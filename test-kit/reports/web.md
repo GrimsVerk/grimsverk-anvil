@@ -606,3 +606,89 @@ not an allowed value:
 - Severity: friction (documentation/diagnostic). The template's ESC-50 note
   should say plainly: on the web lane `gh auth status` is expected to fail, and
   the real liveness probe is `gh api user`.
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 2026-08-19T23:17:38Z | 3W — branch `run/web` off `main`, render with copier | **OK.** `git switch -c run/web origin/main`, then `copier copy --defaults --trust --data ... https://github.com/GrimsVerk/grimsverk-template.git .` — exit 0, 3 seconds, no overwrite prompts. `.copier-answers.yml` records `_commit: v0.4.33` and `_src_path: https://github.com/GrimsVerk/grimsverk-template.git` (canonical https, not a token and not a local path — Part 2 rule 12 satisfied). The attached `grimsverk-template` checkout was never read, edited, or used as a source. |
+| 2026-08-19T23:17:51Z | 4 — install canned inputs | **OK.** All four copied from `test-kit/canned/`. |
+| 2026-08-19T23:17:52Z | 5 — `uv sync` | **OK**, exit 0, 1 second. `uv.lock` present and staged for the scaffold commit (ESC-47 satisfied). |
+| 2026-08-19T23:18:05Z | 5 — `pre-commit install` | **FAILED then worked after a workaround.** See F10. |
+| 2026-08-19T23:18:10Z | 5 — scaffold commit | **OK.** 73 files, `Scaffold and canned test design (run/web)`. |
+| 2026-08-19T23:19:01Z | 6 — push `run/web` | **OK on the first attempt, no retry needed.** The local agent's ruleset reset had already landed, so the round-1 rejection path never triggered. Zero of the 45 allotted minutes used. |
+| 2026-08-19T23:19:12Z | 7W — `RUN_BASE=run/web .github/scripts/unattended-ready.sh --runtime` | **FAILED, exit 2, and not for the expected reason.** It never reached the gating question: it dies on its own first API call because the web session's proxy refuses GraphQL. See F11 — blocker. |
+| 2026-08-19T23:20Z | 7W — gating state, read directly over REST | `run/web` is **not yet gated**. `grimsverk-gates` includes `~DEFAULT_BRANCH` and `refs/heads/run/local` only. Bounded wait started; the local agent's step 6a-4 is expected to add it. |
+
+### F10 — the documented setup step `pre-commit install` fails on a clean machine; the scaffold never provides `pre-commit`
+- Where: TESTPLAN Part 1 step 5; the scaffold's `pyproject.toml` and `.pre-commit-config.yaml`.
+- What happened:
+
+  ```
+  $ uv run pre-commit install
+  error: Failed to spawn: `pre-commit`
+    Caused by: No such file or directory (os error 2)
+  $ command -v pre-commit
+  (nothing)
+  ```
+
+  `uv sync` installs 13 packages — `ruff`, `mypy`, `pytest` and their deps —
+  and `pre-commit` is not among them, though the scaffold ships a
+  `.pre-commit-config.yaml` and both the TESTPLAN and the scaffold's own docs
+  tell you to run `pre-commit install` right after `uv sync`.
+- Expected: after `uv sync`, the documented next command works. Either
+  `pre-commit` belongs in the scaffold's dev dependency group, or the
+  instruction should read `uv tool install pre-commit` first.
+- Workaround used: `uv tool install pre-commit` (a machine tool, exactly as the
+  TESTPLAN prescribes for `copier` on the local lane), then
+  `pre-commit install` → `pre-commit installed at .git/hooks/pre-commit`.
+  Nothing in the repository was modified to get past this.
+- Severity: friction. It costs every fresh clone one undocumented step, and on
+  the local lane it is invisible because the owner's machine already has the
+  tool — which is exactly why it survived to round 4.
+
+### F11 — BLOCKER: the web session's proxy serves REST but refuses GraphQL, so every `gh pr` command in the template's machinery fails
+- Where: TESTPLAN Part 1 step 7W and everything downstream of it. Affects
+  `.github/scripts/unattended-ready.sh`, `.claude/scripts/deliver-loop.sh`,
+  `.claude/scripts/deliver-phase.sh`, and the auto-merge/detector paths.
+- What happened:
+
+  ```
+  $ RUN_BASE=run/web .github/scripts/unattended-ready.sh --runtime
+  unattended-ready: cannot resolve this repository — run: gh auth login
+  $ echo $?
+  2
+  ```
+
+  The message is wrong about the cause. The script's line 82 is
+  `REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"`, and run
+  alone that command says:
+
+  ```
+  $ gh repo view --json nameWithOwner --jq .nameWithOwner
+  HTTP 403: This GraphQL query is not enabled for this session — only the pinned
+  set of PR-review operations is served. Use REST via `gh api repos/{owner}/{repo}/...`
+  instead. (https://api.github.com/graphql)
+  ```
+
+  The same 403 hits `gh pr list` (named explicitly: "GraphQL query
+  (PullRequestList, sent by gh pr list)") and `gh pr checks`. REST through the
+  same binary is fine: `gh api repos/GrimsVerk/grimsverk-anvil --jq .full_name`
+  → `GrimsVerk/grimsverk-anvil`, and `gh api .../rulesets` returns the live
+  ruleset. So the credential is healthy; the transport is filtered.
+
+  Machinery exposure, counted in the rendered scaffold: `gh pr create` x9,
+  `gh pr merge` x6, `gh pr list` x6, `gh pr checks` x6, `gh pr update-branch`
+  x2, `gh pr view` x1, `gh pr comment` x1 — every one of them GraphQL-backed.
+- Expected: TESTPLAN Part 0 and the template's ESC-50 note both state that on
+  the web lane the platform injects the owner's credential so `gh` "simply
+  works", and `unattended-ready.sh` line 245 is written to *notice* it is on
+  such a platform and continue. It never gets there. The template anticipated
+  that App **minting** is impossible on a hosted platform (ESC-50) but not that
+  the same proxy also **narrows the API surface to REST**.
+- Impact: this is a second, independent web-lane escape sitting behind ESC-50.
+  ESC-50's fix (open pull requests server-side via `open-pr.yml`) is unaffected
+  and still correct, but the driver's own read paths — detecting a pull
+  request, polling its checks, merging it — cannot run as written in a web
+  session.
+- Severity: **blocker** for the lane as specified. Recorded here before any
+  attempt to proceed; the machinery was not modified and will not be
+  (Part 2 rule 3).
