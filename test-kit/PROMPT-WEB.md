@@ -19,12 +19,17 @@ Do this, in order:
 
 1. Read `test-kit/TESTPLAN.md` — Part 2 (rules for testing agents) binds you.
    Read the project's `AGENTS.md` and `GLOSSARY.md`. State your lane out loud.
-2. Preflight, and record any failure as a finding: `gh auth status` works in
-   this container; `.claude/scripts/app-token.sh >/dev/null` succeeds; branch
-   `run/web` exists on origin. If `gh` or the App identity is missing, the
-   environment was not prepared — record the exact error as a blocker finding,
-   push the ledger, tell the owner, and stop this lane. Do not install or
-   improvise credentials beyond what the environment already provides.
+2. Preflight, and record any failure as a finding: mint gh's credential from
+   the App — `export GH_TOKEN="$(.claude/scripts/app-token.sh)"` — and repeat
+   that mint at the START OF EVERY TURN (App tokens die in an hour; a turn is
+   shorter; there is deliberately no PAT in this environment). Then
+   `gh auth status` works; the readiness check
+   `RUN_BASE=run/web .github/scripts/unattended-ready.sh --runtime` passes;
+   branch `run/web` exists on origin. If `gh` or the App identity is missing,
+   the environment was not prepared — record the exact error as a blocker
+   finding, push the ledger, tell the owner, and stop this lane. Do not
+   install or improvise credentials beyond what the environment already
+   provides.
 3. Start your findings ledger at `test-kit/reports/web.md` on branch
    `chore/test-report-web`, per TESTPLAN Part 2 rule 4. First entry: the
    preflight results.

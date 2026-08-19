@@ -28,8 +28,8 @@ Start here, in this order:
    planted input is expected to trigger, is in TESTPLAN Part 3. Do not "fix"
    any of it.
 
-The prerequisites this kit depends on are met: the template's per-base-branch
-pipeline fix (ESC-46) is released as **v0.4.28**, and the evidence-recovery
-tools the instructions use (`deliver-loop.sh --land-evidence`, the
-setup-github transcript) as **v0.4.29**. Setup step 0 double-checks that the
-latest release is at least v0.4.29 before anything is generated.
+The prerequisites this kit depends on are met: the per-base-branch pipeline
+fix (v0.4.28), the evidence-recovery tools (v0.4.29), and the App-only
+credential model — no PATs anywhere, two secrets total — (v0.4.30). Setup
+step 0 double-checks that the latest release is at least v0.4.30 before
+anything is generated.

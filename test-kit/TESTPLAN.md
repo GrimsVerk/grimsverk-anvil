@@ -72,11 +72,21 @@ gh release view -R GrimsVerk/grimsverk-template --json tagName --jq .tagName
 gh repo view GrimsVerk/grimsverk-anvil --json defaultBranchRef --jq .defaultBranchRef.name
 ```
 
-The first must print `v0.4.29` or newer — v0.4.28 carries the per-base lane
-fix, v0.4.29 adds the evidence-recovery tools this plan's instructions use
-(`deliver-loop.sh --land-evidence`, the setup transcript) — and copier
-generates from the **latest tag**. The second
+The first must print `v0.4.30` or newer — v0.4.28 carries the per-base lane
+fix, v0.4.29 the evidence-recovery tools (`--land-evidence`, the setup
+transcript), and v0.4.30 the App-only credentials this plan assumes (no
+`TEMPLATE_TOKEN`, no web PAT) — and copier generates from the **latest tag**.
+The second
 must print `main`; if it does not, fix it before anything else:
+
+Also one-time, on the GitHub App (it exists already):
+
+- App settings → Permissions → **Checks: Read-only** → save, then approve the
+  permission update where the App is installed. The web driver reads CI
+  results through the App; without this, `gh pr checks` fails there.
+- App settings → Install App → make sure it covers **grimsverk-anvil** AND
+  **grimsverk-template** (`template-sync` reads the template through a token
+  minted from the App; there is no PAT).
 
 ```sh
 gh repo edit GrimsVerk/grimsverk-anvil --default-branch main
@@ -146,11 +156,9 @@ scripts/setup-github.sh --app --verify \
   --gate-branch run/local --gate-branch run/web
 ```
 
-It will prompt for `CLAUDE_CODE_OAUTH_TOKEN` (run `claude setup-token`),
-`TEMPLATE_TOKEN` (your fine-grained template-read PAT), and the GitHub App id
-plus `.pem` path (the App already exists from find_best_mobo — but you must
-also **install** it on this repository: App settings → Install App →
-grimsverk-anvil).
+It will prompt for exactly two things: `CLAUDE_CODE_OAUTH_TOKEN` (run
+`claude setup-token`) and the GitHub App id plus `.pem` path. No PATs — the
+App you configured in step 0 covers everything else.
 
 ### 6. Create the two lanes
 
@@ -179,7 +187,6 @@ In claude.ai/code, create or edit the environment for
 
 | Name | Value |
 | --- | --- |
-| `GH_TOKEN` | a fine-grained PAT, repository `grimsverk-anvil` only: Contents RW, Pull requests RW, Checks RO |
 | `GRIMSVERK_APP_ID` | the App id |
 | `GRIMSVERK_APP_PEM_B64` | `base64 -w0 < your-app.private-key.pem` |
 | `GRIMSVERK_APP_PRIVATE_KEY` | `/root/.config/grimsverk/app.pem` |
@@ -199,8 +206,11 @@ if ! command -v gh >/dev/null 2>&1; then
     > /etc/apt/sources.list.d/github-cli.list
   apt-get update && apt-get install -y gh
 fi
-gh auth status
 ```
+
+No `GH_TOKEN` is set anywhere: the web driver mints `gh`'s credential from
+the App at the start of every turn (`export GH_TOKEN="$(.claude/scripts/app-token.sh)"`),
+exactly as its command file instructs — one more thing under test.
 
 Network policy must allow `github.com` and `cli.github.com`. **If the web
 session cannot get a working `gh`, the web driver refuses at preflight. That
