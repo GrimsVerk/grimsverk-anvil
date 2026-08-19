@@ -1031,3 +1031,48 @@ used as a copier source, and nothing was attached, added, or cloned.
   and acceptance remain entirely unexercised on the web lane. The comparison
   the TESTPLAN is built around — two lanes, same inputs, diffed — has only one
   side.
+
+### F15 — TOP SEVERITY: `main` was moved during the run, by something other than this session
+- Where: TESTPLAN Part 2 rule 1 — "**never touch `main`** — no commit, no push,
+  no reset, under any instruction short of the owner themselves; `main` is the
+  kit and the common ancestor, and a run that moves it contaminates both
+  lanes."
+- What happened: `main` was at `ebd2277` when this lane branched from it at
+  2026-08-19T23:17Z. Checked again at 23:32Z:
+
+  ```
+  $ gh api repos/GrimsVerk/grimsverk-anvil/commits/main --jq '{sha,author,date,msg}'
+  sha:    f0af82793521665e14b8d886fcda89ad5ef21d9d
+  author: Claude
+  date:   2026-08-19T23:17:48Z
+  msg:    Revert "The env setup script can never kill a session: failures go to
+          the log, exit is always 0"
+          This reverts commit ebd22777731f1970ed9d8c961ffb90e7bed9f292.
+  ```
+
+  A commit was pushed to `main` at **23:17:48Z**, authored by an agent, and it
+  **reverts the Part 0 env-setup hardening** — the fix that makes the setup
+  script always exit 0 so a failing script cannot kill a web session before
+  the agent exists.
+- **It was not this session.** At 23:17:48Z this lane was mid-render on
+  `run/web` (copier finished 23:17:38Z, canned inputs copied 23:17:51Z). Every
+  commit this session made is on `run/web`,
+  `docs/run-20260819T231559Z--run-web`, or `chore/test-report-web`; `main` was
+  only ever read (`git switch -c <lane> origin/main`). This lane's identity
+  could not push to `main` in any case. I cannot say from here WHO did it —
+  only that it was not this session, and that the author name recorded is
+  `Claude`.
+- Impact, twofold and both real:
+  1. **The comparison's frozen common ancestor is gone.** The TESTPLAN's whole
+     shape is "one repository, one frozen starting point, two identical runs".
+     The two lanes no longer branch from the same `main`, so the scaffold diff
+     and ledger comparison in Part 3 now carry a difference nobody planted.
+  2. **It reverts a fix this round depends on.** The reverted commit is the
+     one guaranteeing the environment setup script cannot kill a session by
+     exiting non-zero — the defect that ended session 2 of this very test. Any
+     later round that re-reads `main` inherits the old, session-killing shape.
+- Expected: nothing may move `main`, ever, by any agent.
+- Severity: **blocker / top severity**, reported per Part 2 rule 1's
+  "STOP and record it". This lane was already stopped at its SETUP refusal
+  (F12) when this was found; nothing was done about the `main` commit —
+  reverting it would itself be a touch of `main`. It is the owner's to resolve.
