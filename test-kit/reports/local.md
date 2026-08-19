@@ -543,3 +543,74 @@ exercised. Recording what it does at the reset.
 | Time (UTC) | PHASE | Key fields |
 | --- | --- | --- |
 | 23:44:57Z | ORACLE | iteration 1. Worker `oracle-20260819234457`, base `run/local`. |
+
+| 23:52:52Z | WAIT | iteration 2. `waiting on PR #2 (docs/oracle-20260819234457--run-local) — mechanical watch, no model budget`. Oracle worker exited 0 with 1 commit, and this time the driver opened the pull request itself. |
+| 23:52:54Z | WAIT → fix | `PR #2 red (checks secrets ) — dispatching a fix`. The redness is **not** the code — see F8. |
+
+### Observation checklist — round 2.1 readings so far
+
+- **App authorship (ESC-26, ESC-35): CONFIRMED again.** PR #2 is
+  `by app/autogrims (bot=true)`, head `docs/oracle-20260819234457--run-local`,
+  base `run/local`. Two for two.
+- **`arm-auto-merge` appears in the check list: CONFIRMED** (ESC-36) — it is
+  present on PR #2. Whether it *completes* a merge is still unobserved, and
+  cannot be observed while F8 stands.
+- **`update-open-prs`, `delete-merged-branch`, `sweep-merged-branches`** are all
+  present on the run and reporting `skipping` — correct, since nothing has
+  merged.
+- **Per-check durations (ESC-45): all anomalous, and diagnostically so.** Every
+  required check finished in **3–4 seconds**, which is the exact "far too fast
+  to have done the work" signature rule 9 asks about. Here it points at F8
+  rather than at a skip reporting success — they are red, not green — but it is
+  worth recording that the duration heuristic caught this immediately.
+
+---
+
+### F8 — BLOCKER, and NOT a template defect: GitHub Actions will not start any job on this account (billing)
+- **Where:** round 2.1, PR #2, every workflow, every job.
+- **What happened:** every required check goes red in 3–4 seconds. The job logs
+  are empty because the jobs never ran. The reason is only visible through the
+  check-run annotations API:
+
+  ```
+  $ gh api repos/GrimsVerk/grimsverk-anvil/check-runs/96265553867/annotations --jq '.[].message'
+  The job was not started because recent account payments have failed or your
+  spending limit needs to be increased. Please check the 'Billing & plans'
+  section in your settings
+  ```
+
+  Confirmed identical on a second, unrelated job (`96265540542`, the `checks`
+  job of a different workflow run), so it is account-wide, not job-specific.
+  All three workflow runs triggered at 23:52:52Z — CI, Auto-merge, Review —
+  report `failure` without executing anything:
+
+  ```
+  $ gh api repos/GrimsVerk/grimsverk-anvil/actions/runs \
+      --jq '.workflow_runs[0:3][] | "\(.name) \(.conclusion) \(.created_at)"'
+  CI failure 2026-08-19T23:52:52Z
+  Auto-merge failure 2026-08-19T23:52:52Z
+  Review failure 2026-08-19T23:52:52Z
+  ```
+
+- **Why this stops the lane completely.** The merge pipeline is defined by
+  required checks going green (`AGENTS.md`, "The merge pipeline"). No check can
+  go green while jobs cannot start, so **nothing can ever merge**: no plan, no
+  code, no acceptance, no evidence pull request. Every remaining item on the
+  observation checklist — branch deletion after merge, auto-merge actually
+  completing, per-check durations of real runs, cross-lane `update-open-prs` —
+  is unobservable until this is cleared. It blocks the **web lane** identically,
+  since both lanes share the repository and the account.
+- **Severity: blocker. Owner-side / rig, explicitly NOT a template finding.**
+  Recorded here because Part 2 rule 4 wants every blocker recorded and because
+  it explains every red check in both lanes' evidence from 23:52Z onward. The
+  template behaved correctly throughout: it detected red, said which checks were
+  red, and dispatched a fix — which is right for a code failure and cannot
+  succeed against an infrastructure one.
+- **The template question this raises, which IS worth answering upstream:** the
+  driver cannot distinguish "the code is wrong" from "the runner never started",
+  and its response to both is to spend model budget on a fix session. A red
+  check whose annotation says the job never started is not fixable by any diff.
+  Whether the driver should detect that and stop instead of paying for fix
+  sessions is a genuine template design question — logged here, pending the
+  owner, and deliberately not filed as a defect against v0.4.34 without their
+  ruling.
