@@ -60,6 +60,10 @@ you, or needs a retry, jot one line (step number, what happened) into
 `test-kit/reports/owner-setup.md`, commit it on `main` before step 6 or on a
 `chore/test-report-setup` branch after, and push. The agents cannot see what
 happened before they existed; this file is the only record of it.
+(`scripts/setup-github.sh` records its own transcript automatically under
+`docs/runs/setup/` — commit that too when it tells you to; your notes file
+covers the steps the script does not see: copier, the clone, the web
+environment.)
 
 ### 0. Confirm the template release and the default branch
 
@@ -68,8 +72,10 @@ gh release view -R GrimsVerk/grimsverk-template --json tagName --jq .tagName
 gh repo view GrimsVerk/grimsverk-anvil --json defaultBranchRef --jq .defaultBranchRef.name
 ```
 
-The first must print `v0.4.28` or newer — v0.4.28 is the release that carries
-the per-base lane fix, and copier generates from the **latest tag**. The second
+The first must print `v0.4.29` or newer — v0.4.28 carries the per-base lane
+fix, v0.4.29 adds the evidence-recovery tools this plan's instructions use
+(`deliver-loop.sh --land-evidence`, the setup transcript) — and copier
+generates from the **latest tag**. The second
 must print `main`; if it does not, fix it before anything else:
 
 ```sh
@@ -292,6 +298,19 @@ is disposable; your findings are the deliverable. These rules bind both lanes.
     layer; nothing in `test-kit/` is theirs to read. If any pipeline artifact
     (a plan, a ruling, a commit message) quotes or references `test-kit/`,
     record it as a finding — it means a worker roamed outside its inputs.
+11. **A triggered failsafe is itself a finding, always, and says so by name.**
+    The template promises to land its own evidence at every stop — run
+    report, reviews, worker logs, the evidence pull request. The failsafes in
+    this kit (the ledger paste, the raw-log copy, `--land-evidence`, any
+    manual securing) exist for when that promise breaks. So whenever a
+    failsafe — not the template's own machinery — is what preserved a piece
+    of evidence, file a finding titled exactly
+    `TEMPLATE SELF-RECORDING FAILURE: <what the template failed to record,
+    and which failsafe caught it>`, severity bug or higher. Never fold this
+    into a general summary line: the failsafe working is the anvil doing its
+    job; the failsafe being NEEDED is the template failing at the exact
+    failure mode this whole test exists to catch, and it must be reported
+    upstream as its own row.
 
 ## Part 3 — What the owner compares afterwards
 
@@ -353,8 +372,17 @@ covered:
   `docs/DESIGN.md` / `docs/VISION.md` (the canned docs land before the gates
   exist, deliberately, so the two lanes start byte-identical).
 - `copier update` / `template-sync` on a real update — including the conflict
-  path (template ESC-14), which needs a template release to land mid-project.
-  Candidate for a follow-up round on whichever lane survives better.
+  path (template ESC-14). **Checked and recorded 2026-08-19, not skipped by
+  oversight:** the owner asked whether the evidence-hardening template release
+  could be pulled in via `copier update` as a live mid-run-update test. It
+  cannot yet — this repository holds only the test kit until setup Part 1
+  renders the scaffold, and `copier update` needs the `.copier-answers.yml`
+  that only generation creates. There was no update to attempt, so there is no
+  failure to log. The runs will simply generate FROM the release that already
+  carries the hardening. The live update test arms itself naturally: the
+  first template release that appears AFTER generation is the payload — run
+  `scripts/update-from-template.sh` on `main` then, and that is the ESC-14 /
+  `template-sync` live test. Candidate for whichever lane survives better.
 - `swift-ios`, the codex engine, and glossary maintenance flows.
 - Attended orchestration (`/orchestrate` driven by a human session): both lanes
   run the unattended path only.

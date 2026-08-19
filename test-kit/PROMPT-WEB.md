@@ -55,9 +55,14 @@ Do this, in order:
    evidence exactly as the /deliver-loop command file instructs (run report,
    `reviews/`, `workers/`, on its own pull request) — even for a failed run,
    especially for a failed run. Then verify the evidence pull request exists
-   and can merge; if it cannot, that is a top finding, and paste the report's
-   content into your ledger — the ledger branch is the one path no gate can
-   block and the one file guaranteed to survive this container. Then write the
+   and can merge; if it cannot, paste the report's content into your ledger —
+   the ledger branch is the one path no gate can block and the one file
+   guaranteed to survive this container. **And whenever a failsafe — the
+   ledger paste, any manual securing — is what preserved evidence instead of
+   the template's own machinery, file it as its own finding titled
+   `TEMPLATE SELF-RECORDING FAILURE: <what>` (TESTPLAN Part 2, rule 11): the
+   template failing to record its own failure is precisely what must be
+   reported upstream, never folded into a summary line.** Then write the
    summary block into your ledger (TESTPLAN rule 6), push
    `chore/test-report-web`, and report to the owner: high level, per the
    glossary rules — what stopped the run, which phases ran, how many pull

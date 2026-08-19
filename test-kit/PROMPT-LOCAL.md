@@ -58,11 +58,22 @@ Do this, in order:
      `cp /tmp/anvil-local-driver.log test-kit/reports/local-driver.log`,
      commit, push. The driver's own machinery lands a run report too, but the
      raw log is the only record that survives if that machinery is what broke.
+   - If the driver died WITHOUT landing its report (a kill, a crash — the
+     buffer `.claude/deliver-loop/run.md` still has content), land it with the
+     recovery mode:
+     `.claude/scripts/deliver-loop.sh --base run/local --land-evidence`
    - Verify the driver landed `docs/runs/<timestamp>/` (report, `reviews/`,
      `workers/`) and opened its evidence pull request, and that the pull
-     request can merge. If any of that failed, that is a top finding — and
-     paste the report's content into your ledger, because the ledger branch is
-     the one path no gate can block.
+     request can merge. If anything failed, paste the report's content into
+     your ledger — the ledger branch is the one path no gate can block.
+   - **Every failsafe you had to use gets its own finding, titled
+     `TEMPLATE SELF-RECORDING FAILURE: <what>` (TESTPLAN Part 2, rule 11).**
+     Needing `--land-evidence`, a missing report, missing `reviews/` or
+     `workers/`, an evidence PR that never opened or cannot merge — each one
+     means the template failed to record its own failure, which is exactly
+     what must be reported upstream. The raw-log copy alone is routine and
+     needs no such finding — unless the raw log turns out to be the ONLY
+     surviving record, in which case it does.
    Then write the summary block into the ledger (TESTPLAN rule 6), push
    `chore/test-report-local`, and report to the owner: high level, per the
    glossary rules — what stopped the run, which phases ran, how many pull
