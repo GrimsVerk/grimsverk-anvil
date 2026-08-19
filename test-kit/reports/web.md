@@ -501,29 +501,51 @@ not an allowed value:
 ## Summary (Part 2 rule 6)
 
 - **Phases reached:** none. The run never started; the lane stopped during
-  TESTPLAN Part 1 setup, at the step-3W credential mint.
+  TESTPLAN Part 1 setup, at the step-3W credential mint, in all three sessions.
 - **Pull requests opened:** 0. **Merged:** 0.
 - **Oracle decisions written (OD ids):** none.
 - **Uncertainties filed (BL ids):** none.
 - **Criteria status:** not evaluated; `docs/acceptance.md` was never rendered.
 - **Driver's own exit reason:** the driver was never started. The lane was
-  stopped by the operator, per the standing instruction to stop on a failed
-  credential mint.
-- **Findings:** 6 — two blockers (F1, F4), one bug (F5), two friction (F3,
-  F6), one positive observation (F2).
-- **Bait map (Part 3):** every row is untested this round. No bait was reached.
-- **Sessions:** 2. Session 1 (21:33Z) found no credential at all (F1). Session
-  2 (21:50Z), with the Part 0 setup script attached, failed to build the
-  environment with exit code 8 (F4) and left no artifact behind (F5).
-- **Template verdict:** this round tested the RIG, not the template. F1, F4,
-  F5 and F6 are all environment-configuration or rig-script defects on the
-  owner's side, not template bugs —
-  the template's own refusal behaved correctly and loudly, exactly as its
-  comments promise, and F2 shows the round-1 diagnostic fix earning its keep.
-  The web lane produced no evidence about the template's pipeline.
-- **No failsafe was triggered** in the Part 2 rule 11 sense: no template
+  stopped by the operator each time, per the standing instruction to stop on a
+  failed credential mint.
+- **Findings:** 9 — three blockers (F1, F4, F7), one bug (F5), three friction
+  (F3, F6, F9), two positive observations (F2, F8).
+- **Bait map (Part 3):** every row untested. No bait was reached.
+- **Sessions:** 3, each failing one step deeper than the last.
+  1. 21:33Z — no App credential in the environment at all; `app-token.sh`
+     exit 3, "not configured at all" (F1).
+  2. 21:50Z — Part 0 setup script attached, but the environment build failed
+     with exit code 8 because `cli.github.com` was denied by the network
+     policy (F4), and the failed build discarded every artifact the script had
+     already produced, credential included (F5).
+  3. 22:29Z — the rig is healthy at last (F8): setup script ran, `gh` and
+     `copier` installed, both `GRIMSVERK_*` variables set, and the owner's
+     pasted key on disk as a valid 2048-bit RSA key. The mint now reaches
+     GitHub — and GitHub rejects the JWT with `401`: App ID 4635498 and that
+     private key are not a matching pair (F7).
+- **What the owner needs to do to unblock the lane:** generate a fresh private
+  key on App 4635498's own settings page, confirm the App is installed on
+  `grimsverk-anvil`, and paste that key into the next web session. The key
+  pasted this round is intact and valid — it simply is not App 4635498's. Its
+  source filename in PROMPT-WEB (`find-best-mobo.pem`) suggests it belongs to
+  a different App.
+- **Template verdict:** all three sessions tested the RIG, not the template.
+  Every blocker is environment configuration or a rig-script defect on the
+  owner's side. The template's own credential script behaved correctly in all
+  three: it refused loudly rather than warning, it used distinct exit codes
+  that told the three failures apart (3, build-failure, 4), and its messages
+  named the true cause each time. F2 and F8 record the round-1 and round-2
+  diagnostic fixes earning their keep. **The web lane has still produced no
+  evidence about the template's pipeline** — that remains entirely untested on
+  this lane.
+- **No failsafe was triggered** in the Part 2 rule 11 sense. No template
   self-recording promise was broken, because no run ever reached the point of
-  making one. This ledger is the primary record, not a rescue of one.
+  making one. This ledger is the primary record, not a rescue of one — so
+  there is no `TEMPLATE SELF-RECORDING FAILURE` row to file, and its absence
+  here is a real observation rather than an omission.
 - **`main` was never touched.** No commit, no push, no reset. The `run/web`
   branch was never created. The `run/local` lane, its branches, and its pull
-  requests were never read or touched.
+  requests were never read or touched. No repository other than
+  `grimsverk-anvil` was attached, added, cloned, fetched, or read (Part 2
+  rule 12 held throughout).
