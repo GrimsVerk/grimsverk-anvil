@@ -772,3 +772,83 @@ produced, so nothing could quote `test-kit/`. The detector's one output
 (`UNCITED=BL-3 BL-4 ESC-1`) names only design-layer ids from `docs/`, which
 is correct — those came from the canned inputs after they were copied into
 `docs/`, never from `test-kit/` itself.
+
+### F13 — BLOCKER: the ESC-50 escape hatch is unreachable from a web session; no pipeline pull request can be opened as the App, by two independent causes
+- Where: `/deliver-loop` command file, "Opening pull requests — always as the
+  App", ambient-login branch; `.github/workflows/open-pr.yml`. Hit while
+  landing the run's own evidence pull request (the command file's
+  "The run leaves evidence behind, and that is your job here").
+- What happened: the documented command fails, and so does its REST
+  equivalent, for different reasons.
+
+  **(a) The documented command is itself GraphQL-backed.**
+
+  ```
+  $ gh workflow run open-pr.yml -f head=docs/run-20260819T231559Z--run-web \
+      -f base=run/web -f title=... -f body=...
+  unable to determine default branch for GrimsVerk/grimsverk-anvil: HTTP 403:
+  This GraphQL query (RepositoryInfo, sent by gh pr create/view (repo info preamble))
+  is not enabled for this session — only the pinned set of PR-review operations
+  is served. (https://api.github.com/graphql)
+  ```
+
+  `gh workflow run` runs a repo-info preamble over GraphQL before dispatching,
+  so the one command the command file prescribes for this platform cannot run
+  on this platform. **Forced deviation, recorded as such:** I fell back to the
+  same dispatch over REST (`gh api -X POST
+  repos/.../actions/workflows/open-pr.yml/dispatches --input ...`), which is
+  the identical action through a transport the proxy serves.
+
+  **(b) The REST dispatch is refused too — and the workflow is not
+  dispatchable at all.**
+
+  ```
+  $ gh api -X POST repos/GrimsVerk/grimsverk-anvil/actions/workflows/open-pr.yml/dispatches --input /tmp/dispatch.json
+  {"message":"Resource not accessible by integration","status":"403"}
+
+  $ gh api repos/GrimsVerk/grimsverk-anvil/actions/workflows/open-pr.yml
+  {"message":"Not Found","status":"404"}
+
+  $ gh api repos/GrimsVerk/grimsverk-anvil/actions/workflows --jq '.workflows[].name'
+  CI
+
+  $ gh api repos/GrimsVerk/grimsverk-anvil --jq .default_branch
+  main
+  $ gh api repos/GrimsVerk/grimsverk-anvil/contents/.github?ref=main
+  {"message":"Not Found","status":"404"}
+  ```
+
+  Two separate walls, either of which alone is fatal:
+
+  1. **Permission.** The credential the proxy injects has no `actions: write`
+     — `403 Resource not accessible by integration`. Its scope headers are
+     empty with `allows_permissionless_access=true`; it reads fine and pushes
+     fine, but it cannot dispatch a workflow. So "the ambient login drives …
+     workflow dispatches" (command file, ESC-50 paragraph) is not true of this
+     platform's credential.
+  2. **Registration.** GitHub only registers a `workflow_dispatch` workflow
+     that exists on the **default branch**. `open-pr.yml` is 404 to the
+     workflows API and the API lists exactly one workflow, `CI`, because
+     `main` carries no `.github/` at all — by this test kit's own design
+     ("`main` — the test kit, and nothing else, forever"). Push-triggered
+     workflows still run from lane branches, which is why CI runs; a dispatch
+     target must be on `main`, and cannot be.
+- Expected: per ESC-50 and the command file, a hosted session pushes its
+  branch and dispatches `open-pr.yml`, which mints server-side and opens the
+  pull request authored by the App.
+- Impact: **the web lane cannot open any pipeline pull request.** The only
+  remaining way is `gh api -X POST .../pulls` under the ambient login, which
+  the command file forbids in the strongest terms it uses anywhere — "never
+  open the pull request under the ambient login as a fallback — an
+  owner-authored pipeline pull request is the one artifact this pipeline must
+  never produce" — because it hollows `owner-authored.sh` and makes the
+  acceptance pull request unapprovable. **I did not do it.** No pull request
+  was opened by this lane.
+- Note on cause (2): this one is as much about the TEST KIT as the template.
+  The kit's rule that `main` holds only the kit is what un-registers the
+  opener. The template is not wrong to use `workflow_dispatch`; the two
+  designs are simply incompatible, and nothing in either says so. Whichever
+  side is changed, it has to be decided deliberately — a scaffold whose
+  workflows never reach the default branch has no dispatchable workflows at
+  all.
+- Severity: **blocker**.
