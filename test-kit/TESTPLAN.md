@@ -64,22 +64,13 @@ so anyone redoes it: the GitHub App (ID 4635498) with Contents RW, Pull
 requests RW, Checks RO — installed on **grimsverk-anvil and
 grimsverk-template**; the repository secrets `CLAUDE_CODE_OAUTH_TOKEN`,
 `APP_ID`, `APP_PRIVATE_KEY` (secrets survive branch wipes); and the claude.ai
-web **environment** for grimsverk-anvil, which must carry the environment
-variables `GRIMSVERK_APP_ID` (4635498) and `GRIMSVERK_APP_PRIVATE_KEY`
-(`/root/.config/grimsverk/app.pem`) and this setup script (network policy
-must allow `github.com` and `cli.github.com`):
+web **environment** used for anvil sessions, which needs NO variables and
+only this setup script (network policy must allow `github.com` and
+`cli.github.com`):
 
 ```sh
 set -e
 date -u +"env-setup ran %Y-%m-%dT%H:%M:%SZ" >> /tmp/anvil-env-setup.log
-mkdir -p /root/.config/grimsverk
-if [ -n "$GRIMSVERK_APP_PEM_B64" ]; then
-  printf '%s' "$GRIMSVERK_APP_PEM_B64" | base64 -d > /root/.config/grimsverk/app.pem
-  chmod 600 /root/.config/grimsverk/app.pem
-  echo "pem written from GRIMSVERK_APP_PEM_B64" >> /tmp/anvil-env-setup.log
-else
-  echo "GRIMSVERK_APP_PEM_B64 unset; the owner pastes the pem in-session" >> /tmp/anvil-env-setup.log
-fi
 command -v uv >/dev/null 2>&1 && uv tool install copier >> /tmp/anvil-env-setup.log 2>&1 || true
 if ! command -v gh >/dev/null 2>&1; then
   mkdir -p -m 755 /etc/apt/keyrings
@@ -93,18 +84,23 @@ if ! command -v gh >/dev/null 2>&1; then
 fi
 ```
 
-**The key itself travels by paste, not by variable.** The settings dialog's
-environment-variables field mangled the ~2200-character base64 value on every
-attempt (round-2 rig finding), so `GRIMSVERK_APP_PEM_B64` is optional and
-normally unset. The standard delivery: the owner pastes the pem file's
-content as the second message of the web session, and PROMPT-WEB tells the
-agent to write it to `$GRIMSVERK_APP_PRIVATE_KEY` (mode 600) before doing
-anything else. The two unrelated PPA sources are removed before `apt-get
-update` because the web proxy 403s them and their failure used to abort the
-`gh` install (also a round-2 rig finding).
+(The two unrelated PPA sources are removed before `apt-get update` because
+the web proxy 403s them and their failure used to abort the `gh` install — a
+round-2 rig finding. The script logs to `/tmp/anvil-env-setup.log` so the
+web agent can quote a real error instead of guessing whether setup ran — a
+round-1 finding.)
 
-The script logs to `/tmp/anvil-env-setup.log` so the web agent can quote a
-real error instead of guessing whether setup ran (a round-1 finding).
+**No App credential exists on the web side, by platform design (template
+ESC-50, found in round 2).** The claude.ai egress proxy replaces every
+Authorization header with the owner's own injected credential and blocks the
+App-mint API paths outright, so a web session can never hold App identity —
+no key, variable, or paste changes that. The web driver therefore acts as
+the owner's injected credential for reads, pushes, and dispatches, and every
+pipeline pull request is opened AS THE APP by the scaffold's
+`.github/workflows/open-pr.yml` (server-side, where minting works). This
+requires template **v0.4.33 or newer**. Template access for copier comes
+from the owner attaching BOTH repositories when creating the web session —
+grimsverk-anvil to work in, grimsverk-template only so copier can read it.
 
 **Wiping between rounds (owner):** delete every branch except `main`. Secrets,
 the ruleset, the App, and the web environment all stay; the stale ruleset
@@ -138,17 +134,21 @@ local lane only, **W:** the web lane only.
   `cd ~/code/GrimsVerk && git clone
   git@github.com-grimsverk:GrimsVerk/grimsverk-anvil.git && cd
   grimsverk-anvil` (the plain `git@github.com:` host has no key attached).
-- **W:** the session starts with the repository checked out. Touch no other
-  repository (Part 2, rule 12) — do not attach, add, or clone anything else.
+- **W:** the session starts with BOTH repositories checked out — the owner
+  attached them at session creation. grimsverk-anvil is your workspace;
+  grimsverk-template is present ONLY so copier can read it (Part 2, rule 12)
+  — never work in it, never push to it, and do not attach, add, or clone
+  anything further.
 
 ### 2. Confirm the template release
 
-The latest release of grimsverk-template must be **v0.4.31 or newer** (it
+The latest release of grimsverk-template must be **v0.4.33 or newer** (it
 carries the per-base lanes, the evidence recovery tools, the App-only
-credentials, and the two fixes from round 1). **L:** `gh release view -R
-GrimsVerk/grimsverk-template --json tagName --jq .tagName`. **W:** query the
-API with `gh` after step 3W's token mint, or read the tag copier resolves in
-`.copier-answers.yml` after rendering and stop if it is older.
+credentials, the round-1 fixes, ESC-49's hook fix and ESC-50's server-side
+pull-request opener, which the web lane cannot run without). Both lanes:
+`gh release view -R GrimsVerk/grimsverk-template --json tagName --jq
+.tagName`, or read the tag copier resolves in `.copier-answers.yml` after
+rendering — stop if it is older.
 
 ### 3. Create your lane branch, then render the scaffold ON IT
 
@@ -161,19 +161,15 @@ Render with copier — the scaffold lands on your branch, never on `main`:
 - **L:** copier is a machine tool (`uv tool install copier` if missing); the
   owner's gitconfig routes the template's https URL over SSH. Run
   `copier copy https://github.com/GrimsVerk/grimsverk-template.git .`
-- **W:** the template is private and this session must NOT attach or clone
-  it. The one permitted read is copier's own fetch, authenticated by a token
-  minted from the App:
-
-  ```sh
-  TOKEN="$(test-kit/bootstrap/app-token.sh)"
-  git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
-  copier copy https://github.com/GrimsVerk/grimsverk-template.git .
-  export GH_TOKEN="$TOKEN"   # gh's credential, same mint; re-mint every turn
-  ```
+- **W:** run the same command —
+  `copier copy https://github.com/GrimsVerk/grimsverk-template.git .` —
+  from inside the anvil checkout. The platform injects the owner's
+  credential for the attached template repository, so the fetch just works;
+  there is nothing to mint and nothing to configure (Part 0, ESC-50).
 
   `_src_path` must record the canonical `https://github.com/...` URL — never
-  a token, never a local path.
+  a token, never a local path (not even the session's own checkout of the
+  template).
 
 Answers, both lanes, exactly:
 
@@ -366,15 +362,15 @@ is disposable; your findings are the deliverable. These rules bind both lanes.
     job; the failsafe being NEEDED is the template failing at the exact
     failure mode this whole test exists to catch, and it must be reported
     upstream as its own row.
-12. **The web lane sees exactly one repository: grimsverk-anvil.** Never
-    attach, add, clone, fetch, or read any other repository from the web
-    session — including grimsverk-template. (Round 1's web agent attached the
-    template to its session; the owner ruled that out.) The single sanctioned
-    exception is copier's own template fetch in Part 1 step 3W, authenticated
-    by the App token through the git URL rewrite — copier reads the template
-    so it can render; the agent never does. `_src_path` must end up as the
-    canonical https URL. The local lane reads the template only the same way,
-    through copier.
+12. **The web lane WORKS in exactly one repository: grimsverk-anvil.** The
+    owner attaches grimsverk-template to the session too, but only so
+    copier can fetch it (Part 1 step 3W) — the agent never edits it, never
+    pushes to it, never opens its files to read around a problem, and never
+    attaches, adds, or clones anything beyond what the owner attached.
+    (Round 1's web agent granted ITSELF template access mid-run; that stays
+    ruled out — access is the owner's to grant, once, at session creation.)
+    `_src_path` must end up as the canonical https URL. The local lane reads
+    the template only the same way, through copier.
 
 ## Part 3 — What the owner compares afterwards
 
