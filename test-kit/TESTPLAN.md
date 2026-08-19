@@ -8,8 +8,8 @@ findings about the template are the deliverable.
 **The shape of the test.** One repository, one frozen starting point, two
 identical unattended runs in parallel:
 
-- `main` — the generated scaffold plus the canned design documents. Frozen
-  once setup is done; no run merges into it.
+- `main` — the test kit, the generated scaffold, and the canned design
+  documents. Frozen once setup is done; no run merges into it.
 - `run/local` — branched from `main`. Driven by `deliver-loop.sh` on the
   owner's machine, operated by a local Claude Code agent.
 - `run/web` — branched from `main`. Driven by `/deliver-loop` in a Claude Code
@@ -24,8 +24,8 @@ test-writer, reviewer, acceptance, and the driver itself.
 
 The per-base-branch pipeline isolation this layout depends on landed in the
 template as the fix for ESC-46 (`deliver-loop.sh --base`, lane branch
-suffixes, `setup-github.sh --gate-branch`). **Do not start before that fix is
-merged and released** (step 0).
+suffixes, `setup-github.sh --gate-branch`), released as **v0.4.28**. Step 0
+double-checks your generation will use it.
 
 ---
 
@@ -34,54 +34,62 @@ merged and released** (step 0).
 Everything here is copy-paste. Stop at any step that fails and fix it before
 going on.
 
-### 0. Confirm the template release carries the lane fix
+### 0. Confirm the template release and the default branch
 
 ```sh
-gh release view -R GrimsVerk/grimsverk-template
+gh release view -R GrimsVerk/grimsverk-template --json tagName --jq .tagName
+gh repo view GrimsVerk/grimsverk-anvil --json defaultBranchRef --jq .defaultBranchRef.name
 ```
 
-The release notes must include "Scope the one-PR rule per base branch". Copier
-generates from the **latest tag**, so if the fix is merged but a newer tag has
-not appeared, wait for the release workflow, or stop and ask why it did not
-run.
+The first must print `v0.4.28` or newer — v0.4.28 is the release that carries
+the per-base lane fix, and copier generates from the **latest tag**. The second
+must print `main`; if it does not, fix it before anything else:
 
-### 1. Generate the project
+```sh
+gh repo edit GrimsVerk/grimsverk-anvil --default-branch main
+```
+
+### 1. Clone the repo and render the scaffold into it
+
+The test kit already lives on `main`, so the scaffold is rendered **into the
+clone**, beside it. No file overlaps: the kit is entirely under `test-kit/`.
 
 ```sh
 cd ~/code/GrimsVerk
-copier copy https://github.com/GrimsVerk/grimsverk-template.git grimsverk-anvil
+git clone git@github.com-grimsverk:GrimsVerk/grimsverk-anvil.git
 cd grimsverk-anvil
+copier copy https://github.com/GrimsVerk/grimsverk-template.git .
 ```
 
 Answers:
 
 | Question | Answer |
 | --- | --- |
-| `project_name` | press Enter (`grimsverk-anvil`) |
+| `project_name` | press Enter — but check the prompt offers `grimsverk-anvil`; if it offers anything else (or blank), type `grimsverk-anvil` |
 | `language` | `python` |
 | `description` | `A tiny unit-conversion CLI that stress-tests the grimsverk-template pipeline` |
 | `auto_merge` | press Enter (`true`) |
 | `code_owner` | press Enter (`@GrimsVerk`) |
 
-### 2. Make it a git repo and pull in the test kit
+If copier asks about overwriting any existing file, stop and look — it should
+not, and an overwrite prompt means something unexpected is on `main`.
+
+### 2. Commit the scaffold and install the canned design
 
 The canned documents land **before** the gates exist, in the same window the
-scaffold commit uses. This round deliberately does not test `/design` or the
+scaffold commit uses — direct commits to `main` are allowed here for exactly
+that reason. This round deliberately does not test `/design` or the
 owner-landing of the design documents — see "Out of scope" at the bottom.
 
 ```sh
-git init -b main
 git add -A
 git commit -m "Initial scaffold from grimsverk-template"
 git log -1 --format='%an <%ae>'   # must show the GrimsVerk identity
-git remote add origin git@github.com-grimsverk:GrimsVerk/grimsverk-anvil.git
-git fetch origin claude/grimsverk-anvil-test-prep-86r4xu
-git checkout FETCH_HEAD -- test-kit
 cp test-kit/canned/DESIGN.md  docs/DESIGN.md
 cp test-kit/canned/VISION.md  docs/VISION.md
 cp test-kit/canned/BACKLOG.md docs/BACKLOG.md
 git add -A
-git commit -m "Add the anvil test kit and the canned test design"
+git commit -m "Install the canned test design"
 ```
 
 ### 3. Bootstrap the toolchain
@@ -91,16 +99,10 @@ uv sync
 pre-commit install
 ```
 
-### 4. Push, and make main the default branch
-
-The prep branch was pushed to this repository first, so GitHub made **it** the
-default branch. The pipeline needs `main` to be the default. Do not skip the
-second command.
+### 4. Push
 
 ```sh
-git push -u origin main
-gh repo edit GrimsVerk/grimsverk-anvil --default-branch main
-git remote set-head origin main   # the local clone must also know the default
+git push origin main
 ```
 
 ### 5. Configure GitHub — gates on main AND on both lanes
