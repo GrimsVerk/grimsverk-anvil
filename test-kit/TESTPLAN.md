@@ -69,36 +69,26 @@ only this setup script (network policy must allow `github.com` and
 `cli.github.com`):
 
 ```sh
+set -e
 date -u +"env-setup ran %Y-%m-%dT%H:%M:%SZ" >> /tmp/anvil-env-setup.log
 command -v uv >/dev/null 2>&1 && uv tool install copier >> /tmp/anvil-env-setup.log 2>&1 || true
 if ! command -v gh >/dev/null 2>&1; then
-  {
-    mkdir -p -m 755 /etc/apt/keyrings
-    if wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-         > /etc/apt/keyrings/githubcli-archive-keyring.gpg; then
-      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
-        > /etc/apt/sources.list.d/github-cli.list
-      rm -f /etc/apt/sources.list.d/*deadsnakes* /etc/apt/sources.list.d/*ondrej*
-      apt-get update || true
-      apt-get install -y gh
-    else
-      echo "gh keyring fetch FAILED — is cli.github.com allowed by this environment's network policy?"
-    fi
-  } >> /tmp/anvil-env-setup.log 2>&1 || true
+  mkdir -p -m 755 /etc/apt/keyrings
+  wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    > /etc/apt/keyrings/githubcli-archive-keyring.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+    > /etc/apt/sources.list.d/github-cli.list
+  rm -f /etc/apt/sources.list.d/*deadsnakes* /etc/apt/sources.list.d/*ondrej* 2>/dev/null || true
+  apt-get update >> /tmp/anvil-env-setup.log 2>&1 || true
+  apt-get install -y gh >> /tmp/anvil-env-setup.log 2>&1
 fi
-exit 0
 ```
 
-Three rig findings live in this script's shape. It logs to
-`/tmp/anvil-env-setup.log` so the web agent can quote a real error instead
-of guessing whether setup ran (round 1). The two unrelated PPA sources are
-removed before `apt-get update` because the web proxy 403s them and their
-failure used to abort the `gh` install (round 2). And it ALWAYS exits 0: a
-non-zero setup script kills the session before the agent exists (observed —
-`set -e` plus a refused keyring fetch, wget exit 8, no session), and a
-failure that no agent can read or report is the exact opposite of the
-anvil's job — the log is the report, the agent quotes it, the lane stops
-itself if `gh` is genuinely missing (round 2).
+(The two unrelated PPA sources are removed before `apt-get update` because
+the web proxy 403s them and their failure used to abort the `gh` install — a
+round-2 rig finding. The script logs to `/tmp/anvil-env-setup.log` so the
+web agent can quote a real error instead of guessing whether setup ran — a
+round-1 finding.)
 
 **No App credential exists on the web side, by platform design (template
 ESC-50, found in round 2).** The claude.ai egress proxy replaces every
