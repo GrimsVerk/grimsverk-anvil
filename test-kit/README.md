@@ -19,19 +19,19 @@ Start here, in this order:
    already done), lane setup each agent performs itself (Part 1), rules for
    the testing agents (Part 2), what the owner compares (Part 3).
 2. `test-kit/PROMPT-LOCAL.md` — paste into a local Claude Code session.
-3. `test-kit/PROMPT-WEB.md` — paste into a Claude Code web session on this
-   repository.
+3. `test-kit/PROMPT-WEB.md` — paste into a Claude Code web session created
+   with BOTH repositories attached: this one to work in, the template so
+   copier can read it (template ESC-50: a web session can never mint as the
+   App, so copier rides the owner's injected credential instead).
 4. `test-kit/canned/` — the fixed inputs both lanes copy into `docs/`
    (DESIGN, VISION, BACKLOG, a seeded escapes ledger). Built from the
    template's own failure record as a **stress test**: deliberate design
    gaps, backlog items the pipeline must rule on / halt on / dismiss, a
    slug-collision trap, and criteria that should fail honestly at least once.
    The bait map is in TESTPLAN Part 3. Do not "fix" any of it.
-5. `test-kit/bootstrap/` — the web lane's App-token minter for the moments
-   before its scaffold exists (a verbatim snapshot of the template's own
-   script).
-
 Prerequisite releases, all met and pinned by Part 1 step 2: per-base lanes
 (v0.4.28), evidence recovery (v0.4.29), App-only credentials — two secrets
-total, zero PATs (v0.4.30), and the round-1 blocker fixes — born-red
-`uv.lock` flow, wrong-ref CODEOWNERS probe (**v0.4.31**).
+total, zero PATs (v0.4.30), the round-1 blocker fixes — born-red `uv.lock`
+flow, wrong-ref CODEOWNERS probe (v0.4.31), the first-commit mypy hook fix —
+ESC-49 (v0.4.32), and the server-side pull-request opener for web sessions —
+ESC-50 (**v0.4.33**).
