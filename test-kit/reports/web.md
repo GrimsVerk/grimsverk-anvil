@@ -1301,3 +1301,154 @@ lane, and the forbidden owner-authored fallback was again not used.
   (F13) — but it is the same class of bug ESC-51 just fixed, left in the file
   that ESC-51 edited.
 - Severity: bug (documentation of a load-bearing step).
+
+### F18 — TOP SEVERITY: `collect-evidence.sh` imported the OTHER LANE's review payload into this lane's run directory
+- Where: `.claude/scripts/collect-evidence.sh`, run at this lane's stop per the
+  `/deliver-loop` evidence section. TESTPLAN Part 2 rule 1 ("never touch the
+  other lane … If the machinery ever shows you the other lane's pull request
+  as yours … STOP and record it — that is a top-severity finding") and rule 10
+  (contamination is a probe).
+- What happened:
+
+  ```
+  $ .claude/scripts/collect-evidence.sh --run-dir docs/runs/20260819T233920Z \
+      --since 2026-08-19T23:39:20Z
+  collect-evidence: 1 review(s) into docs/runs/20260819T233920Z/reviews (1 skipped).
+  ```
+
+  The one review it collected belongs to `run/local`:
+
+  ```
+  docs/runs/20260819T233920Z/reviews/docs-run-20260819T232721Z--run-local-702d24b547cb/
+  ```
+
+  and its `index.md` lists that branch as this run's evidence:
+
+  > | `docs/run-20260819T232721Z--run-local` | `702d24b547cb` | success | … |
+
+  This lane produced no review at all. Every row in its own evidence index is
+  the other lane's.
+- Root cause: the collector selects review runs by TIME only (`--since`) and
+  applies no base-branch or lane-suffix filter, though the lane suffix
+  `--run-local` is right there in the branch name and ESC-46's whole purpose
+  is per-base isolation. Two lanes running in parallel therefore harvest each
+  other's evidence, and whichever collects last overwrites the story of what
+  its own run saw.
+- Impact: this is the isolation ESC-46 promised, failing in the one place the
+  test was built to check. It corrupts exactly the artifact Part 3 compares
+  lane-to-lane: the web lane's `reviews/` now describes a local-lane review.
+  It also means a run report can silently claim review coverage it never had.
+- **Not touched, deliberately.** The imported directory is left exactly as the
+  machinery wrote it, on `docs/run-20260819T233920Z--run-web`, because it is
+  the proof; the other lane's branch and pull request were never read, fetched
+  or modified by this session.
+- Severity: **blocker / top severity.**
+
+### F19 — ESC-43's `MISSING.md` path fired live, for the first time
+- Where: `docs/runs/20260819T233920Z/reviews/…--run-local-702d24b547cb/MISSING.md`.
+- What happened: the collected review run's artifact could not be downloaded,
+  and the collector wrote the gap down instead of hiding it:
+
+  > # No artifact for review run 32314184671
+  > branch: `docs/run-20260819T232721Z--run-local`, commit `702d24b5…`,
+  > created 2026-08-19T23:39:43Z, conclusion: success
+  >
+  > The run happened; its artifact could not be downloaded (expired, never
+  > uploaded, or the job died before the upload step). This file exists so the
+  > gap is visible rather than indistinguishable from a review that never ran.
+
+- Two readings, both worth recording:
+  1. **The machinery worked.** ESC-43's whole point is that a missing payload
+     must not look like a review that never happened, and that is precisely
+     what this file achieves. First live observation of that path, and it
+     behaved as designed.
+  2. **A review payload was genuinely lost** — a green review whose evidence
+     does not exist, on a run created 23:39:43Z and collected 23:45:13Z, five
+     minutes later, so "expired" is not a plausible explanation. That is worth
+     chasing on the lane that owns it.
+- Severity: friction on the template (the marker works); the lost artifact
+  itself belongs to the local lane to explain.
+
+### F20 — TEMPLATE SELF-RECORDING FAILURE: round 2.1's evidence pull request could not be opened either; the ledger paste caught it again
+- Where: `/deliver-loop`, "The run leaves evidence behind, and that is your job
+  here", step 3. Filed under Part 2 rule 11 as its own row. This is the
+  **second** occurrence, at v0.4.34, after F14 at v0.4.33.
+- What the template failed to record: its own run evidence at its own
+  documented stop, again. The report and `reviews/` were written and committed
+  on `docs/run-20260819T233920Z--run-web` and pushed; the pull request that
+  would make them visible could not be opened, by either documented route:
+
+  ```
+  $ gh workflow run open-pr.yml -f head=docs/run-20260819T233920Z--run-web -f base=run/web ...
+  unable to determine default branch …: HTTP 403: This GraphQL query (RepositoryInfo,
+  sent by gh pr create/view (repo info preamble)) is not enabled for this session
+
+  $ gh api -X POST repos/GrimsVerk/grimsverk-anvil/actions/workflows/open-pr.yml/dispatches -f ref=run/web
+  {"message":"Resource not accessible by integration","status":"403"}
+  ```
+
+- Which failsafe caught it: **the ledger paste** again, below. The evidence
+  survives on `chore/test-report-web`, which needs no pull request.
+- ESC-40 (the run-evidence pull request merging) therefore remains unobserved
+  after five sessions, and the reason is now precisely known rather than
+  suspected.
+- Severity: **bug**, and unchanged in kind from F14 — a second release has now
+  shipped without the stop-path evidence being landable from a web session.
+
+#### Pasted verbatim — `docs/runs/20260819T233920Z/run.md`
+
+> # Unattended run report — web frontend, round 2.1
+> 
+> - Run id: `20260819T233920Z`
+> - Started: 2026-08-19T23:39:20Z
+> - Stopped: 2026-08-19T23:45Z
+> - Frontend: `/deliver-loop` web mode, template **v0.4.34** (ESC-51)
+> - **THIS RUN'S BASE BRANCH: `run/web`** — every pull request this run opens
+>   merges into it, and this run waits only on pull requests targeting it.
+> - Stop reason: **SETUP refusal**, one defect narrower than round 4.
+>   `unattended-ready.sh --runtime` now reads everything it needs over REST and
+>   confirms all seven gates bind on `run/web`, then refuses on its credential
+>   liveness probe, which still uses `gh auth status` — the one command that
+>   reports failure on this platform.
+> - Limits set by the owner: 30 pull requests, 12 wall-clock hours, 60
+>   iterations. None reached; the run stopped at preflight, not on a limit.
+> - Budget: no usage gauge is reachable in a web session, by design (ESC-50).
+>   The countable limits above stand in for the local lane's 20% weekly ceiling.
+> 
+> ## What v0.4.34 fixed
+> 
+> ESC-51 fixed the round-4 blocker's first half, and the fix is confirmed good.
+> The readiness check resolves the repository over REST and reads the live
+> ruleset: the pull-request rule and all seven required checks (`plan`,
+> `template-sync`, `secrets`, `test-the-tests`, `acceptance-criteria`, `review`,
+> `checks`) are reported binding on `run/web`. The scaffold rendered clean at
+> `_commit: v0.4.34`, `uv sync` passed, the commit's hooks passed.
+> 
+> ## What still stops the run
+> 
+> 1. **The credential probe.** `unattended-ready.sh:246` still branches on
+>    `gh auth status`, which fails on a platform whose proxy injects the
+>    credential — so the check refuses with "no GitHub identity works here …
+>    gh holds no login at all" while `gh api user` returns `GrimsVerk`. One
+>    line; `gh api user` is the fix.
+> 2. **No pull request can be opened.** The ESC-50 server-side opener is
+>    unreachable two ways: this credential has no `actions: write` (403 on a
+>    registered workflow), and `open-pr.yml` is dispatch-only so it never
+>    registers, because `main` carries no `.github/`. The forbidden fallback —
+>    opening the pull request under the owner's ambient login — was not used.
+> 
+> ## Anomalies worth the owner's attention
+> 
+> - **The ruleset does not hold against this session.** A direct push to the
+>   gated base branch succeeded with GitHub reporting "Bypassed rule
+>   violations". The web lane holds the owner's admin credential, so it is
+>   stronger than the test's design assumes, not weaker. Probe reverted
+>   immediately; the lane is at its clean scaffold commit.
+> - v0.4.34 tells the driver never to use `gh` porcelain, and two lines earlier
+>   prescribes `gh workflow run` for opening pull requests.
+> 
+> ## What remains
+> 
+> Everything. Zero iterations, zero pull requests, no oracle ruling, no plan, no
+> feature, no acceptance run. The detector is correct and ready —
+> `PHASE=ORACLE BASE=run/web REASON=evidence UNCITED=BL-3 BL-4 ESC-1`.
