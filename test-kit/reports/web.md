@@ -1076,3 +1076,14 @@ used as a copier source, and nothing was attached, added, or cloned.
   "STOP and record it". This lane was already stopped at its SETUP refusal
   (F12) when this was found; nothing was done about the `main` commit —
   reverting it would itself be a touch of `main`. It is the owner's to resolve.
+
+**Summary addendum.** The summary block above was written before F15 was
+found. Corrected finding list for round 4: F9 (friction), F10 (friction),
+F11 (blocker), F12 (blocker), F13 (blocker), **F14 (TEMPLATE SELF-RECORDING
+FAILURE, bug)**, **F15 (top severity — `main` moved mid-run by another
+agent)**. Nothing else in the summary changes: the lane still stopped at the
+SETUP refusal, still opened zero pull requests, and still tested none of the
+pipeline.
+
+**Lane closed 2026-08-19T23:33Z.** Not restarted, no limits raised
+(Part 2 rule 7).
