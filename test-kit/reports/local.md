@@ -148,3 +148,80 @@ in Part 3, in case the web lane answered interactively.
   role.
 - **Severity: blocker.** The lane cannot reach TESTPLAN Part 1 step 6 (push)
   without a ruling from the owner.
+
+---
+
+## CORRECTION to F1 and F2 — fixed upstream in template v0.4.32 (ESC-49)
+
+Ruled by the owner at 2026-08-19 21:2xZ, mid-setup. F1 and F2 were real and are
+now **fixed upstream**, so they stand as findings but no longer block this lane.
+
+- **Fix release:** grimsverk-template **v0.4.32**, published 2026-08-19T21:18:58Z,
+  logged upstream as **ESC-49**.
+- **The fix:** the `mirrors-mypy` hook is gone. mypy is now a `language: system`
+  local hook running `uv run mypy` — the exact command and environment
+  `ci.yml` uses. The rendered `.pre-commit-config.yaml` at v0.4.32 now reads:
+
+  ```yaml
+      - id: mypy
+        name: mypy (uv run — the same environment CI uses)
+        entry: uv run mypy
+        language: system
+  ```
+
+  and its header comment names the root cause in the same terms F1 found it:
+  "`import pytest` in the scaffold's own tests/conftest.py was enough, and a
+  freshly rendered project could not make its FIRST commit."
+- **Why not `additional_dependencies`:** the upstream comment rejects that fix
+  explicitly — it "would patch today's list and re-break on every typed
+  dependency the project ever adds — in a CODEOWNERS-owned file no pipeline
+  role may repair at 3am." That answers F2's second half directly.
+- **Owner's instruction:** do not uninstall the hook. Discard the v0.4.31
+  render and re-render from the latest tag. Done — see the setup log below.
+- **Verified on the re-render:** `pre-commit run --all-files` is green with the
+  hook installed, and the scaffold commit succeeded with all four hooks active.
+
+Both findings keep severity **blocker** for the release they were found in
+(v0.4.31). Neither cost this lane anything beyond the re-render.
+
+---
+
+## Setup log, second pass (TESTPLAN Part 1 from step 3, at v0.4.32)
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 21:25Z | Discard the v0.4.31 render | OK, with one snag (F3). `git clean -fdx` alone would have kept the entire render — it was staged in the index from the failed step-5 commit. `git reset` first, then `git clean -fdx`, left the tree byte-identical to `origin/main` (only `.git` and `test-kit/`). |
+| 21:26Z | 2. Confirm the template release | OK. Latest is now `v0.4.32`, published 2026-08-19T21:18:58Z. Above the v0.4.31 floor. |
+| 21:27Z | 3. copier render (same 5 answers) | OK. `_commit: v0.4.32`, `_src_path: https://github.com/GrimsVerk/grimsverk-template.git`. No overwrite prompts. |
+| 21:28Z | 4. Install canned inputs | OK. Same four files. |
+| 21:28Z | 5. `uv sync` + `pre-commit install` | OK. Python 3.14.7, `uv.lock` written, hook installed at `.git/hooks/pre-commit`. |
+| 21:29Z | 5. `git commit` (hooks ACTIVE) | **OK — F1 is gone.** ruff check / ruff format / mypy (uv run) / gitleaks all Passed. 72 paths committed. |
+| 21:29Z | 5. Identity check | OK. `git log -1 --format='%an <%ae>'` → `GrimsVerk <github@grimsverk.com>`. |
+| 21:30Z | 6. `git push -u origin run/local` | OK, first attempt, no rejection. The "required status checks have not succeeded" rejection the plan warns about did NOT occur — no stale ruleset survived the wipe (confirmed at 6a-1 below, which reports the ruleset as *created*, not updated). |
+| 21:30Z | 6a-1. `scripts/setup-github.sh --app` | OK. Merge settings asserted (auto-merge on, merge commits on, delete-on-merge on). Secrets left alone — `CLAUDE_CODE_OAUTH_TOKEN`, `APP_ID`, `APP_PRIVATE_KEY`, `AUTO_MERGE_TOKEN` all already set. Ruleset `grimsverk-gates` **created** with required checks: `checks secrets plan template-sync test-the-tests acceptance-criteria review`. Ran with stdin closed; it prompted for nothing. See F4 for its closing advice. |
+| 21:30Z | 6a-2. App identity file | OK. `cp .claude/app-identity.example .claude/app-identity`, filled `APP_ID=4635498` and `APP_PRIVATE_KEY=/home/loke/.config/grimsverk/find-best-mobo.pem`. Confirmed gitignored (`.gitignore:18`). `.claude/scripts/app-token.sh >/dev/null && echo "App identity OK"` → **App identity OK**. |
+| 21:31Z | 6a-3. Push the lane | OK. Setup transcript committed and pushed on `run/local` *before* gating, so the direct push was still allowed. |
+| 21:31Z | 6a-4. Wait for `run/web` | Started. `git ls-remote --heads origin 'run/*'` → `run/local` only. Polling every 3 min, bound 45 min (deadline 22:16Z). |
+
+---
+
+### F3 — TESTPLAN's discard instruction is incomplete: `git clean -fdx` does not remove a staged render
+- **Where:** owner's mid-run instruction to discard the v0.4.31 render ("from your lane branch run `git clean -fdx`").
+- **What happened:** the render was staged, because step 5's failed commit left it in the index (`git add -A` had succeeded; only the commit was refused). `git clean` by definition only removes UNTRACKED files, and a staged path is tracked. `git ls-files` listed all 72 rendered paths, so the clean would have removed almost nothing and the re-render would have landed on top of v0.4.31 leftovers.
+- **What was run instead:** `git reset` (mixed, unstaging everything) and then `git clean -fdx`, verified with `git status --short` and `git diff --stat origin/main` — both empty, so the tree matched `main` exactly before the second copier run.
+- **Expected:** a discard step that is safe after a failed commit. Any project whose first commit fails leaves exactly this state, so this is not specific to this test.
+- **Severity: friction.** Caught before it did harm, but silent if unnoticed — the re-render would have been a v0.4.31/v0.4.32 hybrid with no error anywhere.
+
+### F4 — `setup-github.sh` tells you to commit its transcript to `main`, which this test forbids and which its own ruleset then blocks
+- **Where:** TESTPLAN Part 1 step 6a-1, closing output of `scripts/setup-github.sh --app`.
+- **What happened:** the script writes `docs/runs/setup/setup-github-20260819T213013Z.log` into the working tree and ends with:
+
+  ```
+  setup-github: Commit it: directly on main before the gates exist, or on a docs/ branch
+  setup-github: after (docs/runs/ is exempt from the plan-check size cap at any size).
+  ```
+
+  Both routes are wrong here. `main` is untouchable for the whole test (TESTPLAN Part 1 principles, Part 2 rule 1), and the script has just created the `grimsverk-gates` ruleset targeting the default branch — so by the time you read the advice, "before the gates exist" has already expired, by this script's own action. The advice is stale at the moment it is printed.
+- **What was done:** committed on `run/local` directly, before gating that branch at 6a-4 — the only window in which a direct push to the lane base still succeeds.
+- **Expected:** advice that names a route still open after the script runs.
+- **Severity: docs.** An untracked file left in the working tree at the moment the delivery driver starts is not harmless, so this is worth fixing rather than ignoring.
