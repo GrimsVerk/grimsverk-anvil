@@ -549,3 +549,60 @@ not an allowed value:
   requests were never read or touched. No repository other than
   `grimsverk-anvil` was attached, added, cloned, fetched, or read (Part 2
   rule 12 held throughout).
+
+---
+
+# Round 4 — session 4 (2026-08-19T23:15Z)
+
+- Lane: **web**. Base branch for the run: `run/web`. Stated out loud before any
+  other action (Part 2 rule 1).
+- Credential model this round: **ESC-50** — no App key exists or can exist in a
+  web session. The session rides the owner's platform-injected credential for
+  reads, pushes and dispatches; every pipeline pull request is opened AS THE
+  APP server-side by the scaffold's `.github/workflows/open-pr.yml`.
+- Ledger continued on the same branch rather than re-cut from `main`, so
+  sessions 1-3 evidence survives; `origin/main` merged in first. Prior rounds'
+  entries above are untouched.
+
+## Setup log — TESTPLAN Part 1
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 2026-08-19T23:15:59Z | pre-flight — environment inventory | **OK.** `/tmp/anvil-env-setup.log` present and clean: `copier` 9.17.2 installed by `uv tool install`, `gh` 2.97.0 installed from `cli.github.com` with no 403, all PPA removals effective. `gh`, `copier`, `uv`, `git`, `python3` all on `PATH`. `pre-commit` absent from `PATH` at this point (expected — it arrives with `uv sync` in step 5). |
+| 2026-08-19T23:16:2xZ | pre-flight — credential check | **OK with friction.** `gh api user --jq .login` → `GrimsVerk`; `gh release view -R GrimsVerk/grimsverk-template` succeeds. But `gh auth status` reports `X Failed to log in to github.com using token (GH_TOKEN) — The token in GH_TOKEN is invalid.` See F9. |
+| 2026-08-19T23:16:2xZ | 2 — confirm template release ≥ v0.4.33 | **OK.** `gh release view -R GrimsVerk/grimsverk-template --json tagName --jq .tagName` → `v0.4.33`. Meets the ESC-50 floor exactly. |
+| 2026-08-19T23:17Z | ledger branch | **OK.** `chore/test-report-web` already existed on the remote from sessions 1-3 (the round wipe did not remove it). Continued from its tip with `origin/main` merged in, rather than force-cutting a fresh branch, to avoid destroying three sessions of recorded evidence. Never a pull request. |
+
+## Findings — round 4
+
+### F9 — `gh auth status` reports the injected credential as invalid, while every real API call succeeds
+- Where: TESTPLAN Part 1 pre-flight, web lane; the ESC-50 credential model.
+- What happened:
+
+  ```
+  $ gh auth status
+  github.com
+    X Failed to log in to github.com using token (GH_TOKEN)
+    - Active account: true
+    - The token in GH_TOKEN is invalid.
+
+  $ gh api user --jq .login
+  GrimsVerk
+
+  $ gh release view -R GrimsVerk/grimsverk-template --json tagName --jq .tagName
+  v0.4.33
+  ```
+
+- Expected: TESTPLAN Part 0 (ESC-50) says the platform proxy replaces the
+  Authorization header with the owner's injected credential, so `gh` "simply
+  works". It does work — but its own self-check contradicts that, because
+  `gh auth status` validates the literal `GH_TOKEN` value locally before the
+  proxy ever substitutes it.
+- Impact: an agent that pre-flights with `gh auth status` — the obvious check,
+  and the one the operator prompt implies with "if `gh` itself has no working
+  credential" — would read this as a hard blocker and stop a perfectly healthy
+  lane. Sessions 1-3 each died on credential questions, so this is exactly the
+  failure mode the lane is primed to over-read.
+- Severity: friction (documentation/diagnostic). The template's ESC-50 note
+  should say plainly: on the web lane `gh auth status` is expected to fail, and
+  the real liveness probe is `gh api user`.
