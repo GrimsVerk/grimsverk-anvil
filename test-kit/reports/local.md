@@ -225,3 +225,80 @@ Both findings keep severity **blocker** for the release they were found in
 - **What was done:** committed on `run/local` directly, before gating that branch at 6a-4 — the only window in which a direct push to the lane base still succeeds.
 - **Expected:** advice that names a route still open after the script runs.
 - **Severity: docs.** An untracked file left in the working tree at the moment the delivery driver starts is not harmless, so this is worth fixing rather than ignoring.
+
+---
+
+## Setup log, continued (6a-4 onward)
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 21:32Z–22:17Z | 6a-4. First poll for `run/web` | **Expired.** 16 polls at 3-minute intervals, `git ls-remote --heads origin 'run/*'` returned `run/local` only every time. Bound reached at 22:17:30Z. **Owner-side rig friction, NOT a template finding** — see R1 below. |
+| 22:17Z | 6a-4 timeout branch. Gate `run/local` alone | Ran, per the TESTPLAN's own timeout instruction ("gate `run/local` alone, record a finding, continue"). `ruleset 'grimsverk-gates': updated in place (id 21061515)`, gated branches: the default branch, plus `run/local`. The owner countermanded this a moment later, but the command had already completed. No harm: the ruleset is edited in place, so the two-lane call below simply widened it. `run/web` was never touched. |
+| 23:25Z | 6a-4. `run/web` confirmed present | `git ls-remote --heads origin 'run/*'` → `run/local` **and** `run/web` (`9a1cd14`). Second poll skipped on the owner's instruction, since the branch was already there. |
+| 23:26Z | 6a-4. Gate BOTH lanes in one call | OK. `scripts/setup-github.sh --app --gate-branch run/local --gate-branch run/web` → `ruleset 'grimsverk-gates': updated in place (id 21061515)`, `gated branches: the default branch, plus run/local run/web`. Required checks on all three: `checks secrets plan template-sync test-the-tests acceptance-criteria review`. |
+| 23:27Z | Commit + push the setup transcripts | Pushed, but **not cleanly** — the push bypassed the ruleset rather than satisfying it. See F5. |
+
+---
+
+### R1 — the first 6a-4 poll expired for an owner-side rig reason (recorded, not a finding)
+
+The 45-minute bound at 6a-4 expired because the web session had not started: a
+rig failure on the owner's side, which the owner diagnosed and fixed, and
+explicitly ruled **not** a template defect. Logged here because TESTPLAN Part 2
+rule 4 wants every wait recorded and because the two lanes' timelines are
+compared afterwards — the local lane sat idle from **22:17Z to 23:25Z**, about
+68 minutes, waiting for a lane partner that could not start. The template
+behaved correctly throughout: it refused the run for the one genuinely missing
+item and named the exact command that would fix it.
+
+The owner then instructed: skip the second poll (the branch was already there),
+gate both lanes in one call, and do not gate `run/local` alone. Recorded so the
+lane-vs-lane comparison is not read as the local lane deviating from Part 1.
+
+---
+
+### F5 — the gates ruleset ships with an always-on admin bypass, and `setup-github.sh` never says so
+- **Where:** TESTPLAN Part 1 step 6a, `scripts/setup-github.sh`; bears directly on Part 3's closing check 3 ("Check the ruleset held: … nothing pushed straight to `main`, `run/local`, or `run/web`").
+- **What happened:** a plain `git push` straight to the freshly gated `run/local` **succeeded**, and GitHub reported the violations it had waived rather than refusing:
+
+  ```
+  $ git push origin run/local
+  remote: Bypassed rule violations for refs/heads/run/local:
+  remote:
+  remote: - Changes must be made through a pull request.
+  remote:
+  remote: - 7 of 7 required status checks are expected.
+  remote:
+  To github.com-grimsverk:GrimsVerk/grimsverk-anvil.git
+     7cb807d..e52101d  run/local -> run/local
+  $ echo $?
+  0
+  ```
+
+  The ruleset the template's own script created grants it:
+
+  ```
+  $ gh api repos/GrimsVerk/grimsverk-anvil/rulesets/21061515 \
+      --jq '{bypass_actors, conditions: .conditions.ref_name, enforcement}'
+  {"bypass_actors":[{"actor_id":5,"actor_type":"RepositoryRole","bypass_mode":"always"}],
+   "conditions":{"exclude":[],"include":["~DEFAULT_BRANCH","refs/heads/run/local","refs/heads/run/web"]},
+   "enforcement":"active"}
+  ```
+
+  `RepositoryRole` 5 is the repository **admin** role, `bypass_mode: always`.
+- **Expected:** `setup-github.sh`'s header documents the ruleset it builds in
+  detail — "active on the default branch, deletions and force-pushes blocked,
+  pull request required with 0 approvals plus Code Owners review, and the
+  required status checks for this project's language" — and lists what stays
+  manual and why. It never mentions granting anyone a standing bypass. A reader
+  of that header would conclude the branch cannot be pushed to directly.
+- **Assessed honestly:** an admin bypass is plausibly deliberate (without one the
+  owner can lock themselves out of their own repository during setup), and it
+  does **not** weaken the unattended run — the driver acts as the GitHub App,
+  which holds Contents/Pull-requests write and no repository role, so it cannot
+  use this bypass and stays fully gated. The defect is that the bypass is
+  undocumented and silent-by-default, and that Part 3's closing check 3 is
+  written as though direct pushes were impossible when in fact they merely
+  print a line that scrolls past.
+- **Severity: bug.** Not blocking. The fix is one paragraph in the script header
+  plus, ideally, a line in `unattended-ready.sh` reporting who can bypass.
