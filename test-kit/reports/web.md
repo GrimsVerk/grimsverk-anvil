@@ -1452,3 +1452,61 @@ lane, and the forbidden owner-authored fallback was again not used.
 > Everything. Zero iterations, zero pull requests, no oracle ruling, no plan, no
 > feature, no acceptance run. The detector is correct and ready —
 > `PHASE=ORACLE BASE=run/web REASON=evidence UNCITED=BL-3 BL-4 ESC-1`.
+
+## Observation checklist — round 2.1 (Part 2 rule 9)
+
+| Checklist item | Round 2.1 observation |
+| --- | --- |
+| Head branch disappears after merge (ESC-21) | **Still unobserved.** Zero merged pull requests on this lane. |
+| `arm-auto-merge` present; merge completes with no human (ESC-36) | **Still unobserved.** `Auto-merge` is now a *registered* workflow (it was not in round 4), so it has run at least once — on the other lane's branches, not this one. |
+| Every pipeline PR authored by the App (ESC-26, ESC-35) | **Zero pull requests opened; the invariant held by refusal.** The forbidden owner-authored fallback was available (F16 shows this session can push through anything) and was not used. |
+| DURATION of every required check (ESC-45) | **Observed again, no skip-reporting-success.** Round-4 figures stand: `secrets` 7s, `checks` 12s, both real; `plan`, `test-the-tests`, `template-sync`, `acceptance-criteria` honestly reported `skipped`, never green. |
+| `docs/runs/<ts>/` has report, `reviews/` without `MISSING.md` (ESC-43), `workers/` (ESC-42); evidence PR merged (ESC-40) | **Report: yes.** **`reviews/`: populated — but with the OTHER LANE's review (F18), and it DOES contain a `MISSING.md` (F19).** **`workers/`: absent, correct** — zero workers spawned. **Evidence PR: could not be opened (F20).** ESC-40 unobserved after five sessions. |
+| Cross-lane auto-update of an open PR (`update-open-prs`, ESC-17) | **Not exercisable** — this lane never had an open pull request. |
+| **Does the ruleset hold?** (Part 3 closing check 3) | **NO — answered live and negatively for the first time. See F16.** |
+
+**Contamination probe (Part 2 rule 10): FAILED this round, and not by a
+worker.** No pipeline artifact quoted `test-kit/` — that part is clean, and
+zero workers ran. But the template's own evidence collector imported the other
+lane's data into this lane's run directory (F18), which is the same class of
+boundary failure the probe exists to catch, arriving from the machinery rather
+than from a roaming worker.
+
+---
+
+## Summary block — web lane, round 2.1 (Part 2 rule 6)
+
+- **Driver's exit reason:** SETUP refusal, one defect narrower than round 4.
+  `RUN_BASE=run/web .github/scripts/unattended-ready.sh --runtime` exits 1 with
+  `REFUSED — 1 missing item(s)`, the missing item being a credential probe that
+  is wrong about this platform (C3). `/deliver-loop` was not started: its
+  preflight step 2 ends a run on exactly this refusal.
+- **Phases reached:** none dispatched. The detector ran and was correct —
+  `PHASE=ORACLE BASE=run/web REASON=evidence UNCITED=BL-3 BL-4 ESC-1`. The base
+  branch was announced as `run/web` and never differed; no pull request
+  targeting another base was ever presented to this lane.
+- **Pull requests opened:** 0. **Merged:** 0.
+- **Oracle decisions (OD ids):** none. **Uncertainties (BL ids):** none. All
+  four seeded backlog items and all three design gaps remain untested here.
+- **Criteria status:** untouched; S1-S5 never ran.
+- **Limits:** 30 pull requests / 12 hours / 60 iterations. None reached — the
+  round lasted about 6 minutes. No usage gauge exists in a web session, as
+  designed (ESC-50), and the driver's own file says so; the countable limits
+  stood in for it. Nothing anomalous about cost, because nothing ran.
+- **Findings this round:** C1-C4 (corrections), **F16 (top severity — the
+  ruleset does not hold against this session)**, F17 (bug), **F18 (top
+  severity — cross-lane evidence contamination)**, F19 (friction, plus the
+  first live ESC-43 observation), **F20 (TEMPLATE SELF-RECORDING FAILURE,
+  bug)**.
+- **Net movement from round 4:** genuine progress on the diagnosis — ESC-51
+  fixed what F11/F12(a) named, and the readiness check now proves all seven
+  gates bind on `run/web`. But the lane stops in the same place for the same
+  class of reason, and two of the round's new findings (F16, F18) are more
+  serious than the one that was fixed.
+- **Still untested on the web lane after five sessions:** the pipeline itself.
+  Oracle, steward, planner, orchestrator, coder, blind test-writer, reviewer
+  and acceptance have never run here.
+
+**Lane closed 2026-08-19T23:47Z.** Not restarted, no limits raised
+(Part 2 rule 7). `main` was never touched by this session — which F16 shows
+was a matter of restraint, not permission.
