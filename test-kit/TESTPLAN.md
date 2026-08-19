@@ -53,7 +53,7 @@ coder, blind test-writer, reviewer, acceptance, and the driver itself.
 The per-base-branch pipeline isolation this layout depends on landed in the
 template as the fix for ESC-46 (`deliver-loop.sh --base`, lane branch
 suffixes, `setup-github.sh --gate-branch`); everything the lanes need is in
-release **v0.4.31**, and Part 1 step 2 refuses anything older.
+release **v0.4.34**, and Part 1 step 2 refuses anything older.
 
 ---
 
@@ -142,10 +142,11 @@ local lane only, **W:** the web lane only.
 
 ### 2. Confirm the template release
 
-The latest release of grimsverk-template must be **v0.4.33 or newer** (it
+The latest release of grimsverk-template must be **v0.4.34 or newer** (it
 carries the per-base lanes, the evidence recovery tools, the App-only
-credentials, the round-1 fixes, ESC-49's hook fix and ESC-50's server-side
-pull-request opener, which the web lane cannot run without). Both lanes:
+credentials, the round-1 fixes, ESC-49's hook fix, ESC-50's server-side
+pull-request opener and ESC-51's REST-only session reads — the web lane
+cannot run without the last two). Both lanes:
 `gh release view -R GrimsVerk/grimsverk-template --json tagName --jq
 .tagName`, or read the tag copier resolves in `.copier-answers.yml` after
 rendering — stop if it is older.

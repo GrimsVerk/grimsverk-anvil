@@ -38,7 +38,7 @@ Do this, in order:
 
        git switch run/local
        nohup .claude/scripts/deliver-loop.sh --base run/local \
-         --budget-points 8 --max-prs 30 --max-hours 12 \
+         --budget-points 20 --max-prs 30 --max-hours 12 \
          > /tmp/anvil-local-driver.log 2>&1 &
 
    The driver must announce `THIS RUN'S BASE BRANCH: run/local`. If it
