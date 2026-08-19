@@ -52,11 +52,21 @@ Do this, in order:
    mechanisms; never busy-loop. Do not kill the driver unless the log has been
    completely silent for more than 90 minutes — if you do, that is itself a
    finding.
-6. When the driver stops (any exit code), write the summary block into the
-   ledger (TESTPLAN rule 6), push `chore/test-report-local`, and report to the
-   owner: high level, per the glossary rules — what stopped the run, which
-   phases ran, how many pull requests merged, and your top findings. Do not
-   restart the run.
+6. When the driver stops (any exit code), secure the evidence before anything
+   else:
+   - Copy the raw driver log into the ledger branch:
+     `cp /tmp/anvil-local-driver.log test-kit/reports/local-driver.log`,
+     commit, push. The driver's own machinery lands a run report too, but the
+     raw log is the only record that survives if that machinery is what broke.
+   - Verify the driver landed `docs/runs/<timestamp>/` (report, `reviews/`,
+     `workers/`) and opened its evidence pull request, and that the pull
+     request can merge. If any of that failed, that is a top finding — and
+     paste the report's content into your ledger, because the ledger branch is
+     the one path no gate can block.
+   Then write the summary block into the ledger (TESTPLAN rule 6), push
+   `chore/test-report-local`, and report to the owner: high level, per the
+   glossary rules — what stopped the run, which phases ran, how many pull
+   requests merged, and your top findings. Do not restart the run.
 
 Remember throughout: you are testing the template, not the product. Every
 surprise, unclear message, wrong doc, or workaround is a finding for the

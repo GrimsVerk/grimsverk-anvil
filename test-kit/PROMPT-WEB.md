@@ -51,7 +51,13 @@ Do this, in order:
    be reclaimed between turns, so an unpushed ledger line is a lost ledger
    line.
 6. When the run stops (done, limit, pattern, refusal — any documented stop),
-   the driver machinery lands its own run evidence; you additionally write the
+   secure the evidence before anything else: land the run report and collected
+   evidence exactly as the /deliver-loop command file instructs (run report,
+   `reviews/`, `workers/`, on its own pull request) — even for a failed run,
+   especially for a failed run. Then verify the evidence pull request exists
+   and can merge; if it cannot, that is a top finding, and paste the report's
+   content into your ledger — the ledger branch is the one path no gate can
+   block and the one file guaranteed to survive this container. Then write the
    summary block into your ledger (TESTPLAN rule 6), push
    `chore/test-report-web`, and report to the owner: high level, per the
    glossary rules — what stopped the run, which phases ran, how many pull

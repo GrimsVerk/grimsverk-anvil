@@ -55,7 +55,11 @@ double-checks your generation will use it.
 ## Part 1 — Owner setup (do this once, on your machine)
 
 Everything here is copy-paste. Stop at any step that fails and fix it before
-going on.
+going on. **Setup friction is test data too:** if any step fails, surprises
+you, or needs a retry, jot one line (step number, what happened) into
+`test-kit/reports/owner-setup.md`, commit it on `main` before step 6 or on a
+`chore/test-report-setup` branch after, and push. The agents cannot see what
+happened before they existed; this file is the only record of it.
 
 ### 0. Confirm the template release and the default branch
 
