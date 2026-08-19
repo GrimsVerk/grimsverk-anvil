@@ -302,3 +302,48 @@ lane-vs-lane comparison is not read as the local lane deviating from Part 1.
   print a line that scrolls past.
 - **Severity: bug.** Not blocking. The fix is one paragraph in the script header
   plus, ideally, a line in `unattended-ready.sh` reporting who can bypass.
+
+---
+
+## Step 7 and driver start
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 23:27Z | 7. `RUN_BASE=run/local .github/scripts/unattended-ready.sh` | **GREEN.** `unattended-ready: this repository can run unattended.` (exit 0). All 24 items `ready`, including all 7 required checks binding on the base branch `run/local` specifically. One `note` (not a failure): the App must also be installed on the template repository or `template/` branches fail `template-sync` closed. |
+| 23:27Z | Read `AGENTS.md` and `GLOSSARY.md` | Done, both, in full (485 + 307 lines). |
+| 23:27Z | Start the driver | Launched: `nohup .claude/scripts/deliver-loop.sh --base run/local --budget-points 8 --max-prs 30 --max-hours 12 > /tmp/anvil-local-driver.log 2>&1 &` — pid 179897. Working tree clean at launch. |
+
+**Both mandatory start conditions verified.**
+
+1. Base branch announcement, verbatim:
+
+   ```
+   ════════════════════════════════════════════════════════════════════
+     THIS RUN'S BASE BRANCH: run/local
+     Every pull request this run opens will merge into 'run/local',
+     and this run waits only on pull requests targeting 'run/local'.
+     Non-default base: every branch this run pushes is suffixed '--run-local'.
+   ════════════════════════════════════════════════════════════════════
+   ```
+
+   Correct lane. Note the lane branch suffix `--run-local`, the ESC-46 isolation
+   fix, announced up front.
+
+2. Budget gauge — **a real reading, not a "no gauge reachable" refusal** (Part 2
+   rule 8, the primary limit of this lane):
+
+   ```
+   deliver-loop: budget: weekly at 61% (model 62%), allowance 8 points, window resets Aug
+   ```
+
+   So the weekly meter was already at 61% before this run started, against an
+   allowance of 8 points. Watching whether this line updates as the run
+   proceeds, and recording the exact stop message if the run ends on it.
+
+---
+
+## Phase transitions (Part 2 rule 5)
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 23:27:25Z | ORACLE | iteration 1. Worker `oracle-20260819232725`, engine `claude`, base `run/local`, 3600s timeout. Scope handed to it: **"work the logged evidence: BL-3 BL-4 ESC-1"** — the driver picked up three of the four seeded baits by id on the first pass. |
