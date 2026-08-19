@@ -1,0 +1,7 @@
+Preparing worktree (new branch 'worker/oracle-20260819232725')
+HEAD is now at e52101d Record the setup-github transcripts for the gating runs (run/local)
+=== spawn-worker[oracle-20260819232725] engine=claude branch=worker/oracle-20260819232725 base=run/local (e52101dd02fe6ec9d2363beb637661dfea6b6db2) bypass=0 ===
+=== 2026-08-19T23:27:25Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/loke/code/GrimsVerk/grimsverk-anvil"].hasTrustDialogAccepted: true in /home/loke/.claude.json.
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).

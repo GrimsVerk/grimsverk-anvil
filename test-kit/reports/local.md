@@ -347,3 +347,145 @@ lane-vs-lane comparison is not read as the local lane deviating from Part 1.
 | Time (UTC) | PHASE | Key fields |
 | --- | --- | --- |
 | 23:27:25Z | ORACLE | iteration 1. Worker `oracle-20260819232725`, engine `claude`, base `run/local`, 3600s timeout. Scope handed to it: **"work the logged evidence: BL-3 BL-4 ESC-1"** — the driver picked up three of the four seeded baits by id on the first pass. |
+
+---
+
+## Round 2.0 stopped by owner direction at 23:39Z — what it produced first
+
+The owner restarted the round at template v0.4.34 (ESC-51) while this driver was
+in its first phase. The driver was stopped with `SIGTERM`; the lane is rebuilt
+below. Round 2.0 ran **12 minutes**, reached one phase, and opened one pull
+request. Everything it produced is preserved:
+
+- raw driver log → `test-kit/reports/local-driver-round2.0.log`
+- oracle worker log → `test-kit/reports/round2.0-oracle-worker.log`
+- the oracle's ruling → `test-kit/reports/round2.0-oracle-ruling.md`
+
+### The template recorded its own stop, unaided — no failsafe was needed
+
+Recorded positively, because Part 2 rule 11 exists for the opposite case. On
+`SIGTERM` the driver's `EXIT` trap fired and did the whole job by itself:
+
+```
+deliver-loop: landing this run's evidence in docs/runs/20260819T232721Z ...
+deliver-loop: collect-evidence: 1 worker log(s) into docs/runs/20260819T232721Z/workers.
+deliver-loop: collect-evidence: no runs of review.yml to collect.
+```
+
+`--land-evidence` was **not** used. The raw-log copy above is the routine one
+rule 11 exempts, not a rescue: the template's own record survives independently
+on the evidence branch. **No `TEMPLATE SELF-RECORDING FAILURE` finding arises
+from this stop.**
+
+The evidence landed as a branch and a pull request, not in the working tree —
+worth noting, because `find docs/runs -type f` in the checkout shows only the
+setup logs and reads at first glance like the report was never written:
+
+```
+$ git ls-tree -r --name-only docs/run-20260819T232721Z--run-local -- docs/runs/
+docs/runs/20260819T232721Z/run.md
+docs/runs/20260819T232721Z/workers/oracle-20260819232725.log
+```
+
+`reviews/` is absent, and correctly so — the run stopped before any review ran,
+and `collect-evidence` said exactly that rather than writing an empty directory
+or a `MISSING.md`. That is the ESC-43 shape behaving.
+
+### Observation checklist — first positive readings (Part 2 rule 9)
+
+- **App authorship (ESC-26, ESC-35): CONFIRMED.** The evidence pull request was
+  opened by the App, not the owner:
+
+  ```
+  $ gh pr view 1 --json author --jq '{login:.author.login, is_bot:.author.is_bot}'
+  {"login":"app/autogrims","is_bot":true}
+  ```
+
+  PR #1, `docs/run-20260819T232721Z--run-local` → `run/local`, created
+  2026-08-19T23:39:40Z, four seconds after the stop. `mergeable: MERGEABLE`,
+  `mergeStateStatus: BLOCKED` — blocked on its required checks, which is the
+  gate working.
+- **Lane isolation (ESC-46): CONFIRMED.** Every branch this run pushed carries
+  the `--run-local` suffix, as the start banner promised. The web lane's own
+  evidence branch (`docs/run-20260819T231559Z--run-web`) sat on the same remote
+  throughout and neither run touched the other.
+- **Worker commit authorship:** the oracle's *git commit* is authored
+  `GrimsVerk <github@grimsverk.com>` — the owner. Not a defect: workers commit
+  locally under the machine's gitconfig, and it is the *pull request* author
+  that ESC-26/ESC-35 are about. Noted so the two are not confused later.
+- Branch deletion after merge, auto-merge arming, per-check durations,
+  cross-lane `update-open-prs`: **not yet observable** — nothing merged in
+  round 2.0. Carried forward to round 2.1.
+
+### Bait map — three of four baits fired correctly in 12 minutes (Part 3)
+
+The driver handed the oracle `work the logged evidence: BL-3 BL-4 ESC-1`, and
+the oracle committed 96 lines to `docs/DESIGN.oracle.md` in one commit:
+`Rule on ESC-1, BL-3, BL-4: precision decided, rich halted, currency rejected`.
+
+| Bait | Expected | Observed | Verdict |
+| --- | --- | --- | --- |
+| Precision gap + seeded ESC-1 | oracle rules citing ESC-1, names how it is measured | **OD-1**: evidence `ESC-1`, adds **R1000** ("at most 12 significant digits"), relies on V1 quoted whole, names V3 as the statement against and says why it does not forbid | **as designed** |
+| BL-3 `rich` vs tenet V5 | a HALT entry (never yet exercised) **or** explicit rejection quoting V5 | **OD-2 — HALTED**, tenet relied on V5 quoted verbatim, plus "what a decision would have said" and "what it needs from the owner" | **as designed — and this is the first live exercise of the HALT path** |
+| BL-4 currency | dismissed against the design's non-goals, not re-handed to the oracle each iteration | **OD-3**: rejected, cites §3 non-goals and R8, weighs and rejects three alternatives (stdlib `urllib` fetch, bundled static rates, halting), leaves the item in Proposed where only the owner moves it | **as designed** |
+
+The `docs/oracle/handoff-*.md` file the oracle command's step 4 requires was
+**not** written. **Not attributable** — the worker was still running when the
+owner-directed `SIGTERM` arrived, so it may simply never have reached step 4.
+Flagged for round 2.1, where the same step runs uninterrupted.
+
+---
+
+### F6 — the unattended worker silently loses its tool grant: the workspace is untrusted
+- **Where:** round 2.0, oracle worker log (`spawn-worker.sh`, engine `claude`).
+- **What happened:** first line of the worker's own log:
+
+  ```
+  Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted.
+  Run Claude Code interactively here once and accept the trust dialog, or set
+  projects["/home/loke/code/GrimsVerk/grimsverk-anvil"].hasTrustDialogAccepted: true in /home/loke/.claude.json.
+  ```
+
+- **Expected:** `.claude/settings.json` describes its allow list as "a scoped
+  allowlist for /orchestrate (headless workers + git worktree management)", and
+  `AGENTS.md` calls `.claude/` the delivery machinery that "holds the tool grant
+  every unattended session runs under". Two entries of that grant were dropped,
+  and nothing in the driver's preflight noticed: `unattended-ready.sh` checks 24
+  items and workspace trust is not among them. The run proceeds with a quieter
+  grant than the template believes it has.
+- **Severity: bug.** It did not block round 2.0 — the oracle still committed —
+  but it is exactly the "gate that quietly stopped working" shape, and it is
+  invisible unless you read a worker log.
+
+### F7 — the oracle is granted `Write(...)` permissions the engine does not honour
+- **Where:** round 2.0 oracle worker log; `.claude/scripts/spawn-worker.sh:212-223`.
+- **What happened:** the engine rejected two of the oracle's grants outright:
+
+  ```
+  Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file
+  permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead
+  (Edit rules cover all file-editing tools).
+  Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file
+  permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead.
+  ```
+
+  The allow list pairs some paths but not others:
+
+  ```
+  212:  "Write(docs/DESIGN.oracle.md)" "Edit(docs/DESIGN.oracle.md)"
+  213:  "Write(docs/oracle/**)"
+  218:  "Write(docs/plans/oracle/**)" "Edit(docs/plans/oracle/**)"
+  223:  "Write(docs/BACKLOG.md)" "Edit(docs/BACKLOG.md)"
+  ```
+
+  Line 213 is the odd one out: `docs/oracle/**` has a `Write(...)` rule and **no
+  `Edit(...)` partner**. Since only `Edit` rules bind, the oracle has *no*
+  effective grant for `docs/oracle/**` — which is where its handoff file must be
+  written (oracle command, step 4). The three other paths survive on their
+  `Edit` twin; the `Write` halves are dead weight everywhere.
+- **Expected:** the oracle can write its two sanctioned paths,
+  `docs/DESIGN.oracle.md` and `docs/oracle/handoff-<date>-<n>.md`.
+- **Severity: bug.** A plausible cause of the missing handoff noted above,
+  though the interrupted run means that is not proven. Round 2.1 should settle
+  it: if the handoff is missing again from an uninterrupted oracle phase, F7 is
+  the reason.
