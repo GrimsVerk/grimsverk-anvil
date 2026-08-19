@@ -236,3 +236,52 @@ decision not to decide, recorded.
 
 <!-- Append decisions below, newest at the bottom. Never edit one that has
 landed; supersede it with a new decision naming its id. -->
+
+## OD-1 — Converted values print with at most 12 significant digits (`.12g`)
+
+- **Date:** 2026-08-20
+- **Evidence:** ESC-1
+- **Requirements added:** R1000
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V1 — "Correct conversions come before everything else: a wrong number presented confidently is the worst output this tool can produce."
+- **Vision statements against:** V2 — "Clear, honest errors come before feature breadth: refusing loudly beats guessing silently." Rounding could be read as silently discarding information, but the seventeenth significant digit of `100.00000000000001` is not information about the conversion — it is information about IEEE-754 binary representation, and printing it is exactly the confidently wrong number V1 rejects. Nothing is guessed: the arithmetic is unchanged; only the rendering is bounded.
+- **Alternatives considered:** (1) Print the float unrounded — that is the defect ESC-1 records, not a resolution of it. (2) A fixed number of decimal places — scales badly across magnitudes: two decimals erases 1 mm expressed in km (`0.00`), while twelve decimals reintroduces the artifact on large values; significant digits scale with the value, decimal places do not. (3) Exact `decimal`-module arithmetic — heavier machinery than one formatting call, and factors like ft→m are not exact decimals anyway, so the artifact would move rather than disappear. (4) Fewer significant digits, e.g. six — throws away genuine precision a script consumer may need; twelve keeps every digit a physical measurement could plausibly carry while sitting well below the 15–17-digit region where binary representation noise lives.
+- **Rationale:** ESC-1 is §11's deliberately undecided precision question producing a wrong-looking number on the very first hand run: 0.1 km rendered as `100.00000000000001` metres. One standard-library formatting call resolves it: `format(value, ".12g")` suppresses representation noise (0.1 km → `100`), never pads with false zeros, and preserves twelve significant digits of genuine result. Confidence is high that `.12g` removes this class of artifact; the choice of twelve over ten or fourteen is judgment, recorded here so superseding it costs one entry if evidence arrives.
+
+**R1000** — Output precision: every converted value, in one-shot and batch mode
+alike, is rendered with Python's `.12g` format — at most 12 significant digits,
+trailing zeros stripped — so `0.1 km` in metres prints exactly `100` and never
+`100.00000000000001`. Error messages and usage text are unaffected.
+
+Measurement, per the vision's durable-evidence section ("A change nothing can
+observe is a change nobody can evaluate"): the plan that implements R1000 must
+(a) include the ESC-1 case in `acceptance/S1.sh`'s fixed conversion table —
+`0.1 km` to `m` expecting exactly `100` — and (b) carry unit tests asserting the
+`.12g` rule on at least one value that would otherwise show representation
+noise. `acceptance/S1.sh` does not exist yet; the milestone plan that creates it
+carries this case from the start. Once that script has merged and been observed
+red-then-green, ESC-1's stub in `docs/escapes.md` gets its completing correction
+row naming it.
+
+Downstream: no plans exist yet, so R1000 folds into the first milestone plan
+(`convert`, covering R1, R2, R4, R5) rather than needing a separate steward
+plan — it is one formatting call plus its tests.
+
+## OD-2 — Currency conversion is declined; the design's offline non-goal stands
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-4
+- **Requirements added:** (none)
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V3 — "Simplicity comes before completeness: a small tool that is obviously right beats a large one that must be trusted." — and the purpose statement: "grimsverk-anvil exists to prove, on a real overnight run, that the grimsverk-template pipeline works end to end — and, as a side effect, to leave behind a small unit-conversion CLI that answers instantly and offline."
+- **Vision statements against:** (none — no statement in docs/VISION.md tells against declining this; the nearest candidate, the purpose sentence's end-to-end ambition, does not require building every filed proposal — declining one through this ledger exercises the pipeline exactly as building one would — and V4, breadth of units being expendable, points the same way as this ruling.)
+- **Alternatives considered:** (1) Currency with pinned or cached rates, keeping the tool offline — still the thing §3 names a non-goal ("Currency, time zones, or any unit that needs live data"), and pinned rates make confidently wrong money numbers within days, the exact failure V1 ranks worst. (2) Live fetching via the standard library's `urllib` — adds no package, so core tenet V5 is technically untouched, but it breaks R8's "fully offline and deterministic", makes output depend on a network endpoint nobody here controls, and makes results non-reproducible, which no test in this suite could verify offline. (3) Decline and leave the design as it stands — chosen.
+- **Rationale:** BL-4 asks for the one feature the owner's own design lists as a non-goal, and the vision's purpose sentence ends "answers instantly and offline". "Feels half-finished" is completeness pressure, and V3 ranks simplicity above completeness explicitly. This decision changes no behaviour, so no new measurement is owed — there is nothing to observe that existing gates do not already cover. BL-4 stays in Proposed as text, resolved by this citation; if the owner wants currency, that is a change to `docs/DESIGN.md` §3, which is theirs to land.
+
+## OD-3 — HALTED: prettier output via the `rich` library (BL-3)
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-3
+- **Tenet relied on:** V5 — "No runtime dependency may be added: the Python standard library is the whole toolbox, and a diff that adds one violates this tenet."
+- **What a decision would have said:** Aligned, readable output built with the standard library alone — `str.format` field widths for alignment, colour omitted or emitted only on a tty. But BL-3 names `rich` specifically and explicitly rejects hand-rolled ANSI as wasted effort, so every available ruling either adds a runtime dependency, which the tenet forbids outright, or countermands the owner's explicit instruction in the evidence, which is not the oracle's call to make.
+- **What it needs from the owner:** The smallest change to `docs/VISION.md`: amend V5 with an explicit carve-out (for example, "display-only dependencies the owner names in docs/DECISIONS.md are exempt"). Alternatively, rule directly: either approve `rich` per the Dependencies rule in `AGENTS.md` (a `docs/DECISIONS.md` entry landed before the dependency merges), or refile the request without naming `rich`, at which point a standard-library formatting decision can be made on the ordinary path.
