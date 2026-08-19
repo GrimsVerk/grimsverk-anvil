@@ -489,3 +489,57 @@ Flagged for round 2.1, where the same step runs uninterrupted.
   though the interrupted run means that is not proven. Round 2.1 should settle
   it: if the handoff is missing again from an uninterrupted oracle phase, F7 is
   the reason.
+
+---
+
+# ROUND 2.1 — owner-directed restart at template v0.4.34
+
+Owner's instruction, 2026-08-19 ~23:40Z: template **v0.4.34** is out with
+**ESC-51** (all session-side GitHub reads are REST now — the web platform
+refuses GraphQL). Both lanes re-render on it for a clean comparison. **All
+earlier F-rows stand**; nothing below retracts them.
+
+Note that `main` also moved (`353fa2f` → `3fb55db`, 5 commits) — the test kit
+itself was revised for this round. Checked before rebuilding on it: the local
+lane's Part 1 steps 5, 6, 6a and 7 are **unchanged**. The only local-lane delta
+is in `test-kit/PROMPT-LOCAL.md` — `--budget-points 8` → `--budget-points 20`,
+matching the owner's ruling. Everything else in that diff is web-lane (ESC-50's
+server-side pull-request opener, the removed App-token bootstrap, rule 12's
+rewrite) or Part 0 rig.
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 23:39Z | Stop round 2.0 | `SIGTERM` to pid 179897. Evidence landed by the template's own `EXIT` trap — see the round 2.0 section above. |
+| 23:41Z | Clear round 2.0 leftovers | Necessary implication of the restart, not in the owner's list: PR #1 (evidence, round 2.0) was still **open against `run/local`**, and AGENTS.md allows only one pipeline pull request in flight per base branch — the new driver would have waited on a pull request whose base tree was about to be rewritten. Closed with a comment saying why; deleted `docs/run-20260819T232721Z--run-local` locally and on the remote, removed the oracle worktree, deleted `worker/oracle-20260819232725`. Its contents are preserved in this ledger. |
+| 23:43Z | 1. Reset ruleset to main-only | OK. `scripts/setup-github.sh --app` → `updated in place (id 21061515)`; `.conditions.ref_name.include` now `["~DEFAULT_BRANCH"]`. Both lane branches ungated so they can be rewritten. |
+| 23:43Z | 2. Rebuild the lane | `git fetch origin main && git checkout -B run/local origin/main`, then `git reset` + `git clean -fdx` (the F3 correction again — a bare `git clean` would have kept anything staged). Tree back to `main` exactly. **`.claude/app-identity` is gitignored and was destroyed by the clean**, as the owner warned; recreated from the example with App ID `4635498` and key `/home/loke/.config/grimsverk/find-best-mobo.pem`, re-proved: `App identity OK`. |
+| 23:44Z | 2. Re-render at v0.4.34 | OK. `_commit: v0.4.34`, `_src_path` canonical https. New file present that v0.4.32 did not have: `.github/workflows/open-pr.yml` (ESC-50's server-side pull-request opener). |
+| 23:44Z | 2. Canned inputs, toolchain, commit | OK. All four pre-commit hooks **Passed** (F1 stays fixed). 73 files, 13 161 insertions. Identity `GrimsVerk <github@grimsverk.com>`. |
+| 23:44Z | 2. `git push -f origin run/local` | OK, clean force-update `e52101d...b5db1b5`. **No `Bypassed rule violations` line this time** — the branch was genuinely ungated, so nothing had to be waived. That is the F5 contrast: when the gate does not apply, the push is silent; when it does apply and is waived, GitHub says so. |
+| 23:45Z | 3. Wait for the web lane at v0.4.34 | **No wait needed.** `git show origin/run/web:.copier-answers.yml` already read `_commit: v0.4.34` on the first check — the web lane re-rendered first. Bounded 45-min poll not required. |
+| 23:45Z | 3. Gate BOTH lanes | OK. `.conditions.ref_name.include` → `["~DEFAULT_BRANCH","refs/heads/run/local","refs/heads/run/web"]`. Setup transcripts committed and pushed before the driver started, so the tree was clean at launch. |
+| 23:45Z | 4. Full readiness check | **GREEN.** `unattended-ready: this repository can run unattended.` (exit 0). |
+| 23:45Z | 4. Start the driver | pid 188057, `--budget-points 20 --max-prs 30 --max-hours 12`, logging to `/tmp/anvil-local-driver.log`. Round 2.0's log preserved as `test-kit/reports/local-driver-round2.0.log`. |
+
+**Both mandatory start conditions verified again.**
+
+```
+  THIS RUN'S BASE BRANCH: run/local
+deliver-loop: budget: weekly at 62% (model 64%), allowance 20 points, window resets Aug
+deliver-loop: iteration 1: phase ORACLE
+deliver-loop: dispatch oracle worker (oracle-20260819234457)
+```
+
+A real gauge reading, not a refusal. The weekly meter moved 61% → **62%**
+(model 62% → 64%) across round 2.0's 12 minutes, so the probe is live rather
+than reporting a constant. Allowance is now the owner's 20 points.
+
+**Watch item for this round:** the owner's limits reset in under 10 hours while
+the driver may run 12, so the budget probe's rollover handling is expected to be
+exercised. Recording what it does at the reset.
+
+## Phase transitions — round 2.1 (Part 2 rule 5)
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 23:44:57Z | ORACLE | iteration 1. Worker `oracle-20260819234457`, base `run/local`. |
