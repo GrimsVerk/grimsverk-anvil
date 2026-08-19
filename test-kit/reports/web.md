@@ -692,3 +692,58 @@ not an allowed value:
 - Severity: **blocker** for the lane as specified. Recorded here before any
   attempt to proceed; the machinery was not modified and will not be
   (Part 2 rule 3).
+
+### F12 — BLOCKER: `unattended-ready.sh --runtime` cannot pass in a web session, for two independent reasons, and neither message names the real cause
+- Where: TESTPLAN Part 1 step 7W, and `/deliver-loop` preflight step 2 (whose
+  rule is "a refusal ends the run, report it verbatim").
+- What happened: the script never reaches its gating question. Two separate
+  probes both misread this environment:
+
+  **(a) line 82 — repository resolution, GraphQL.**
+
+  ```
+  REPO="$("$GH" repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null)"
+  [[ -n "$REPO" ]] || { echo "unattended-ready: cannot resolve this repository — run: gh auth login" >&2; exit 2; }
+  ```
+
+  `gh repo view --json` is GraphQL-backed and the proxy 403s it (F11), so
+  `REPO` is empty and the script exits 2 advising `gh auth login` — advice that
+  cannot help, because the login is fine and there is nothing to log into.
+  Every other repository read in the same script already uses REST
+  (`gh api "repos/$REPO"`, `.../rulesets`, `.../rules/branches/$RUN_BASE`) and
+  those all work here. It is the one GraphQL call in the file, and it is the
+  first one.
+
+  **(b) line 243 — the ESC-50 platform detector, `gh auth status`.**
+
+  ```
+  if   "$READY_APP_TOKEN_CMD" >/dev/null 2>&1; then  ok "App identity mints a token"
+  elif "$GH" auth status       >/dev/null 2>&1; then  note "App mint impossible here ... ESC-50 ..."
+  else refuse "no GitHub identity works here: the App cannot mint and gh holds no login at all"
+  fi
+  ```
+
+  The comment above it states the platform's signature exactly right — "a gh
+  login that works anyway (the proxy injects it)" — and then tests it with the
+  one command that reports failure on such a platform (F9). Here the mint is
+  impossible AND `gh auth status` exits non-zero, so even with (a) fixed the
+  script would take the `else` branch and **refuse a healthy lane**, claiming
+  "gh holds no login at all" while `gh api user` returns `GrimsVerk` and
+  `gh api repos/...` returns the repository.
+- Expected: on a hosted platform carrying `.github/workflows/open-pr.yml`
+  (this scaffold does), the script should emit its ESC-50 `note` and continue
+  to the gating check. That is what the code was written to do; two wrong
+  probes stop it.
+- Impact: **the web lane cannot pass preflight at all**, independently of
+  whether the local agent gates `run/web`. ESC-50's own fix — opening pull
+  requests server-side — is sound and untouched; what fails is the readiness
+  check that guards the door in front of it. The failure is silent about its
+  real nature: a lane operator reading either message would go hunting for a
+  credential problem that does not exist, which is exactly how sessions 1-3 of
+  this test were spent.
+- Suggested upstream fix (for the template, NOT applied here — Part 2 rule 3):
+  resolve the repository over REST (`gh api repos/{owner}/{repo}` derived from
+  the git remote, or `$GITHUB_REPOSITORY`), and probe liveness with
+  `gh api user` rather than `gh auth status`. Both are one-line changes in the
+  template repository, and both belong there, not here.
+- Severity: **blocker**.
