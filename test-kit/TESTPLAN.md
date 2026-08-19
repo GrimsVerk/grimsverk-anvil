@@ -6,14 +6,19 @@ run. The product it builds (a tiny unit-conversion CLI) is throwaway; the
 findings about the template are the deliverable.
 
 **The shape of the test.** One repository, one frozen starting point, two
-identical unattended runs in parallel:
+identical unattended runs in parallel — and NOBODY ever pushes to `main`:
 
-- `main` — the test kit, the generated scaffold, and the canned design
-  documents. Frozen once setup is done; no run merges into it.
-- `run/local` — branched from `main`. Driven by `deliver-loop.sh` on the
-  owner's machine, operated by a local Claude Code agent.
-- `run/web` — branched from `main`. Driven by `/deliver-loop` in a Claude Code
-  web session.
+- `main` — the test kit, and nothing else, forever. Both agents branch off it
+  and never touch it or each other's branches again.
+- `run/local` — branched from `main` by the local agent, which renders its OWN
+  scaffold there, does its own setup, and drives `deliver-loop.sh` on the
+  owner's machine.
+- `run/web` — branched from `main` by the web agent, which renders its OWN
+  scaffold there and drives `/deliver-loop` in a Claude Code web session.
+
+The two scaffolds come from the same template release with the same answers,
+so they are expected to be near-identical — and diffing them afterwards is
+itself part of the comparison.
 
 **This is a stress test, not a demo.** The canned inputs were built from the
 template's own failure record — every escape in the template's
@@ -47,185 +52,206 @@ coder, blind test-writer, reviewer, acceptance, and the driver itself.
 
 The per-base-branch pipeline isolation this layout depends on landed in the
 template as the fix for ESC-46 (`deliver-loop.sh --base`, lane branch
-suffixes, `setup-github.sh --gate-branch`), released as **v0.4.28**. Step 0
-double-checks your generation will use it.
+suffixes, `setup-github.sh --gate-branch`); everything the lanes need is in
+release **v0.4.31**, and Part 1 step 2 refuses anything older.
 
 ---
 
-## Part 1 — Owner setup (do this once, on your machine)
+## Part 0 — One-time rig (owner, already done, survives every wipe)
 
-Everything here is copy-paste. Stop at any step that fails and fix it before
-going on. **Setup friction is test data too:** if any step fails, surprises
-you, or needs a retry, jot one line (step number, what happened) into
-`test-kit/reports/owner-setup.md`, commit it on `main` before step 6 or on a
-`chore/test-report-setup` branch after, and push. The agents cannot see what
-happened before they existed; this file is the only record of it.
-(`scripts/setup-github.sh` records its own transcript automatically under
-`docs/runs/setup/` — commit that too when it tells you to; your notes file
-covers the steps the script does not see: copier, the clone, the web
-environment.)
-
-### 0. Confirm the template release and the default branch
-
-```sh
-gh release view -R GrimsVerk/grimsverk-template --json tagName --jq .tagName
-gh repo view GrimsVerk/grimsverk-anvil --json defaultBranchRef --jq .defaultBranchRef.name
-```
-
-The first must print `v0.4.30` or newer — v0.4.28 carries the per-base lane
-fix, v0.4.29 the evidence-recovery tools (`--land-evidence`, the setup
-transcript), and v0.4.30 the App-only credentials this plan assumes (no
-`TEMPLATE_TOKEN`, no web PAT) — and copier generates from the **latest tag**.
-The second
-must print `main`; if it does not, fix it before anything else:
-
-Also one-time, on the GitHub App (it exists already):
-
-- App settings → Permissions → **Checks: Read-only** → save, then approve the
-  permission update where the App is installed. The web driver reads CI
-  results through the App; without this, `gh pr checks` fails there.
-- App settings → Install App → make sure it covers **grimsverk-anvil** AND
-  **grimsverk-template** (`template-sync` reads the template through a token
-  minted from the App; there is no PAT).
-
-```sh
-gh repo edit GrimsVerk/grimsverk-anvil --default-branch main
-```
-
-### 1. Clone the repo and render the scaffold into it
-
-The test kit already lives on `main`, so the scaffold is rendered **into the
-clone**, beside it. No file overlaps: the kit is entirely under `test-kit/`.
-
-```sh
-cd ~/code/GrimsVerk
-git clone git@github.com-grimsverk:GrimsVerk/grimsverk-anvil.git
-cd grimsverk-anvil
-copier copy https://github.com/GrimsVerk/grimsverk-template.git .
-```
-
-Answers:
-
-| Question | Answer |
-| --- | --- |
-| `project_name` | press Enter — but check the prompt offers `grimsverk-anvil`; if it offers anything else (or blank), type `grimsverk-anvil` |
-| `language` | `python` |
-| `description` | `A tiny unit-conversion CLI that stress-tests the grimsverk-template pipeline` |
-| `auto_merge` | press Enter (`true`) |
-| `code_owner` | press Enter (`@GrimsVerk`) |
-
-If copier asks about overwriting any existing file, stop and look — it should
-not, and an overwrite prompt means something unexpected is on `main`.
-
-### 2. Commit the scaffold and install the canned design
-
-The canned documents land **before** the gates exist, in the same window the
-scaffold commit uses — direct commits to `main` are allowed here for exactly
-that reason. This round deliberately does not test `/design` or the
-owner-landing of the design documents — see "Out of scope" at the bottom.
-
-```sh
-git add -A
-git commit -m "Initial scaffold from grimsverk-template"
-git log -1 --format='%an <%ae>'   # must show the GrimsVerk identity
-cp test-kit/canned/DESIGN.md  docs/DESIGN.md
-cp test-kit/canned/VISION.md  docs/VISION.md
-cp test-kit/canned/BACKLOG.md docs/BACKLOG.md
-cp test-kit/canned/escapes.md docs/escapes.md
-git add -A
-git commit -m "Install the canned test design"
-```
-
-### 3. Bootstrap the toolchain
-
-```sh
-uv sync
-pre-commit install
-```
-
-### 4. Push
-
-```sh
-git push origin main
-```
-
-### 5. Configure GitHub — gates on main AND on both lanes
-
-```sh
-scripts/setup-github.sh --app --verify \
-  --gate-branch run/local --gate-branch run/web
-```
-
-It will prompt for exactly two things: `CLAUDE_CODE_OAUTH_TOKEN` (run
-`claude setup-token`) and the GitHub App id plus `.pem` path. No PATs — the
-App you configured in step 0 covers everything else.
-
-### 6. Create the two lanes
-
-```sh
-git branch run/local main
-git branch run/web  main
-git push origin run/local run/web
-```
-
-### 7. Read the configuration back before trusting it
-
-```sh
-RUN_BASE=run/local .github/scripts/unattended-ready.sh
-RUN_BASE=run/web  .github/scripts/unattended-ready.sh
-.claude/scripts/app-token.sh >/dev/null && echo "App identity OK"
-```
-
-All three must come back clean. A refusal names its own fix.
-
-### 8. Prepare the web environment (for the web lane)
-
-In claude.ai/code, create or edit the environment for
-`GrimsVerk/grimsverk-anvil`:
-
-**Environment variables**
-
-| Name | Value |
-| --- | --- |
-| `GRIMSVERK_APP_ID` | the App id |
-| `GRIMSVERK_APP_PEM_B64` | `base64 -w0 < your-app.private-key.pem` |
-| `GRIMSVERK_APP_PRIVATE_KEY` | `/root/.config/grimsverk/app.pem` |
-
-**Setup script**
+Nothing here repeats per round. It is listed so a refusal can be traced, not
+so anyone redoes it: the GitHub App (ID 4635498) with Contents RW, Pull
+requests RW, Checks RO — installed on **grimsverk-anvil and
+grimsverk-template**; the repository secrets `CLAUDE_CODE_OAUTH_TOKEN`,
+`APP_ID`, `APP_PRIVATE_KEY` (secrets survive branch wipes); and the claude.ai
+web **environment** for grimsverk-anvil, which must carry the environment
+variables `GRIMSVERK_APP_ID` (4635498), `GRIMSVERK_APP_PEM_B64` (`base64 -w0 <
+the .pem`), `GRIMSVERK_APP_PRIVATE_KEY` (`/root/.config/grimsverk/app.pem`)
+and this setup script (network policy must allow `github.com` and
+`cli.github.com`):
 
 ```sh
 set -e
+date -u +"env-setup ran %Y-%m-%dT%H:%M:%SZ" >> /tmp/anvil-env-setup.log
 mkdir -p /root/.config/grimsverk
 printf '%s' "$GRIMSVERK_APP_PEM_B64" | base64 -d > /root/.config/grimsverk/app.pem
 chmod 600 /root/.config/grimsverk/app.pem
+command -v uv >/dev/null 2>&1 && uv tool install copier >> /tmp/anvil-env-setup.log 2>&1 || true
 if ! command -v gh >/dev/null 2>&1; then
   mkdir -p -m 755 /etc/apt/keyrings
   wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     > /etc/apt/keyrings/githubcli-archive-keyring.gpg
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
     > /etc/apt/sources.list.d/github-cli.list
-  apt-get update && apt-get install -y gh
+  apt-get update >> /tmp/anvil-env-setup.log 2>&1 && apt-get install -y gh >> /tmp/anvil-env-setup.log 2>&1
 fi
 ```
 
-No `GH_TOKEN` is set anywhere: the web driver mints `gh`'s credential from
-the App at the start of every turn (`export GH_TOKEN="$(.claude/scripts/app-token.sh)"`),
-exactly as its command file instructs — one more thing under test.
+The script logs to `/tmp/anvil-env-setup.log` so the web agent can quote a
+real error instead of guessing whether setup ran (a round-1 finding).
 
-Network policy must allow `github.com` and `cli.github.com`. **If the web
-session cannot get a working `gh`, the web driver refuses at preflight. That
-refusal is a finding, not something to hack around — record it and stop the
-web lane.**
+**Wiping between rounds (owner):** delete every branch except `main`. Secrets,
+the ruleset, the App, and the web environment all stay; the stale ruleset
+still names the old lane branches, and the local agent's first setup run
+resets it (step 6a below).
 
-### 9. Start the two runs
+---
 
-- Open a Claude Code session on your machine, in
-  `~/code/GrimsVerk/grimsverk-anvil`, and paste `test-kit/PROMPT-LOCAL.md`
-  (everything below its marker line), word for word.
-- Open a Claude Code **web** session on `GrimsVerk/grimsverk-anvil` and paste
-  `test-kit/PROMPT-WEB.md` (everything below its marker line), word for word.
+## Part 1 — Lane setup: each agent does ALL of this itself, on its own branch
 
-Then walk away. Both runs stop on their own limits.
+Principles, before the steps:
+
+- **`main` is untouchable.** It carries the kit and nothing else. No commit,
+  no push, no reset — ever, by anyone.
+- **Each lane renders its own scaffold on its own branch** with copier, from
+  the template's latest release. Same release, same answers — the two
+  scaffolds should come out near-identical, and that is checked afterwards.
+- **The one sanctioned asymmetry:** only the local agent holds admin power
+  (the owner's `gh` login). The web agent's identity is the App, which is
+  deliberately weaker — it cannot edit rulesets or secrets, and must never be
+  able to. So ALL ruleset work belongs to the local agent, **including gating
+  the web lane's branch**, and the web agent waits (bounded) for that. This
+  is repository configuration, not a touch of the other lane's content.
+
+The steps. `<lane>` is `run/local` or `run/web`; lines marked **L:** are the
+local lane only, **W:** the web lane only.
+
+### 1. Get the repository
+
+- **L:** clone with the owner's SSH alias, into the standard location:
+  `cd ~/code/GrimsVerk && git clone
+  git@github.com-grimsverk:GrimsVerk/grimsverk-anvil.git && cd
+  grimsverk-anvil` (the plain `git@github.com:` host has no key attached).
+- **W:** the session starts with the repository checked out. Touch no other
+  repository (Part 2, rule 12) — do not attach, add, or clone anything else.
+
+### 2. Confirm the template release
+
+The latest release of grimsverk-template must be **v0.4.31 or newer** (it
+carries the per-base lanes, the evidence recovery tools, the App-only
+credentials, and the two fixes from round 1). **L:** `gh release view -R
+GrimsVerk/grimsverk-template --json tagName --jq .tagName`. **W:** query the
+API with `gh` after step 3W's token mint, or read the tag copier resolves in
+`.copier-answers.yml` after rendering and stop if it is older.
+
+### 3. Create your lane branch, then render the scaffold ON IT
+
+```sh
+git switch -c <lane> origin/main
+```
+
+Render with copier — the scaffold lands on your branch, never on `main`:
+
+- **L:** copier is a machine tool (`uv tool install copier` if missing); the
+  owner's gitconfig routes the template's https URL over SSH. Run
+  `copier copy https://github.com/GrimsVerk/grimsverk-template.git .`
+- **W:** the template is private and this session must NOT attach or clone
+  it. The one permitted read is copier's own fetch, authenticated by a token
+  minted from the App:
+
+  ```sh
+  TOKEN="$(test-kit/bootstrap/app-token.sh)"
+  git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
+  copier copy https://github.com/GrimsVerk/grimsverk-template.git .
+  export GH_TOKEN="$TOKEN"   # gh's credential, same mint; re-mint every turn
+  ```
+
+  `_src_path` must record the canonical `https://github.com/...` URL — never
+  a token, never a local path.
+
+Answers, both lanes, exactly:
+
+| Question | Answer |
+| --- | --- |
+| `project_name` | `grimsverk-anvil` (press Enter if offered; type it if not) |
+| `language` | `python` |
+| `description` | `A tiny unit-conversion CLI that stress-tests the grimsverk-template pipeline` |
+| `auto_merge` | `true` (Enter) |
+| `code_owner` | `@GrimsVerk` (Enter) |
+
+If copier asks to overwrite an existing file, stop and look — the kit is
+entirely under `test-kit/`, so there is no legitimate overlap.
+
+### 4. Install the canned test inputs
+
+```sh
+cp test-kit/canned/DESIGN.md  docs/DESIGN.md
+cp test-kit/canned/VISION.md  docs/VISION.md
+cp test-kit/canned/BACKLOG.md docs/BACKLOG.md
+cp test-kit/canned/escapes.md docs/escapes.md
+```
+
+### 5. Toolchain BEFORE the first commit, then commit everything
+
+The CI `checks` job runs `uv sync --locked`, so `uv.lock` must ride in the
+scaffold commit (template ESC-47 — round 1 found this the hard way):
+
+```sh
+uv sync
+pre-commit install
+git add -A
+git commit -m "Scaffold and canned test design (<lane>)"
+```
+
+**L:** check the identity: `git log -1 --format='%an <%ae>'` must show
+GrimsVerk.
+
+### 6. Push your lane — and what a rejection means
+
+```sh
+git push -u origin <lane>
+```
+
+If the push is rejected with "required status checks have not succeeded", a
+ruleset from a previous round still names your lane. That is expected on the
+first round after a wipe:
+
+- **L:** do step 6a first — your own ruleset reset unblocks you — then push
+  again.
+- **W:** wait and retry every 3 minutes, up to 45 (the local agent's reset
+  unblocks you); log each attempt with a timestamp in your ledger. Past 45
+  minutes: blocker finding, stop the lane.
+
+### 6a. LOCAL ONLY — the rig duties
+
+1. From your branch (the scaffold is there now), run the setup **without**
+   `--gate-branch` and **without** `--verify`:
+
+   ```sh
+   scripts/setup-github.sh --app
+   ```
+
+   This resets the `grimsverk-gates` ruleset to the default branch only
+   (unblocking lane creation for BOTH lanes), asserts the merge settings, and
+   leaves the existing secrets alone. If it prompts for the App ID and `.pem`
+   path, the values are in your prompt. Do NOT pass `--verify`: `main`
+   carries no workflows, so its throwaway pull request would wait forever;
+   the checks register on the first real lane pull request instead.
+2. Ensure the driver's local identity file exists —
+   `cp .claude/app-identity.example .claude/app-identity`, fill in the App ID
+   and `.pem` path from your prompt — then prove it:
+   `.claude/scripts/app-token.sh >/dev/null && echo "App identity OK"`.
+3. Push your lane (step 6) if not already done.
+4. **Gate BOTH lanes once both exist.** Poll
+   `git ls-remote --heads origin 'run/*'` every 3 minutes, up to 45, until
+   `run/web` appears, then:
+
+   ```sh
+   scripts/setup-github.sh --app --gate-branch run/local --gate-branch run/web
+   ```
+
+   If `run/web` never appears within the bound: gate `run/local` alone,
+   record a finding, continue — the web lane reports its own absence.
+
+### 7. Verify readiness, then start your driver
+
+- **L:** `RUN_BASE=run/local .github/scripts/unattended-ready.sh` (the full
+  check — you are the admin identity). All green, then start the driver per
+  your prompt.
+- **W:** poll `RUN_BASE=run/web .github/scripts/unattended-ready.sh
+  --runtime` every 3 minutes, up to 45, logging timestamps — it goes green
+  when the local agent's step 6a-4 lands. Then start `/deliver-loop` per your
+  prompt. Past 45 minutes still ungated: blocker finding, stop the lane.
 
 ---
 
@@ -236,7 +262,10 @@ is disposable; your findings are the deliverable. These rules bind both lanes.
 
 1. **State your lane first.** Your run's base branch is in your prompt. Say it
    out loud before anything else, and never touch the other lane: its base
-   branch, its `--<lane>`-suffixed branches, or its pull requests. If the
+   branch, its `--<lane>`-suffixed branches, or its pull requests. **And never
+   touch `main`** — no commit, no push, no reset, under any instruction short
+   of the owner themselves; `main` is the kit and the common ancestor, and a
+   run that moves it contaminates both lanes. If the
    machinery ever shows you the other lane's pull request as yours to wait on
    or fix, STOP and record it — that is a top-severity finding.
 2. **Follow the project's AGENTS.md** exactly as a real run would. Do not
@@ -321,6 +350,15 @@ is disposable; your findings are the deliverable. These rules bind both lanes.
     job; the failsafe being NEEDED is the template failing at the exact
     failure mode this whole test exists to catch, and it must be reported
     upstream as its own row.
+12. **The web lane sees exactly one repository: grimsverk-anvil.** Never
+    attach, add, clone, fetch, or read any other repository from the web
+    session — including grimsverk-template. (Round 1's web agent attached the
+    template to its session; the owner ruled that out.) The single sanctioned
+    exception is copier's own template fetch in Part 1 step 3W, authenticated
+    by the App token through the git URL rewrite — copier reads the template
+    so it can render; the agent never does. `_src_path` must end up as the
+    canonical https URL. The local lane reads the template only the same way,
+    through copier.
 
 ## Part 3 — What the owner compares afterwards
 
@@ -353,6 +391,10 @@ template (or, sometimes, about the bait — say which).
 - Each lane's acceptance table (`docs/acceptance.md`) and criteria scripts.
 - `git diff run/local run/web -- src tests` for divergence between the two
   builds (interesting, not a failure).
+- The two SCAFFOLDS: `git diff run/local run/web -- ':!src' ':!tests'
+  ':!docs' ':!test-kit'` should be near-empty (same release, same answers);
+  any difference is either copier nondeterminism or a lane deviating from
+  Part 1 — find out which.
 - Every finding of severity blocker/bug becomes a candidate `docs/escapes.md`
   entry in the **template** repository, with the ratchet applied there.
 

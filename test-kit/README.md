@@ -7,29 +7,31 @@ run the template's unattended pipeline twice — once locally, once from a
 Claude Code web session — on two isolated lanes in this one repository, and
 compare.
 
-The kit lives in `test-kit/` on `main`. During setup the template scaffold is
-rendered into the same clone, beside it; `main` is then frozen as the common
-starting point, and the two lanes (`run/local`, `run/web`) branch from it.
+**`main` carries this kit and nothing else, forever.** The owner pastes two
+prompts and leaves. Each agent branches off `main` to its own lane
+(`run/local`, `run/web`), renders its OWN scaffold there with copier, does its
+own setup, runs its own driver, and never touches `main` or the other lane.
+Between rounds the owner deletes every branch except `main`.
 
 Start here, in this order:
 
-1. `test-kit/TESTPLAN.md` — the whole protocol: owner setup (Part 1), rules
-   for the testing agents (Part 2), what to compare (Part 3).
-2. `test-kit/PROMPT-LOCAL.md` — paste into a local Claude Code session to
-   start the local lane.
-3. `test-kit/PROMPT-WEB.md` — paste into a Claude Code web session to start
-   the web lane.
-4. `test-kit/canned/` — the fixed inputs both lanes build from (DESIGN,
-   VISION, BACKLOG, and a seeded escapes ledger); setup copies them into
-   `docs/`. They were built from the template's own failure record as a
-   **stress test**: deliberate design gaps, backlog items the pipeline must
-   rule on / halt on / dismiss, a slug-collision trap, and criteria that
-   should fail honestly at least once. The full bait map, with what each
-   planted input is expected to trigger, is in TESTPLAN Part 3. Do not "fix"
-   any of it.
+1. `test-kit/TESTPLAN.md` — the whole protocol: the one-time rig (Part 0,
+   already done), lane setup each agent performs itself (Part 1), rules for
+   the testing agents (Part 2), what the owner compares (Part 3).
+2. `test-kit/PROMPT-LOCAL.md` — paste into a local Claude Code session.
+3. `test-kit/PROMPT-WEB.md` — paste into a Claude Code web session on this
+   repository.
+4. `test-kit/canned/` — the fixed inputs both lanes copy into `docs/`
+   (DESIGN, VISION, BACKLOG, a seeded escapes ledger). Built from the
+   template's own failure record as a **stress test**: deliberate design
+   gaps, backlog items the pipeline must rule on / halt on / dismiss, a
+   slug-collision trap, and criteria that should fail honestly at least once.
+   The bait map is in TESTPLAN Part 3. Do not "fix" any of it.
+5. `test-kit/bootstrap/` — the web lane's App-token minter for the moments
+   before its scaffold exists (a verbatim snapshot of the template's own
+   script).
 
-The prerequisites this kit depends on are met: the per-base-branch pipeline
-fix (v0.4.28), the evidence-recovery tools (v0.4.29), and the App-only
-credential model — no PATs anywhere, two secrets total — (v0.4.30). Setup
-step 0 double-checks that the latest release is at least v0.4.30 before
-anything is generated.
+Prerequisite releases, all met and pinned by Part 1 step 2: per-base lanes
+(v0.4.28), evidence recovery (v0.4.29), App-only credentials — two secrets
+total, zero PATs (v0.4.30), and the round-1 blocker fixes — born-red
+`uv.lock` flow, wrong-ref CODEOWNERS probe (**v0.4.31**).
