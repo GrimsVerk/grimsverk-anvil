@@ -1087,3 +1087,118 @@ pipeline.
 
 **Lane closed 2026-08-19T23:33Z.** Not restarted, no limits raised
 (Part 2 rule 7).
+
+---
+
+# Round 2.1 — owner-directed restart at template v0.4.34 (2026-08-19T23:39Z)
+
+- Lane: **web**. Base branch: `run/web`, unchanged.
+- Owner's instruction: rebuild the lane on v0.4.34, which carries **ESC-51** —
+  all session-side GitHub reads are REST, because the web platform refuses
+  GraphQL. Limits for this run: 30 pull requests, 12 wall-clock hours,
+  60 iterations. The earlier F-rows stand; corrections are recorded below as
+  their own rows rather than by editing history.
+- `main` moved twice since round 4 opened: `f0af827` (the revert recorded in
+  F15) and `3fb55db` "Round 2.1: minimum release v0.4.34 (ESC-51 REST reads),
+  local budget 20 points" — the second is owner-directed and therefore
+  permitted by Part 2 rule 1. F15 stands as written: the 23:17:48Z revert was
+  an agent push to `main` during a run, and it was not this session.
+
+## Setup log — round 2.1
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 2026-08-19T23:39:20Z | template release check | **OK.** `v0.4.34` live. |
+| 2026-08-19T23:39:2xZ | rebuild lane — `git checkout -B run/web origin/main` | **OK**, from `3fb55db`. Stale empty directories from the previous render removed first so copier had a clean tree. |
+| 2026-08-19T23:39:57Z | 3W — re-render with copier | **OK**, exit 0, 4 seconds. `_commit: v0.4.34`, `_src_path: https://github.com/GrimsVerk/grimsverk-template.git`. No overwrite prompts. |
+| 2026-08-19T23:40:03Z | 4, 5 — canned inputs, `uv sync` | **OK.** `uv.lock` present in the scaffold commit. |
+| 2026-08-19T23:40:1xZ | 5 — `uv run pre-commit install` | **Worked, but F10 is NOT fixed — see correction row C1.** |
+| 2026-08-19T23:40:23Z | 5 — scaffold commit | **OK**, 73 files. Hooks ran and passed. |
+| 2026-08-19T23:40:44Z | 6 — `git push -f origin run/web` | **Succeeded on the first attempt — and should not have. See F16.** |
+| 2026-08-19T23:42:30Z | 7W — readiness check, lane already gated | **REFUSED, exit 1, one missing item.** Half the round-4 blocker is fixed and half is not. See C2 and C3. |
+
+## Correction rows — round 4 findings re-tested at v0.4.34
+
+### C1 — F10 stands: `pre-commit` is still not a scaffold dependency
+The owner's restart note suggested `uv run pre-commit install` "per your F10",
+and it did succeed here — but not because v0.4.34 fixed anything:
+
+```
+$ ls .venv/bin/pre-commit          →  No such file or directory
+$ grep -c 'name = "pre-commit"' uv.lock   →  0
+```
+
+It is absent from the project environment and from the lock file. It ran only
+because THIS container already had `pre-commit` from the round-4 workaround
+(`uv tool install pre-commit`), and `uv run` fell back to it on `PATH`. On a
+fresh container the round-4 failure returns exactly as recorded. This session
+is a clean natural experiment for it: the identical command failed at
+23:18:05Z before the tool install and succeeded at 23:40:1xZ after it, with no
+template change in between touching it. **F10: still open.**
+
+### C2 — F11 and F12(a) CONFIRMED and FIXED in v0.4.34
+The readiness check now resolves the repository over REST and reads the gates.
+Round 4's `cannot resolve this repository — run: gh auth login` is gone, and
+in its place:
+
+```
+unattended-ready: GrimsVerk/grimsverk-anvil
+  ready    base branch 'run/web': pull-request rule binds
+  ready    base branch 'run/web': required check 'plan' binds
+  ready    base branch 'run/web': required check 'template-sync' binds
+  ready    base branch 'run/web': required check 'secrets' binds
+  ready    base branch 'run/web': required check 'test-the-tests' binds
+  ready    base branch 'run/web': required check 'acceptance-criteria' binds
+  ready    base branch 'run/web': required check 'review' binds
+  ready    base branch 'run/web': required check 'checks' binds
+```
+
+All seven required checks and the pull-request rule are read correctly on
+`run/web`. The diagnosis and the fix are both confirmed good. ESC-51's written
+guidance is also exactly right, and worth quoting because it is the part a
+future agent most needs: "A GraphQL refusal blames the credential in its error
+text; do not believe it — the credential is fine, the query shape is the
+problem." That single sentence would have saved three earlier sessions.
+
+### C3 — F12(b) is NOT fixed, and it is now the only thing stopping this lane
+The second defect F12 named — the ESC-50 platform detector probing with
+`gh auth status`, the one command that reports failure on this platform — is
+untouched at `.github/scripts/unattended-ready.sh:246`:
+
+```
+  elif "$GH" auth status >/dev/null 2>&1; then
+```
+
+so the check falls through to its `else` and refuses:
+
+```
+  MISSING  no GitHub identity works here: the App cannot mint
+           (.claude/scripts/app-token.sh failed) and gh holds no login at all —
+           fix the App id and key this environment carries, or run where the
+           platform injects a credential
+
+unattended-ready: REFUSED — 1 missing item(s) above.
+EXIT=1
+```
+
+Every claim in that message is false here: the credential works, and the
+platform IS one that injects a credential. ESC-51 converted the *reads* to
+REST and left this *liveness probe* on `gh auth status`. The fix is the same
+one line F12 proposed: probe with `gh api user`. **F12(b): still open,
+blocker.**
+
+### C4 — F13 is NOT fixed; both causes verified again at v0.4.34
+1. **No `actions: write`.** Probed against a workflow that IS registered, so
+   registration cannot be confounding it:
+   `gh api -X POST repos/.../actions/workflows/337807157/dispatches -f ref=run/web`
+   → `{"message":"Resource not accessible by integration","status":"403"}`.
+2. **`open-pr.yml` still unregistered**, and the mechanism is now visible.
+   Three workflows are registered today — `Auto-merge`, `CI`, `Review` — up
+   from one in round 4, because each of those has run from a lane branch.
+   `open-pr.yml` has only a `workflow_dispatch` trigger, so it never runs, so
+   it never registers, and `main` still carries no `.github/` at all
+   (`contents/.github?ref=main` → 404). A dispatch-only workflow that never
+   reaches the default branch is permanently invisible to the dispatch API.
+
+**F13: still open, blocker.** No pipeline pull request can be opened from this
+lane, and the forbidden owner-authored fallback was again not used.
