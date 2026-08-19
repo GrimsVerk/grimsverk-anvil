@@ -30,19 +30,28 @@ Do this, in order:
 
        git switch run/local
        nohup .claude/scripts/deliver-loop.sh --base run/local \
-         --budget-points 10 --max-prs 15 --max-hours 8 \
+         --budget-points 8 --max-prs 30 --max-hours 12 \
          > /tmp/anvil-local-driver.log 2>&1 &
 
    The driver must announce `THIS RUN'S BASE BRANCH: run/local`. If it
    announces anything else, kill it immediately and record a blocker finding.
    If it refuses to start (readiness, identity, budget), record the refusal
    verbatim as a finding and stop — do not force it.
+
+   **The weekly rate-limit budget is the primary limit of this lane and is
+   itself under test** (TESTPLAN Part 2, rule 8). The start banner must show a
+   real gauge reading ("budget: weekly at N%…"). If it reports no reachable
+   gauge, that is a blocker finding: record it and stop — do not let the run
+   proceed on the PR/hour backstops alone.
 5. Monitor without interfering: every 10–15 minutes read the tail of
    `/tmp/anvil-local-driver.log` and `.claude/deliver-loop/run.md`, and note
-   every new PHASE line in your ledger (TESTPLAN rule 5). Use your
-   environment's background-wait mechanisms; never busy-loop. Do not kill the
-   driver unless the log has been completely silent for more than 90 minutes —
-   if you do, that is itself a finding.
+   every new PHASE line in your ledger (TESTPLAN rule 5) plus every item the
+   observation checklist demands (TESTPLAN rules 9 and 10: branch deletion
+   after each merge, auto-merge arming, App authorship, per-check durations,
+   budget lines, cross-lane updates). Use your environment's background-wait
+   mechanisms; never busy-loop. Do not kill the driver unless the log has been
+   completely silent for more than 90 minutes — if you do, that is itself a
+   finding.
 6. When the driver stops (any exit code), write the summary block into the
    ledger (TESTPLAN rule 6), push `chore/test-report-local`, and report to the
    owner: high level, per the glossary rules — what stopped the run, which

@@ -30,8 +30,11 @@ Do this, in order:
    preflight results.
 4. Switch the checkout to `run/web`. Then run the project's `/deliver-loop`
    command with the scope argument `base: run/web`. When it asks for limits,
-   these are the owner's numbers, given here in advance: maximum 15 pull
-   requests, maximum 8 wall-clock hours, maximum 40 iterations.
+   these are the owner's numbers, given here in advance: maximum 30 pull
+   requests, maximum 12 wall-clock hours, maximum 60 iterations. The command
+   file is expected to say that no usage gauge is reachable in a web session
+   and to ask for countable limits — record it as a finding if it behaves any
+   other way (TESTPLAN Part 2, rule 8).
    The run must establish and announce `run/web` as its base branch on the
    first turn. If it ever reports a base other than `run/web`, or the detector
    hands you a pull request targeting a different base, stop the run and
@@ -41,9 +44,12 @@ Do this, in order:
    the turn — never poll or sleep inside a turn), pull requests opened as the
    GitHub App with explicit `--base run/web`, and pushed branches carrying the
    `--run-web` suffix. Every deviation you are forced into is a finding.
-   Update the ledger with every PHASE transition (TESTPLAN rule 5), committing
-   and pushing as you go — this container can be reclaimed between turns, so
-   an unpushed ledger line is a lost ledger line.
+   Update the ledger with every PHASE transition (TESTPLAN rule 5) and every
+   observation-checklist item (TESTPLAN rules 9 and 10: branch deletion after
+   each merge, auto-merge arming, App authorship, per-check durations,
+   cross-lane updates), committing and pushing as you go — this container can
+   be reclaimed between turns, so an unpushed ledger line is a lost ledger
+   line.
 6. When the run stops (done, limit, pattern, refusal — any documented stop),
    the driver machinery lands its own run evidence; you additionally write the
    summary block into your ledger (TESTPLAN rule 6), push

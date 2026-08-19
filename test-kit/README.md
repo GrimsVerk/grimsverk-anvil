@@ -19,10 +19,14 @@ Start here, in this order:
    start the local lane.
 3. `test-kit/PROMPT-WEB.md` — paste into a Claude Code web session to start
    the web lane.
-4. `test-kit/canned/` — the fixed design documents (DESIGN, VISION, BACKLOG)
-   both lanes build from; setup copies them into `docs/`. The design contains
-   two deliberate gaps and two seeded backlog items — that is the oracle bait;
-   do not "fix" it.
+4. `test-kit/canned/` — the fixed inputs both lanes build from (DESIGN,
+   VISION, BACKLOG, and a seeded escapes ledger); setup copies them into
+   `docs/`. They were built from the template's own failure record as a
+   **stress test**: deliberate design gaps, backlog items the pipeline must
+   rule on / halt on / dismiss, a slug-collision trap, and criteria that
+   should fail honestly at least once. The full bait map, with what each
+   planted input is expected to trigger, is in TESTPLAN Part 3. Do not "fix"
+   any of it.
 
 The prerequisite this kit depends on is met: the template's per-base-branch
 pipeline fix (ESC-46, "Scope the one-PR rule per base branch") is merged and

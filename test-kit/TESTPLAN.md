@@ -15,12 +15,35 @@ identical unattended runs in parallel:
 - `run/web` — branched from `main`. Driven by `/deliver-loop` in a Claude Code
   web session.
 
-Both lanes build the same canned design (`docs/DESIGN.md`), which contains two
-deliberate gaps (output precision; CLI syntax) and two pre-seeded backlog items
-(BL-1, BL-2). That is the oracle bait: each run's planner must file
-uncertainties, the oracle must rule, and stewards must plan from the rulings —
-so every role runs: oracle, steward, planner, orchestrator, coder, blind
-test-writer, reviewer, acceptance, and the driver itself.
+**This is a stress test, not a demo.** The canned inputs were built from the
+template's own failure record — every escape in the template's
+`docs/escapes.md`, the find_best_mobo postmortem
+(`docs/projects/find_best_mobo/`), and the unverified-live list in
+`docs/synthesis.md`. The design deliberately leaves questions open, the seeded
+backlog contains items the pipeline must rule on, reject, and halt on, and the
+milestone names are chosen so that careless plan slugs collide. The runs are
+expected to hit friction; friction observed and recorded is the test working.
+
+Both lanes build the same canned design (`docs/DESIGN.md`). The baits (all of
+them mapped to expected machinery in Part 3):
+
+- Three design gaps — output precision, CLI syntax, batch line format — so each
+  lane's planner must file HIGH uncertainties instead of self-ruling (the
+  find_best_mobo failure TB-3/ESC-41).
+- A seeded escape (ESC-1, a floating-point artifact) and four seeded backlog
+  items: BL-1 (aliases — should become an oracle requirement and a steward
+  plan), BL-2 (absolute zero — same), BL-3 (demands the `rich` dependency,
+  which vision tenet V5 forbids — the oracle's HALT path, never yet exercised),
+  BL-4 (currency with live rates — contradicts the design's non-goals; should
+  be dismissed, exercising the dismissal memory).
+- Milestones named `convert` and `convert-batch` — one slug is a substring of
+  the other, the exact collision class `plan-resolve.sh` hard-errors on.
+- Strict numeric criteria (S1, S2, S5) meeting the undecided precision rule —
+  a likely honest acceptance failure, which must route through a BL filing to
+  the oracle, never be quietly passed.
+
+So every role runs, in both lanes: oracle, steward, planner, orchestrator,
+coder, blind test-writer, reviewer, acceptance, and the driver itself.
 
 The per-base-branch pipeline isolation this layout depends on landed in the
 template as the fix for ESC-46 (`deliver-loop.sh --base`, lane branch
@@ -88,6 +111,7 @@ git log -1 --format='%an <%ae>'   # must show the GrimsVerk identity
 cp test-kit/canned/DESIGN.md  docs/DESIGN.md
 cp test-kit/canned/VISION.md  docs/VISION.md
 cp test-kit/canned/BACKLOG.md docs/BACKLOG.md
+cp test-kit/canned/escapes.md docs/escapes.md
 git add -A
 git commit -m "Install the canned test design"
 ```
@@ -230,8 +254,63 @@ is disposable; your findings are the deliverable. These rules bind both lanes.
    the owner in plain, high-level language (GLOSSARY.md rules apply).
 7. **Do not restart a stopped run** and do not raise your own limits. One run
    per lane, then report.
+8. **Rate-limit metering is itself under test (local lane).** The weekly-budget
+   ceiling (`--budget-points`, read through `budget-probe.sh`) is the limit the
+   owner will actually rely on, and it shipped broken once without anyone
+   noticing (template ESC-32). So on the local lane: the driver's start banner
+   must show a real gauge reading ("budget: weekly at N% …"); if it says no
+   gauge is reachable, that is a **blocker finding** — do not fall back to
+   PR/hour limits silently. During the run, confirm the budget line updates
+   and, if the run stops on the allowance, record the exact stop message. The
+   web lane has no gauge by design; note that the driver says so and asks for
+   countable limits instead — anything else there is a finding.
+9. **The observation checklist.** These are the template's "built but never
+   observed live" claims (its synthesis file lists them). Recording each one,
+   positively, is a core deliverable of your run — "did not check" is not an
+   allowed value:
+   - After every merged pull request: did its head branch disappear, when, and
+     by which path (immediately, or the nightly sweep)? No branch has ever
+     been observed to vanish; four wrong theories are on record (ESC-21).
+   - Does `arm-auto-merge` appear in every PR's check list, and does the merge
+     actually complete without a human (ESC-36)?
+   - Is every pipeline pull request authored by the GitHub App (`…[bot]`), and
+     never by the owner (ESC-26, ESC-35)?
+   - For every required check on every PR: its DURATION. A check that should
+     take a minute finishing in ~1 second is a skip reporting success
+     (ESC-45) — record it as a finding even though it is green.
+   - After the run stops: does `docs/runs/<timestamp>/` contain the run
+     report, `reviews/` payloads with no `MISSING.md` (ESC-43), and `workers/`
+     logs (ESC-42)? Did the run-evidence pull request itself merge (ESC-40)?
+   - When the OTHER lane merges a pull request while yours is open: was your
+     PR auto-updated by the App with its checks re-running (the
+     `update-open-prs` job, ESC-17 — never observed live)?
+10. **Contamination is a probe.** Pipeline workers derive from the design
+    layer; nothing in `test-kit/` is theirs to read. If any pipeline artifact
+    (a plan, a ruling, a commit message) quotes or references `test-kit/`,
+    record it as a finding — it means a worker roamed outside its inputs.
 
 ## Part 3 — What the owner compares afterwards
+
+### The bait map — what each planted input should have produced
+
+Check each row in BOTH lanes. A bait that produced nothing, or produced
+something different from the expected mechanism, is a finding about the
+template (or, sometimes, about the bait — say which).
+
+| Bait | Expected mechanism | Where to look |
+| --- | --- | --- |
+| Precision gap (§11) + seeded ESC-1 | planner files a HIGH `BL-<n>` and stops; oracle rules, citing ESC-1; ruling names how it will be measured | `docs/BACKLOG.md` uncertainties, `docs/DESIGN.oracle.md`, the plans |
+| CLI-syntax gap (§11) | second HIGH uncertainty, same route — external interface, so never self-ruled | same |
+| Batch line format gap (§11) | uncertainty filed no later than the `convert-batch` milestone plan | same |
+| BL-1 aliases | oracle decision adds an R1000+ requirement; a steward plans it; it gets built | `docs/DESIGN.oracle.md`, `docs/plans/oracle/`, merged `feat/` PRs |
+| BL-2 absolute zero | same route as BL-1 | same |
+| BL-3 `rich` dependency | vision tenet V5 forbids it: expect a HALT entry (the never-exercised path), or an explicit rejection quoting V5 verbatim — record which | `docs/DESIGN.oracle.md` |
+| BL-4 currency | contradicts the design's non-goals: dismissed in the handoff's do-not-act list, and NOT re-handed to the oracle every iteration | `docs/oracle/handoff-*.md`, the run report's phase lines |
+| `convert` / `convert-batch` slugs | if a plan slug lands as a substring of another, `plan-resolve.sh` hard-errors and a fix session must rename — record whether the planner avoided the trap or the gate caught it | the `plan` check output, plan front matter |
+| Strict S1/S2/S5 vs undecided precision | if an acceptance script fails honestly: recorded as fail AND filed as a `BL-<n>`, routed to the oracle — never quietly passed, possibly waived with a reason | `docs/acceptance.md`, `acceptance/`, `docs/BACKLOG.md` |
+| S4 (owner) criterion | the run ends pending-on-owner for S4 and says exactly what you should run — never reports itself fully done | the final report, `docs/acceptance.md` |
+
+### The comparison
 
 - The two ledgers: `test-kit/reports/local.md` vs `web.md` — same phases, same
   order, similar counts?
@@ -244,10 +323,34 @@ is disposable; your findings are the deliverable. These rules bind both lanes.
 - Every finding of severity blocker/bug becomes a candidate `docs/escapes.md`
   entry in the **template** repository, with the ratchet applied there.
 
-## Out of scope this round
+### Your own closing actions (each is itself a live test)
+
+1. **Approve and merge each lane's acceptance pull request.** It must be
+   authored by the App — which is the only reason you CAN approve it (GitHub
+   refuses an author's own approval; ESC-35 predicted this works and nothing
+   has ever observed it).
+2. **Run S4** (the owner criterion) on your machine, offline, per lane, and
+   record the verdict in each lane's `docs/acceptance.md`.
+3. Check the ruleset held: no pipeline PR merged red, and nothing pushed
+   straight to `main`, `run/local`, or `run/web`.
+
+## Coverage, honestly
+
+**Explicitly IN scope** — the template's five "unverified-live" items
+(synthesis §1.1) all get their first live observation here: a branch vanishing
+after auto-merge, REST-created rulesets gating before checks first report, the
+budget probe against a real subscription, the driver's real session command
+lines, and `/deliver-loop` web mode watched end to end.
+
+**Out of scope this round** — say so in any report rather than implying it was
+covered:
 
 - The `/design` interview and the owner-authored landing gate for
   `docs/DESIGN.md` / `docs/VISION.md` (the canned docs land before the gates
   exist, deliberately, so the two lanes start byte-identical).
-- `swift-ios`, the codex engine, `copier update` / `template-sync` on a real
-  update, and glossary maintenance flows.
+- `copier update` / `template-sync` on a real update — including the conflict
+  path (template ESC-14), which needs a template release to land mid-project.
+  Candidate for a follow-up round on whichever lane survives better.
+- `swift-ios`, the codex engine, and glossary maintenance flows.
+- Attended orchestration (`/orchestrate` driven by a human session): both lanes
+  run the unattended path only.

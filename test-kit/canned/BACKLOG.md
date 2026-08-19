@@ -74,6 +74,12 @@ _append-only, so a landed item never changes position.)_
   happens when someone converts -500 C. A physically impossible input that
   converts "correctly" is a confidently wrong answer. Something should decide
   whether that is an error or a warning — filed by: owner
+- **BL-3** — Prettier output: results should print as aligned, colored tables,
+  using the `rich` library specifically — it is the standard answer for this
+  and hand-rolling ANSI codes is wasted effort — filed by: owner
+- **BL-4** — Currency conversion: add EUR/USD/SEK with live exchange rates
+  fetched at run time; a converter that cannot do money feels half-finished —
+  filed by: owner
 
 ## Uncertainties awaiting oracle ruling
 
