@@ -65,17 +65,21 @@ requests RW, Checks RO — installed on **grimsverk-anvil and
 grimsverk-template**; the repository secrets `CLAUDE_CODE_OAUTH_TOKEN`,
 `APP_ID`, `APP_PRIVATE_KEY` (secrets survive branch wipes); and the claude.ai
 web **environment** for grimsverk-anvil, which must carry the environment
-variables `GRIMSVERK_APP_ID` (4635498), `GRIMSVERK_APP_PEM_B64` (`base64 -w0 <
-the .pem`), `GRIMSVERK_APP_PRIVATE_KEY` (`/root/.config/grimsverk/app.pem`)
-and this setup script (network policy must allow `github.com` and
-`cli.github.com`):
+variables `GRIMSVERK_APP_ID` (4635498) and `GRIMSVERK_APP_PRIVATE_KEY`
+(`/root/.config/grimsverk/app.pem`) and this setup script (network policy
+must allow `github.com` and `cli.github.com`):
 
 ```sh
 set -e
 date -u +"env-setup ran %Y-%m-%dT%H:%M:%SZ" >> /tmp/anvil-env-setup.log
 mkdir -p /root/.config/grimsverk
-printf '%s' "$GRIMSVERK_APP_PEM_B64" | base64 -d > /root/.config/grimsverk/app.pem
-chmod 600 /root/.config/grimsverk/app.pem
+if [ -n "$GRIMSVERK_APP_PEM_B64" ]; then
+  printf '%s' "$GRIMSVERK_APP_PEM_B64" | base64 -d > /root/.config/grimsverk/app.pem
+  chmod 600 /root/.config/grimsverk/app.pem
+  echo "pem written from GRIMSVERK_APP_PEM_B64" >> /tmp/anvil-env-setup.log
+else
+  echo "GRIMSVERK_APP_PEM_B64 unset; the owner pastes the pem in-session" >> /tmp/anvil-env-setup.log
+fi
 command -v uv >/dev/null 2>&1 && uv tool install copier >> /tmp/anvil-env-setup.log 2>&1 || true
 if ! command -v gh >/dev/null 2>&1; then
   mkdir -p -m 755 /etc/apt/keyrings
@@ -83,9 +87,21 @@ if ! command -v gh >/dev/null 2>&1; then
     > /etc/apt/keyrings/githubcli-archive-keyring.gpg
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
     > /etc/apt/sources.list.d/github-cli.list
-  apt-get update >> /tmp/anvil-env-setup.log 2>&1 && apt-get install -y gh >> /tmp/anvil-env-setup.log 2>&1
+  rm -f /etc/apt/sources.list.d/*deadsnakes* /etc/apt/sources.list.d/*ondrej* 2>/dev/null || true
+  apt-get update >> /tmp/anvil-env-setup.log 2>&1 || true
+  apt-get install -y gh >> /tmp/anvil-env-setup.log 2>&1
 fi
 ```
+
+**The key itself travels by paste, not by variable.** The settings dialog's
+environment-variables field mangled the ~2200-character base64 value on every
+attempt (round-2 rig finding), so `GRIMSVERK_APP_PEM_B64` is optional and
+normally unset. The standard delivery: the owner pastes the pem file's
+content as the second message of the web session, and PROMPT-WEB tells the
+agent to write it to `$GRIMSVERK_APP_PRIVATE_KEY` (mode 600) before doing
+anything else. The two unrelated PPA sources are removed before `apt-get
+update` because the web proxy 403s them and their failure used to abort the
+`gh` install (also a round-2 rig finding).
 
 The script logs to `/tmp/anvil-env-setup.log` so the web agent can quote a
 real error instead of guessing whether setup ran (a round-1 finding).

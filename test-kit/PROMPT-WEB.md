@@ -2,7 +2,9 @@
 
 Owner: open a Claude Code WEB session (claude.ai/code) on
 `GrimsVerk/grimsverk-anvil` and paste everything below the marker line, word
-for word.
+for word. Then send the App private key as your SECOND message — the full
+content of `/home/loke/.config/grimsverk/find-best-mobo.pem`, the whole
+`-----BEGIN ... PRIVATE KEY-----` block. Then leave.
 
 --- PASTE EVERYTHING BELOW THIS LINE ---
 
@@ -22,14 +24,24 @@ grimsverk-template included. The single sanctioned exception is copier's own
 template fetch in TESTPLAN Part 1 step 3W, through the App-token URL rewrite;
 copier reads the template so it can render — you never do.
 
+**Key delivery (sanctioned, not meddling):** the message right after this
+prompt is the App's private key — a `-----BEGIN ... PRIVATE KEY-----` block —
+pasted by the owner. The environment's settings field mangles long values, so
+the paste IS the rig's key delivery. Before anything else, write that block
+verbatim to `/root/.config/grimsverk/app.pem` with mode 600 (the path
+`$GRIMSVERK_APP_PRIVATE_KEY` names). Never print it, never commit it, never
+push it; it must never appear in the ledger, a diff, or a log.
+
 Your only GitHub credential is the App. Mint it at the START OF EVERY TURN —
 before the scaffold exists via `test-kit/bootstrap/app-token.sh`, afterwards
 via the scaffold's `.claude/scripts/app-token.sh` — and export it as
 `GH_TOKEN` for `gh`. Tokens die in an hour; a turn is shorter; never carry
-one across turns, and never improvise any other credential. If the mint
-fails, the environment is missing its App id or key: record the exact error
-(and quote `/tmp/anvil-env-setup.log` if it exists) as a blocker finding,
-push the ledger, and stop the lane.
+one across turns, and never improvise any other credential. The key file
+does not survive container reclaim between turns: if the pem is missing on a
+later turn, rewrite it from the owner's pasted message before minting. If
+the mint fails with the key in place, record the exact error (and quote
+`/tmp/anvil-env-setup.log` if it exists) as a blocker finding, push the
+ledger, and stop the lane.
 
 Do this, in order:
 
