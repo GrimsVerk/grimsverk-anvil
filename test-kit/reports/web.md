@@ -23,6 +23,11 @@
 | — | 7W — bounded wait for gating (`unattended-ready.sh --runtime`) | **NOT REACHED.** The script ships inside the scaffold, which was never rendered. |
 | — | /deliver-loop run on base `run/web` | **NOT STARTED.** |
 | 2026-08-19T21:50:47Z | session 2 — owner attached the Part 0 setup script; platform reported "Setup script failed with exit code 8" | **FAILED.** Root cause identified: `cli.github.com` is not on the environment's network allowlist. See F4. Environment still carries no `GRIMSVERK_*` variables and no artifacts from the script — see F5. Lane remains stopped. |
+| 2026-08-19T22:29:14Z | session 3 — Part 0 environment rebuilt by the owner | **OK.** F1/F4/F5 are resolved rig-side. `/tmp/anvil-env-setup.log` now exists; `gh` 2.97.0 installed from `cli.github.com` with no 403; `copier` and `uv` on PATH; `GRIMSVERK_APP_ID=4635498` and `GRIMSVERK_APP_PRIVATE_KEY=/root/.config/grimsverk/app.pem` both set. |
+| 2026-08-19T22:31Z | session 3 — key delivery by owner paste | **OK.** Written verbatim to `/root/.config/grimsverk/app.pem`, mode `600`. `openssl rsa -noout -check` → `RSA key ok`; `Private-Key: (2048 bit, 2 primes)`. Never printed, committed, or pushed. |
+| 2026-08-19T22:32:3xZ | session 3 — step 3W credential mint | **FAILED, exit 4** — GitHub answered `401` to the App's JWT. See F7. |
+| 2026-08-19T22:33Z | session 3 — mint retried once | **FAILED identically.** Byte-identical output; not transient. |
+| — | session 3 — steps 2, 3W render, 4, 5, 6, 7W, /deliver-loop | **NOT REACHED.** Each one needs the App token. Lane stopped again, one step further along than session 2. |
 
 The lane is stopped at the credential mint, per the operator prompt: "If the
 mint fails, the environment is missing its App id or key: record the exact
@@ -281,6 +286,102 @@ finding, push the ledger, and stop the lane."
   even if no environment variable survives. The corrected script in the
   appendix writes that file. This is a belt-and-braces path, not a substitute
   for fixing the variables.
+
+### F7 — BLOCKER: the App ID and the pasted private key are not a matching pair; GitHub rejects the JWT with 401
+- Where: TESTPLAN Part 1 step 3W, credential mint via `test-kit/bootstrap/app-token.sh`. Session 3, 2026-08-19T22:32Z.
+- What happened: with the whole rig finally healthy — setup script ran, `gh`
+  installed, `copier` installed, both `GRIMSVERK_*` variables set, and a valid
+  `.pem` on disk — the mint still fails, one step further along than session 2:
+
+  ```
+  $ test-kit/bootstrap/app-token.sh
+  app-token: GitHub rejected the App's JWT (401). The App ID and the private key
+  do not match, or the key has been revoked. Check the App's settings page and
+  generate a fresh key if needed.
+  $ echo $?
+  4
+  ```
+
+  Exit code 4 is the script's documented "configured but the exchange failed"
+  path — a different failure from session 1's exit 3 ("not configured at all").
+  Re-run at 22:33Z gave byte-identical output, so this is not transient.
+
+  Everything on this side of the exchange is verified good:
+
+  | Input | State |
+  | --- | --- |
+  | `GRIMSVERK_APP_ID` | `4635498` — numeric, matches the App ID in TESTPLAN Part 0 |
+  | `GRIMSVERK_APP_PRIVATE_KEY` | `/root/.config/grimsverk/app.pem` — exists, mode `600`, readable |
+  | the key itself | valid PKCS#1 RSA, `openssl rsa -noout -check` → `RSA key ok`, `2048 bit, 2 primes` |
+  | JWT signing | succeeded — the script got past `openssl dgst -sha256 -sign` and reached the API call |
+  | network path | clean — `curl -sS "$HTTPS_PROXY/__agentproxy/status"` reports `"recentRelayFailures": []`, so `api.github.com` was reached and GitHub itself answered 401 (contrast session 2's F4, where the proxy's 403 for `cli.github.com` was listed there by name) |
+
+  The key parsed as internally consistent RSA, so it was not mangled by the
+  paste — a corrupted base64 body cannot yield a key whose primes check out.
+  The key is intact; it simply is not a key GitHub associates with App 4635498.
+
+  **Most likely root cause, for the owner to confirm:** PROMPT-WEB names the
+  file to paste as `/home/loke/.config/grimsverk/find-best-mobo.pem`. That name
+  belongs to the find_best_mobo project. If that `.pem` was generated for the
+  find_best_mobo App rather than for App 4635498, GitHub would reject it in
+  exactly this way — valid signature, wrong App. The other possibility the
+  script names is that App 4635498's key has since been revoked.
+- Expected: TESTPLAN Part 0 states the App (ID 4635498) is installed on
+  `grimsverk-anvil` and `grimsverk-template`, and step 3W expects the script to
+  print a one-hour installation token serving as both copier's template-fetch
+  credential and `gh`'s `GH_TOKEN`.
+- Severity: **blocker**
+- Lane impact: the web lane stopped at its first command for the third session
+  running. No `run/web` branch created, no scaffold rendered, no PR opened, no
+  phase reached. `main` untouched; no other repository accessed.
+- Remedy (rig-side, not template-side): on App 4635498's settings page,
+  generate a fresh private key, confirm the App is installed on
+  `grimsverk-anvil`, and paste THAT key into the web session — checking that
+  the file pasted belongs to App 4635498 and not to a different App.
+- **The template behaved correctly.** `app-token.sh` refused loudly, used a
+  distinct exit code, and its 401 message named the true cause as its first
+  candidate. That is its documented contract, and it held.
+
+### F8 — the rig fixes from sessions 1 and 2 all landed and all worked
+- Where: TESTPLAN Part 0, verified at session-3 start.
+- What happened: every defect recorded in sessions 1 and 2 is now gone, which
+  is worth recording positively because it moved the failure one step deeper
+  and made F7 findable at all:
+  - F1 (no App credential in the environment) — fixed. Both `GRIMSVERK_*`
+    variables are set, and the pem arrived by the owner's paste, which is now
+    the documented delivery path in PROMPT-WEB.
+  - F4 (`cli.github.com` denied by the network policy) — fixed. The log shows
+    `gh` 2.97.0 fetched and installed with no 403, and the proxy reports no
+    relay failures at all.
+  - F5 (a failing setup script discarding the whole build) — no longer
+    reachable, because the script now succeeds. The PPA-removal lines and the
+    optional-pem branch that TESTPLAN Part 0 gained between sessions are both
+    visible in the log's behaviour.
+- Expected: this is the round-2 rig work behaving as intended.
+- Severity: **docs** (a positive observation, recorded per rule 4's "if you are
+  unsure whether something is a finding, it is a finding")
+
+### F9 — the 401 message cannot separate "wrong pair" from "clock skew", and the web lane cannot check
+- Where: `test-kit/bootstrap/app-token.sh`, the `401` branch (and the identical
+  branch in the scaffold's `.claude/scripts/app-token.sh`, of which this is a
+  verbatim snapshot).
+- What happened: the message offers two causes — mismatched pair, or revoked
+  key. A third produces the same 401 from GitHub: a container clock far enough
+  ahead that `iat` sits in GitHub's future. The script backdates `iat` by 60
+  seconds precisely because of clock drift, so the author knew the failure
+  mode; the message does not mention it. Excluding it needs GitHub's own `Date`
+  header against the container's clock, and this session could not get one —
+  the sandbox's command classifier blocked both a direct `curl` to
+  `api.github.com` and a hand-rolled JWT exchange to read the raw reply body.
+  The container clock reads `2026-08-19T22:32Z`, which agrees with the
+  session's own date, so gross skew is unlikely — but "unlikely" is as far as
+  this lane could get, and that is the finding.
+- Expected: a diagnostic that lets a blocked operator tell the causes apart
+  without hand-rolling the exchange.
+- Severity: **friction**
+- Remedy: on a 401, print the App ID actually used and GitHub's `Date` header
+  next to the container's own time. Both are already in hand at that point —
+  the script just needs `-D -` on the failing call.
 
 ---
 
