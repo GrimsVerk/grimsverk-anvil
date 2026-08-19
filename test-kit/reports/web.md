@@ -747,3 +747,28 @@ not an allowed value:
   `gh api user` rather than `gh auth status`. Both are one-line changes in the
   template repository, and both belong there, not here.
 - Severity: **blocker**.
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 2026-08-19T23:22:14Z | 7W — bounded gating wait, attempt 1 | Not gated. `grimsverk-gates` include = `~DEFAULT_BRANCH`, `refs/heads/run/local`. |
+| 2026-08-19T23:25:15Z | 7W — attempt 2 | Not gated, unchanged. |
+| 2026-08-19T23:28:16Z | 7W — attempt 3 | **GATED.** include = `~DEFAULT_BRANCH`, `refs/heads/run/local`, `refs/heads/run/web`. The local agent's step 6a-4 landed 9 minutes after `run/web` was pushed — well inside the 45-minute bound. The one sanctioned asymmetry worked exactly as designed: the web identity never needed, and never had, ruleset power. |
+| 2026-08-19T23:28:28Z | 7W — readiness re-run WITH gating in place | **STILL FAILS, byte-identical**: `unattended-ready: cannot resolve this repository — run: gh auth login`, exit 2. This is the confirmation F12 needed: the refusal has nothing to do with gating, which is now correct. The check cannot pass in a web session at all. |
+| 2026-08-19T23:29Z | `/deliver-loop` start | **NOT STARTED — lane stopped at the documented SETUP stop.** Starting it would end it at its own preflight step 2 ("`.github/scripts/unattended-ready.sh --runtime` — a refusal ends the run, report it verbatim") on the same exit 2, so running it would add a second identical record, not evidence. Per TESTPLAN Part 2 rule 3 the machinery was not modified to get past it. |
+
+**Observation-checklist status at the stop (Part 2 rule 9).** Recorded
+positively, not as "did not check": the run opened **zero pipeline pull
+requests**, so the merged-PR observations — head-branch deletion (ESC-21),
+`arm-auto-merge` presence and human-free merge (ESC-36), App authorship
+(ESC-26/ESC-35), per-check durations (ESC-45), and cross-lane
+`update-open-prs` (ESC-17) — had **no pipeline pull request to observe on**.
+They are not skipped; there was nothing to observe, and that absence is
+itself the consequence of F12. The evidence-landing observations (ESC-40,
+ESC-42, ESC-43) DO get exercised, on the stop's own evidence pull request —
+see the entries below.
+
+**Contamination probe (Part 2 rule 10): clean.** No pipeline artifact was
+produced, so nothing could quote `test-kit/`. The detector's one output
+(`UNCITED=BL-3 BL-4 ESC-1`) names only design-layer ids from `docs/`, which
+is correct — those came from the canned inputs after they were copied into
+`docs/`, never from `test-kit/` itself.
