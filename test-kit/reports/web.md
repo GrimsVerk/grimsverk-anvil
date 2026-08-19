@@ -962,3 +962,72 @@ is correct — those came from the canned inputs after they were copied into
 > canned design layer is in place on `run/web` and the detector correctly wants
 > `PHASE=ORACLE` with `UNCITED=BL-3 BL-4 ESC-1`, so the run is ready to proceed
 > the moment the readiness check can resolve this repository over REST.
+
+---
+
+## Observation checklist — recorded positively (Part 2 rule 9)
+
+No pipeline pull request ever existed on this lane (F13), so the six
+merged-pull-request observations had nothing to observe on. That is a real,
+caused absence, not "did not check" — each is stated with what WAS seen:
+
+| Checklist item | This lane's observation |
+| --- | --- |
+| Head branch disappears after merge, and by which path (ESC-21) | **No merged pull request existed.** Nothing merged, so nothing could vanish. Still unobserved after four sessions. |
+| `arm-auto-merge` in every PR's check list; merge completes with no human (ESC-36) | **No pull request existed.** The `auto-merge.yml` workflow is present in the rendered scaffold and never ran. |
+| Every pipeline PR authored by the App, never the owner (ESC-26, ESC-35) | **Zero pull requests opened — and that is the rule holding, not failing.** The only route left was the forbidden owner-authored one, and it was refused (F13). The invariant was never violated; it was enforced by stopping. |
+| DURATION of every required check (ESC-45) | **Observed, on push CI, on three lane branches.** Latest (`docs/run-20260819T231559Z--run-web`, run 32313488440): `secrets` success 7s (23:29:58→23:30:05), `checks` success 12s (23:29:59→23:30:11). Both are real work at plausible durations — `checks` runs `uv sync --locked`, ruff, mypy and pytest in 12s on a scaffold this small. **No skip-reporting-success was seen:** `plan`, `test-the-tests`, `template-sync` and `acceptance-criteria` all reported conclusion `skipped` in 0s, honestly labelled, never `success`. On this evidence ESC-45's failure mode is absent here — though these are push runs, and the PR-context runs were never reached. |
+| After the stop: `docs/runs/<ts>/` holds the report, `reviews/` with no `MISSING.md` (ESC-43), `workers/` logs (ESC-42); the evidence PR merged (ESC-40) | **Report: yes**, `docs/runs/20260819T231559Z/run.md`, committed. **`reviews/`: created and empty**, and `collect-evidence.sh` said so plainly — `collect-evidence: no runs of review.yml to collect.`, exit 0 — with **no `MISSING.md`**, which is correct: nothing was missing, nothing ran. (Being empty, git does not track the directory itself; only the report is in the commit.) **`workers/`: absent**, correct — zero workers were spawned. **The evidence pull request did NOT merge, because it could not be opened — see F14.** |
+| Cross-lane auto-update of an open PR while the other lane merges (`update-open-prs`, ESC-17) | **Not exercisable.** This lane never had an open pull request for the other lane's merges to update. |
+
+**`uv.lock` / ESC-47:** positively confirmed. `uv.lock` rode in the scaffold
+commit and the `checks` job — which runs `uv sync --locked` — passed on every
+lane branch push. Round 1's failure did not recur.
+
+**`main` untouched.** No commit, no push, no reset, at any point. The other
+lane (`run/local`, its branches, its pull requests) was never touched, and the
+detector never once showed a pull request targeting another base — every
+`deliver-phase.sh` call reported `BASE=run/web`. Part 2 rule 12 held: the
+attached `grimsverk-template` checkout was never read, edited, pushed to, or
+used as a copier source, and nothing was attached, added, or cloned.
+
+---
+
+## Summary block — web lane, round 4 (Part 2 rule 6)
+
+- **Driver's exit reason:** SETUP refusal. `RUN_BASE=run/web
+  .github/scripts/unattended-ready.sh --runtime` exits 2 with
+  `cannot resolve this repository — run: gh auth login`, before and after
+  gating landed. `/deliver-loop` was therefore never started: its own preflight
+  (step 2) ends a run on exactly this refusal, so starting it would have
+  produced a second identical record and no evidence.
+- **Phases reached:** none dispatched. The detector was run and was correct —
+  `PHASE=ORACLE BASE=run/web REASON=evidence UNCITED=BL-3 BL-4 ESC-1` — so the
+  lane stopped one step before its first oracle turn.
+- **Pull requests opened:** 0. **Merged:** 0.
+- **Oracle decisions written (OD ids):** none. **Uncertainties filed (BL ids):**
+  none — the planner never ran. The four seeded backlog items (BL-1 aliases,
+  BL-2 absolute zero, BL-3 `rich`/V5 HALT, BL-4 currency) and the three design
+  gaps are all **untested on this lane**; the detector did correctly notice
+  BL-3, BL-4 and ESC-1 as uncited evidence, which is the only bait signal this
+  lane produced.
+- **Criteria status:** untouched. `docs/acceptance.md` is as rendered; S1-S5
+  never ran.
+- **Limits:** owner's numbers were 30 pull requests / 12 hours / 60 iterations.
+  None reached or approached — total lane lifetime about 14 minutes.
+- **Findings this round:** F9 (friction), F10 (friction), F11 (blocker),
+  F12 (blocker), F13 (blocker), **F14 (TEMPLATE SELF-RECORDING FAILURE, bug)**.
+- **The one-line cause:** a hosted web session's proxy serves GitHub REST and
+  refuses GraphQL, and its injected credential cannot dispatch workflows. The
+  template's web-lane support (ESC-50) correctly foresaw that App minting is
+  impossible there and built a server-side opener — but the readiness check
+  that guards the door probes with GraphQL and with `gh auth status`, and the
+  opener itself can be reached neither by `gh workflow run` (GraphQL) nor by
+  REST (no `actions: write`, and `main` carries no workflows to register it).
+  Every one of those is a small, specific, fixable defect. None was fixed
+  here (Part 2 rule 3).
+- **What this lane still has not tested, after four sessions:** the pipeline.
+  Oracle, steward, planner, orchestrator, coder, blind test-writer, reviewer
+  and acceptance remain entirely unexercised on the web lane. The comparison
+  the TESTPLAN is built around — two lanes, same inputs, diffed — has only one
+  side.
