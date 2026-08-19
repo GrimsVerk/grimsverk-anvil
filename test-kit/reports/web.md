@@ -22,6 +22,7 @@
 | — | 6 — push `run/web` (bounded retry, 3 min x 45) | **NOT REACHED.** Nothing to push; the branch `run/web` was never created. |
 | — | 7W — bounded wait for gating (`unattended-ready.sh --runtime`) | **NOT REACHED.** The script ships inside the scaffold, which was never rendered. |
 | — | /deliver-loop run on base `run/web` | **NOT STARTED.** |
+| 2026-08-19T21:50:47Z | session 2 — owner attached the Part 0 setup script; platform reported "Setup script failed with exit code 8" | **FAILED.** Root cause identified: `cli.github.com` is not on the environment's network allowlist. See F4. Environment still carries no `GRIMSVERK_*` variables and no artifacts from the script — see F5. Lane remains stopped. |
 
 The lane is stopped at the credential mint, per the operator prompt: "If the
 mint fails, the environment is missing its App id or key: record the exact
@@ -146,6 +147,235 @@ finding, push the ledger, and stop the lane."
   end in `[bot]`) before the first `gh pr create`, so a stale ambient token
   cannot pass itself off as the App.
 
+
+### F4 — BLOCKER: the Part 0 setup script dies at `cli.github.com`, which the environment's network policy denies
+- Where: TESTPLAN Part 0, the claude.ai web environment setup script for grimsverk-anvil. Observed in session 2 (2026-08-19T21:50Z), reported by the platform as "Setup script failed with exit code 8. Edit your environment's setup script and start a new session."
+- What happened: the script's `gh` install block fetches the apt keyring:
+
+  ```sh
+  wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    > /etc/apt/keyrings/githubcli-archive-keyring.gpg
+  ```
+
+  The session's egress proxy denies that host. Reproduced directly:
+
+  ```
+  $ wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg > /tmp/kr.gpg
+  $ echo $?
+  4
+  $ ls -la /tmp/kr.gpg
+  -rw-r--r-- 1 root root 0 Aug 19 21:51 /tmp/kr.gpg
+  ```
+
+  and named explicitly by the proxy's own status endpoint:
+
+  ```
+  $ curl -sS "$HTTPS_PROXY/__agentproxy/status"
+  ...
+  "recentRelayFailures": [
+    {
+      "ts": "2026-08-19T21:51:28.171Z",
+      "kind": "connect_rejected",
+      "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+      "host": "cli.github.com:443"
+    }
+  ]
+  ```
+
+  `wget` exit 8 is documented as "Server issued an error response" — the proxy's
+  403. (Interactively the same fetch reports exit 4, a network failure; the
+  difference is only how the proxy refuses at that moment. Both are the same
+  denial, and both are fatal under the script's `set -e`.)
+
+  Nothing else in the script is at fault. Everything the script needs besides
+  that one host is reachable from the session, verified individually:
+
+  | Host / action | Result |
+  | --- | --- |
+  | `api.github.com` (what `app-token.sh` calls) | HTTP 200 — fine |
+  | `git` push/fetch over `https://github.com` | works — the ledger pushed over it |
+  | `uv tool install copier` (pypi, direct-allowed) | succeeded; `copier` now on PATH |
+  | `cli.github.com` (the keyring and apt repo) | **403 CONNECT — denied** |
+
+  No alternative route to `gh` exists from inside the session. Fetching the
+  release tarball from `github.com/cli/cli` is refused too, because the
+  session's GitHub access is repository-scoped to grimsverk-anvil:
+
+  ```
+  $ curl -sS https://api.github.com/repos/cli/cli/releases/latest
+  {"message":"GitHub access to this repository is not enabled for this session. ..."}
+  ```
+
+  That refusal is correct and was not worked around — Part 2 rule 12 forbids
+  attaching any other repository, and `cli/cli` is another repository.
+- Expected: TESTPLAN Part 0 states the environment's "network policy must allow
+  `github.com` and `cli.github.com`". `github.com` is allowed; `cli.github.com`
+  is not. The plan names the requirement correctly; the environment does not
+  satisfy it.
+- Severity: **blocker**
+- Remedy: add `cli.github.com` to the environment's network allowlist. This is
+  environment configuration, not a script change — but see F5 for why the
+  script should be hardened regardless.
+
+### F5 — BUG: a failing setup script appears to discard the entire environment build, credential included
+- Where: TESTPLAN Part 0 script structure, interacting with the claude.ai web environment's build behaviour.
+- What happened: the script begins with `set -e`, and the failing `wget` sits in
+  the LAST block. So the four earlier actions — write
+  `/tmp/anvil-env-setup.log`, `mkdir -p /root/.config/grimsverk`, decode the
+  `.pem`, `uv tool install copier` — all run before the failure and all of them
+  should have left artifacts behind. None survived into the session:
+
+  ```
+  $ cat /tmp/anvil-env-setup.log
+  cat: /tmp/anvil-env-setup.log: No such file or directory
+  $ ls -la /root/.config/grimsverk/
+  ls: cannot access '/root/.config/grimsverk/': No such file or directory
+  $ command -v copier || echo "copier MISSING"
+  copier MISSING
+  $ env | grep -o '^GRIMSVERK[A-Z_]*'
+  (no output)
+  ```
+
+  The most consistent reading is that the platform treats a non-zero setup
+  script as a failed environment build and runs the session from the base image
+  instead, discarding every filesystem change the script made. The
+  `GRIMSVERK_*` environment variables are absent as well, which suggests the
+  discarded build takes the environment's variable set with it — though this
+  round cannot separate that from "the variables were never added", since they
+  were also absent in session 1 before the script was ever attached.
+
+  Either way the consequence is the one that matters: **an optional convenience
+  (`gh` via apt) took the mandatory credential down with it.** The App `.pem` is
+  the one artifact the whole lane depends on, it is produced by line 4, and it
+  was lost because line 20 could not reach a host.
+- Expected: TESTPLAN Part 0 presents the script as a sequence of independent
+  provisioning steps. Nothing in the plan warns that a late failure voids the
+  early steps, and the script's own `set -e` guarantees it.
+- Severity: **bug** (in the rig's script design, not in the template)
+- Remedy: drop `set -e`, do the credential first, make every network-dependent
+  step non-fatal, and end with an explicit `exit 0`. A corrected script is in
+  the appendix below and is the recommended replacement.
+
+### F6 — the App identity has no path into the session that does not depend on environment variables
+- Where: TESTPLAN Part 0 / Part 1 step 3W, `test-kit/bootstrap/app-token.sh`.
+- What happened: `app-token.sh` finds its credentials in exactly two places —
+  the `GRIMSVERK_APP_ID` / `GRIMSVERK_APP_PRIVATE_KEY` environment variables, or
+  an identity FILE at `.claude/app-identity`. In the web lane before rendering,
+  the file cannot exist: `.claude/` only appears once the scaffold is rendered,
+  and rendering is the very thing the token is needed for. So the environment
+  variables are the single point of failure for the entire lane, and they have
+  now been absent in two consecutive sessions.
+- Expected: the plan assumes the variables reach the agent's shell. That
+  assumption is untested and, on this evidence, unreliable.
+- Severity: **friction**
+- Remedy, needing no change to `app-token.sh`: the script honours
+  `GRIMSVERK_APP_IDENTITY_FILE` as an override for the identity file path. If
+  the setup script also writes `/root/.config/grimsverk/app-identity` holding
+  `APP_ID=` and `APP_PRIVATE_KEY=`, the lane can mint a token with
+
+  ```sh
+  GRIMSVERK_APP_IDENTITY_FILE=/root/.config/grimsverk/app-identity \
+    test-kit/bootstrap/app-token.sh
+  ```
+
+  even if no environment variable survives. The corrected script in the
+  appendix writes that file. This is a belt-and-braces path, not a substitute
+  for fixing the variables.
+
+---
+
+## Appendix — corrected Part 0 environment setup script
+
+Replaces the script in TESTPLAN Part 0. It fixes F5 and F6; it does **not** fix
+F4, which is a network-allowlist change the owner must make on the environment
+(`cli.github.com`). With F4 unfixed this script still completes, still delivers
+the credential, and reports the missing `gh` as a line in its log instead of
+destroying the build.
+
+```sh
+# grimsverk-anvil — claude.ai web environment setup script (corrected)
+#
+# Replaces the Part 0 script. Three changes, all forced by observed facts:
+#   1. NO `set -e`, and it always `exit 0`. A failing setup script makes the
+#      platform discard the whole environment build, so one blocked host used
+#      to cost us the credential too. Nothing optional may be fatal any more.
+#   2. The credential is written FIRST, before anything that touches the
+#      network. It is the only part the test actually cannot proceed without.
+#   3. The log is written to a PERSISTENT path as well as /tmp, and the App
+#      identity is written to a file as well as relying on env vars, so the
+#      session can recover both even if /tmp and the environment variables do
+#      not survive into it.
+
+set -u
+LOG=/root/.config/grimsverk/setup.log
+mkdir -p /root/.config/grimsverk
+say() { printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" | tee -a "$LOG" /tmp/anvil-env-setup.log; }
+say "env-setup START"
+
+# ---------------------------------------------------------- 1. the credential
+if [ -n "${GRIMSVERK_APP_PEM_B64:-}" ]; then
+  printf '%s' "$GRIMSVERK_APP_PEM_B64" | base64 -d > /root/.config/grimsverk/app.pem 2>>"$LOG"
+  chmod 600 /root/.config/grimsverk/app.pem
+  if openssl rsa -in /root/.config/grimsverk/app.pem -noout 2>/dev/null; then
+    say "pem OK ($(wc -c < /root/.config/grimsverk/app.pem) bytes)"
+  else
+    say "pem FAIL: decoded but is not a usable RSA private key -- re-generate GRIMSVERK_APP_PEM_B64 with: base64 -w0 < your-app.private-key.pem"
+  fi
+else
+  say "pem FAIL: GRIMSVERK_APP_PEM_B64 is unset or empty on this environment"
+fi
+
+# A file copy of the App identity, so the session can mint a token even if the
+# environment variables do not reach the agent's shell. app-token.sh reads this
+# path when GRIMSVERK_APP_IDENTITY_FILE points at it.
+{
+  echo "APP_ID=${GRIMSVERK_APP_ID:-4635498}"
+  echo "APP_PRIVATE_KEY=/root/.config/grimsverk/app.pem"
+} > /root/.config/grimsverk/app-identity
+chmod 600 /root/.config/grimsverk/app-identity
+say "app-identity written (APP_ID=${GRIMSVERK_APP_ID:-4635498})"
+
+# ---------------------------------------------------------------- 2. copier
+# pypi.org is on the proxy's direct-allow list, so this works.
+if command -v uv >/dev/null 2>&1; then
+  if uv tool install copier >>"$LOG" 2>&1; then say "copier OK"; else say "copier FAIL (see $LOG)"; fi
+else
+  say "copier SKIP: uv is not on PATH"
+fi
+
+# -------------------------------------------------------------------- 3. gh
+# NEEDS cli.github.com IN THE ENVIRONMENT'S NETWORK ALLOWLIST. Without it the
+# proxy answers 403 to CONNECT, wget exits 8, and this used to kill the script.
+if command -v gh >/dev/null 2>&1; then
+  say "gh already present"
+else
+  mkdir -p -m 755 /etc/apt/keyrings
+  if wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+       > /etc/apt/keyrings/githubcli-archive-keyring.gpg 2>>"$LOG"; then
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list
+    if apt-get update >>"$LOG" 2>&1 && apt-get install -y gh >>"$LOG" 2>&1; then
+      say "gh OK ($(gh --version 2>/dev/null | head -1))"
+    else
+      say "gh FAIL at apt (see $LOG)"
+    fi
+  else
+    say "gh FAIL: could not fetch the keyring from cli.github.com -- add cli.github.com to this environment's network allowlist"
+  fi
+fi
+
+say "env-setup END"
+exit 0
+```
+
+After replacing it, start a fresh session and check:
+
+```sh
+cat /root/.config/grimsverk/setup.log
+```
+
+Every line should read OK. A `gh FAIL` line means F4 is still open.
+
 ---
 
 ## Observation checklist (Part 2 rule 9)
@@ -178,11 +408,15 @@ not an allowed value:
 - **Driver's own exit reason:** the driver was never started. The lane was
   stopped by the operator, per the standing instruction to stop on a failed
   credential mint.
-- **Findings:** 3 — one blocker (F1), one positive observation (F2), one
-  friction (F3).
+- **Findings:** 6 — two blockers (F1, F4), one bug (F5), two friction (F3,
+  F6), one positive observation (F2).
 - **Bait map (Part 3):** every row is untested this round. No bait was reached.
-- **Template verdict:** this round tested the RIG, not the template. F1 is an
-  environment-configuration defect on the owner's side, not a template bug —
+- **Sessions:** 2. Session 1 (21:33Z) found no credential at all (F1). Session
+  2 (21:50Z), with the Part 0 setup script attached, failed to build the
+  environment with exit code 8 (F4) and left no artifact behind (F5).
+- **Template verdict:** this round tested the RIG, not the template. F1, F4,
+  F5 and F6 are all environment-configuration or rig-script defects on the
+  owner's side, not template bugs —
   the template's own refusal behaved correctly and loudly, exactly as its
   comments promise, and F2 shows the round-1 diagnostic fix earning its keep.
   The web lane produced no evidence about the template's pipeline.
