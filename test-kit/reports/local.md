@@ -1489,3 +1489,44 @@ and every remaining checklist item.
   evidence pull request merging (ESC-40).
 - Driver **not restarted** (rule 7). Tree clean. `main` and `run/web` untouched
   by this lane.
+
+---
+
+# ROUND 3.2 — owner-directed restart at template v0.4.37
+
+**F14 = ESC-61.** Per the owner: the rendered `AGENTS.md` was citing
+template-ledger ids; it now names the template's ledger in words, and a render
+test forbids any `ESC-<n>` id in rendered gated documents. All earlier findings
+stand.
+
+**ESC-61 verified in the render, before committing it.** No resolvable citation
+survives — `grep -oE "ESC-[0-9]+" AGENTS.md` returns nothing, and the four
+remaining `ESC-` mentions are all the generic placeholder form that
+`escape-refs.sh` does not resolve:
+
+```
+136:because this project's `ESC-<n>` namespace is its own)
+198:already landed — an `ESC-<n>` or a `BL-<n>` — so a design change can only ever
+451:entry carries an id — `ESC-<n>`, the next unused integer — and a gated document
+453:branch. This is checked, not asked for: CI resolves every `ESC-` citation in
+```
+
+Line 136 is the replacement for the old `ESC-53/56` citation — the same fact,
+stated without borrowing an id from another repository's ledger. That is F14's
+cause removed at the source rather than papered over.
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 03:0xZ | Clean the tree | `git reset && git clean -fdx`. Round 3.1's evidence needed no rescue this round — it committed normally (F12 fixed) and lives on the closed PR #10's branch history plus `test-kit/reports/local-driver-round3.1.log`. |
+| 03:0xZ | Reset ruleset to main-only | `include` → `["~DEFAULT_BRANCH"]`. |
+| 03:0xZ | Close leftovers | PRs **#8** (work) and **#10** (evidence) closed, citing ESC-61 as the reason they can be superseded. Remote branches `docs/oracle-20260820022652--run-local` and `docs/run-20260820T022648Z--run-local` deleted. Web-lane PRs **#7** and **#9** left untouched (rule 1). |
+| 03:0xZ | Rebuild at v0.4.37 | `_commit: v0.4.37`, `_src_path` canonical https. Identity from the register by key; `App identity OK`. All four hooks **Passed**; 73 files, 13 488 insertions. Rule-13 scan: **NONE — clean**. `git push -f` → `+ 96ece73...1bd477f`. |
+| 03:0xZ | Bounded wait for `run/web` at v0.4.37 | Started; `run/web` reads `_commit: v0.4.36`. Polling every 3 min, 45-min bound. |
+
+**Fifth start of this lane.** The prize is unchanged and now has a single
+credible path to it: with F10, F11, F12 and F14 all fixed, PR #8's check list
+last round was ten green and one red, and the red was F14. If ESC-61 holds,
+this round should produce the first merge either lane has ever managed — and
+with it the four readings that have never been taken: ESC-21 (branch vanishes),
+ESC-36's second half (auto-merge completes unaided), ESC-40 (the evidence pull
+request merges), and eventually ESC-17 (cross-lane `update-open-prs`).
