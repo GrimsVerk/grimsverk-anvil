@@ -170,3 +170,19 @@ _why that class, and `— filed by: plan`.)_
   `acceptance/S5.sh`, and the boundaries of the batch slices; reversing it after
   S5 lands rewrites the acceptance script and the batch code together — filed
   by: plan
+- **BL-9** — What `anvil --batch` does when standard input is not valid UTF-8.
+  **OD-7 / R1003** fixes the batch line format but assumes every input line
+  decodes; Python's text-mode standard input raises `UnicodeDecodeError` on the
+  first undecodable byte, which ends the batch with a traceback, prints no
+  output line for that request, and returns no exit code of the tool's own
+  choosing — against R6's "a bad line … does not stop the remaining lines" and
+  against the vision's preference for refusing loudly over failing obscurely.
+  **Proposed default:** read standard input with `errors="replace"`, so
+  undecodable bytes become the replacement character and the affected line is
+  refused through the ordinary R4 path — `unknown unit`, `not a number` or
+  `malformed line`, whichever fits — with no new error shape, no new exit code,
+  and every later line still processed. **Risk: LOW** — the whole question is
+  one line in `main`: it moves no slice boundary, changes no Signatures block,
+  adds no shape to R1003's output grammar, and alters no expected byte in
+  `acceptance/S5.sh`. Proceeded on the default in
+  `docs/plans/oracle/anvil-convert-batch.md` — filed by: steward
