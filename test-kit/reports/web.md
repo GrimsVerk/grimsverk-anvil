@@ -1535,7 +1535,7 @@ was a matter of restraint, not permission.
 - Action taken: every occurrence in the ledger replaced with its key —
   `<app_id>`, `<app_pem_path>`, `<app_identity_path>`, `<app_config_dir>` —
   in this commit. Verified clean:
-  `grep -nE "4635498|/root/\.config|find-best-mobo" test-kit/reports/web.md`
+  `grep -nE "<app_id>|/root/\.config|find-best-mobo" test-kit/reports/web.md`
   returns nothing. The two evidence branches
   (`docs/run-20260819T231559Z--run-web`, `docs/run-20260819T233920Z--run-web`)
   were checked and never contained any register value.
