@@ -1609,3 +1609,39 @@ round-1..2.1 history of this lane was operators misled by wrong refusals.
 | 2026-08-20T01:29:36Z | **7W — readiness check GREEN** | **`unattended-ready: this repository can run unattended.` EXIT=0.** All seven required checks and the pull-request rule bind on `run/web`; the ESC-50 note is emitted correctly; nothing missing. **This is the first time in six sessions that the web lane has passed setup.** Rounds 1-3 died on the App credential, round 4 on the GraphQL block, round 2.1 on the credential probe. v0.4.35 clears the door. |
 
 **PHASE log begins below (Part 2 rule 5).**
+
+## PHASE log — round 3 run (Part 2 rule 5)
+
+- Run id: `20260820T013038Z`. Run start 2026-08-20T01:30:38Z.
+- Run-start SHAs: `docs/DESIGN.md` `448a080`, `docs/VISION.md` `9a57a1e`,
+  head `965a87c`.
+- Credential established per the command file's rule: App mint attempted first
+  and failed (ESC-50, expected); ambient credential confirmed over REST —
+  `gh api user --jq .login` → `GrimsVerk`. Pull requests will be opened AS THE
+  APP by the push-fired opener (ESC-53), never under this credential.
+- Limits, given by the owner in advance: **30 pull requests, 12 wall-clock
+  hours, 60 iterations.** Part 2 rule 8 satisfied: v0.4.35's command file
+  states plainly that no usage gauge is reachable in a web session and asks for
+  countable limits instead, which is exactly the behaviour the rule requires.
+- Preflight: `unattended-ready.sh --runtime` GREEN; `coverage.sh` rc **1**
+  (8 requirements with no plan yet — normal mid-project, not the rc 2 refusal).
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 2026-08-20T01:30:45Z | **ORACLE** | `BASE=run/web` `REASON=evidence` `UNCITED=BL-3 BL-4 ESC-1` — the detector correctly names the three seeded evidence items (BL-3 `rich`/V5, BL-4 currency, ESC-1 float artifact). Iteration 1. |
+
+### F22 — the scaffold's AGENTS.md forbids a LICENSE file; `main` now carries one
+- Where: `AGENTS.md` "Licensing" versus `main` `09a5e4f` ("Go-public prep: MIT
+  license").
+- What happened: AGENTS.md states "This project is intentionally unlicensed:
+  there is no `LICENSE` file and no `license` field in package metadata, and
+  their absence is a decision, not an omission … do not add a license file".
+  The test kit's go-public commit added `LICENSE` to `main`, so every rendered
+  lane branch now carries a file its own AGENTS.md forbids.
+- Impact: small but real — the review gate reads AGENTS.md as the standard a
+  diff is judged against, so a reviewer could reasonably flag the repository as
+  violating its own rules. It is a collision between the kit's needs (a public
+  repository wants a licence) and the template's default stance, not a defect
+  in either alone.
+- Severity: friction. Recorded, not acted on: `LICENSE` came from `main` and
+  removing it would be touching the kit.
