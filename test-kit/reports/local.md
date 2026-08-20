@@ -1311,3 +1311,97 @@ Weekly meter across four starts: **61% → 62% → 67% → 69%** (model 62% → 
 | Time (UTC) | PHASE | Key fields |
 | --- | --- | --- |
 | 02:26:52Z | ORACLE | iteration 1. Worker `oracle-20260820022652`, base `run/local`. |
+| 02:36:53Z | WAIT | iteration 2. PR **#8** (`docs/oracle-20260820022652--run-local`), opened by `app/autogrims`. |
+| 02:37:25Z | WAIT → fix | `PR #8 red (plan ) — dispatching a fix`. One check red, not two — see below. |
+
+### F11 — FIXED in v0.4.36 (ESC-58), confirmed live
+
+The review gate ran and **passed**, for the first time in this test:
+
+```
+review	pass	2m0s
+```
+
+Two minutes is a plausible duration for an LLM reading a diff — contrast round
+2.2's 15-second failure, which was the engine dying on startup. `review` is a
+required check and it is green. **F11 closed.**
+
+### F10 — FIXED in v0.4.36 (ESC-57), confirmed live
+
+The `plan` job no longer fails at "CODEOWNERS actually binds". It now reaches a
+later step in the same job, which is only possible if the CODEOWNERS step
+passed. **F10 closed.**
+
+### Everything else on PR #8 is green
+
+| Check | Result | Duration |
+| --- | --- | --- |
+| `open-pr` | pass | 6s |
+| `checks` | pass | 9s / 12s |
+| `secrets` | pass | 9s / 12s |
+| `template-sync` | pass | 10s |
+| `acceptance-criteria` | pass | 9s |
+| `arm-auto-merge` | pass | 10s |
+| `review` | **pass** | **2m0s** |
+| `plan` | **fail** | 4s |
+
+Ten of eleven required checks green. One left.
+
+---
+
+### F14 — BLOCKER: a freshly rendered project fails its own `plan` check on its first pull request, because the template's `AGENTS.md` cites an escape id no generated project has
+- **Where:** `.github/workflows/ci.yml`, `plan` job, step "Escape citations must resolve at the base commit" (`.github/scripts/escape-refs.sh`). Round 3.1, PR #8, template v0.4.36.
+- **What happened:**
+
+  ```
+  AGENTS.md cites ESC-53
+
+  A gated document may cite an escapes entry only once that entry exists on the
+  default branch. The review gate reads gated documents at the BASE commit, so a
+  citation to an unmerged entry is false at the only moment anything checks it —
+  and it will block again on the next push, because nothing about the ordering
+  changes on its own.
+
+  Land the entry first — a one-line stub … — then cite it from here.
+  ##[error]Process completed with exit code 1.
+  ```
+
+- **This is the template, not the canned bait — verified by rendering the
+  template clean into a scratch directory and reading both files:**
+
+  ```
+  template's rendered docs/escapes.md ids:   (none)
+  template's rendered AGENTS.md ESC citations: ESC-53
+  ```
+
+  The rendered `AGENTS.md` line is 134: "pull-request machinery a driver without
+  App identity must commit, ESC-53/56". The rendered `docs/escapes.md` is an
+  **empty ledger** — correctly so, since a new project has escaped nothing yet.
+  So the citation dangles on **every** fresh render, with or without this test's
+  canned `escapes.md` (which carries only the seeded `ESC-1`). Substituting the
+  canned file changes nothing; the failure is identical either way.
+
+- **Expected, and this is the sharp part:** `AGENTS.md` states the rule that
+  fails it, about itself. From the same file: "Citations are by id, and they
+  point backward only. Every `docs/escapes.md` entry carries an id … and a gated
+  document cites an entry by that id alone, **only once the entry exists on the
+  default branch**. This is checked, not asked for: CI resolves every `ESC-`
+  citation in **this file**, both design documents, and `docs/plans/` …". The
+  document naming itself as the checked file is the document that breaks the
+  check. `ESC-53` is an entry in the **template repository's** ledger; the
+  citation was written for a reader of the template and shipped into every
+  generated project, where the id has no referent.
+
+- **Severity: blocker**, and unfixable from inside the pipeline for three
+  independent reasons: `AGENTS.md` is off-limits to every agent (Part 2 rule 3,
+  and `AGENTS.md`'s own "the things that check the code's intent"); landing an
+  `ESC-53` stub in `docs/escapes.md` would require its own pull request, which
+  the one-PR-per-base rule forbids while PR #8 is open; and `docs/escapes.md` is
+  append-only, so nothing may quietly rewrite it either.
+
+- **Likely a v0.4.35/v0.4.36 regression:** the citation sits in the paragraph
+  describing the new push-fired pull-request machinery (ESC-53) and the
+  carve-out change (ESC-56) — both shipped in the last two releases. Rounds 2.0
+  through 2.2 never reached this step, because the CODEOWNERS step above it
+  (F10) failed first and the job stopped there. Fixing F10 is what made F14
+  visible.
