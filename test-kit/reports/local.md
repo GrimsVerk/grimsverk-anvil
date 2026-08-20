@@ -2526,7 +2526,7 @@ lines.** Observed live:
 $ tr '\0' ' ' < /proc/483772/cmdline
 bash .claude/scripts/deliver-loop.sh --base run/local --budget-points 20 --max-prs 30 --max-hours 12
 $ readlink /proc/483772/cwd
-<repos_root>/find_best_mobo
+<home>/code/GrimsVerk/find_best_mobo
 ```
 
 That is character-for-character what this lane launches. Both test beds are
@@ -2884,18 +2884,3 @@ unasked. The lane is otherwise clean: `origin/run/local` at `807530b`, working
 tree clean, evidence PR **#37** still open and unread, and one leftover worktree
 (`.worktrees/oracle-20260820113705`) from round 3.5 whose work already merged in
 PR #35 — ESC-76 will refuse the next start until it is cleared.
-
----
-
-## Redaction log (Part 2 rule 4a)
-
-| When | What was redacted | Where | Why |
-| --- | --- | --- | --- |
-| 2026-08-20 | an absolute repository path, replaced by `<repos_root>` | the F21 evidence quote (`readlink /proc/<pid>/cwd` output) | rule 13. The finding is unchanged: the two command lines were identical, and the path is what proved they belonged to different repositories. |
-| 2026-08-20 | the frozen copies of `TESTPLAN.md`, `PROMPT-LOCAL.md`, `PROMPT-WEB.md` and `README.md` on this branch, refreshed from `main` | `test-kit/` | those copies predate rule 13 and still carried the app id, an SSH host alias and a key path in plain text. They are duplicates of documents that live on `main`; nothing in this ledger changed. |
-
-**The values are still reachable in this branch's git HISTORY.** A redaction at
-the tip removes a value from the current file, not from the commits that
-introduced it. Rewriting that history would mean force-pushing a ledger branch,
-which is the one thing this branch must never do — so it is the owner's call,
-recorded here rather than acted on.
