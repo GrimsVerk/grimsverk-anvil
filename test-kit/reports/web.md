@@ -2290,3 +2290,18 @@ steward hit the gap first. Worth noting for the comparison, not a defect.
   finish, rather than blocking a foreground call on them.
 - Severity: friction, with a blocker-shaped tail — harmless when the worker is
   fast, silent data loss when it is not.
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 2026-08-20T08:52:12Z | **ORACLE** | Iteration 5, scope BL-6. Dispatched in background (F28 workaround) — `WORKER_RESULT … exit=0 commits=1` arrived intact. |
+| 2026-08-20T08:57:31Z | push + open | PR #17, App-authored. **OD-5** adds **R1002**: non-finite values refused on the R4 error path, so `inf`/`nan` never print as a result. |
+| 2026-08-20T09:00Z | merge 5 | **PR #17 merged.** |
+| 2026-08-20T09:01:07Z | **STEWARD** | `ODS=OD-5`. Iteration 6. |
+| 2026-08-20T09:06:12Z | push + open | PR #18, App-authored. The steward **amended the existing `anvil-convert-mvp` plan** (+40/−19) rather than opening a second plan for one branch inside the converter — the right call, and it keeps one plan per milestone. |
+| 2026-08-20T09:09Z | merge 6 | **PR #18 merged.** |
+| 2026-08-20T09:10:02Z | **PLAN** | `REQS=R3 R6 R7 R8`. Iteration 7 — the driver moves from oracle-driven work to milestone planning on its own. This is the phase carrying the `convert` / `convert-batch` slug-collision bait. |
+
+**Running totals at iteration 7:** 6 pull requests opened, **6 merged**, all
+App-authored, all auto-merged with no human. 5 oracle decisions (OD-1..OD-5),
+3 requirements added (R1000 precision, R1001 CLI syntax, R1002 non-finite),
+2 uncertainties filed and ruled (BL-5 HIGH, BL-6 LOW), 1 plan landed.
