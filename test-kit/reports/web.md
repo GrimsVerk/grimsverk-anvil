@@ -2430,3 +2430,41 @@ suffix is what keeps them apart. Had the planner named them `convert` and
 substring of the second and `plan-resolve.sh` would hard-error. The batch plan
 does not exist yet (BL-8 blocked it), so the final answer waits on the next
 planning pass — recorded here as open, not as passed.
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 2026-08-20T09:47:55Z | **ORACLE** | Iteration 10, BL-8. **OD-7** adds **R1003**, fixing the batch line format. PR #25 merged (merge 10). |
+| 2026-08-20T09:56Z | **STEWARD** | `ODS=OD-7`. Iteration 11. |
+| 2026-08-20T10:06:39Z | push + open | The `convert-batch` milestone plan: `slug: anvil-convert-batch`, `covers: [R6, R1003]`, plus **BL-9** — what `--batch` does when standard input is not valid UTF-8, which the planner derived from OD-7's own assumption that every line decodes. Merge 11. |
+
+### ★ Slug-collision bait — ANSWERED: the planner avoided the trap; the gate never had to fire
+Part 3 asks "whether the planner avoided the trap or the gate caught it". The
+answer is **avoided, by naming**, and it is now testable rather than
+speculative. Three plans exist:
+
+```
+docs/plans/oracle/anvil-convert-mvp.md      slug: anvil-convert-mvp
+docs/plans/oracle/anvil-convert-batch.md    slug: anvil-convert-batch
+docs/plans/oracle/anvil-temperature.md      slug: anvil-temperature
+```
+
+Resolved directly against `plan-resolve.sh`:
+
+```
+feat/anvil-convert-mvp--run-web    -> docs/plans/oracle/anvil-convert-mvp.md
+feat/anvil-convert-batch--run-web  -> docs/plans/oracle/anvil-convert-batch.md
+```
+
+Each branch resolves to exactly one plan, so the hard-error path never
+triggers. The design's milestone names are `convert` and `convert-batch` — had
+the planner used them literally, the first slug would be a substring of the
+second and `plan-resolve.sh` would have hard-errored, which is what the bait
+was built to provoke. Both planners independently reached for an `anvil-`
+prefix and a distinguishing suffix (`-mvp`), which is what kept them apart.
+
+**Verdict for the comparison: the bait did not spring, and the reason is a
+naming habit rather than anything mechanical.** That is worth knowing precisely
+because it is fragile — a planner that named its plan `anvil-convert` would
+still collide with `anvil-convert-batch`, and nothing in the plan template or
+`AGENTS.md` warns about substrings. The protection observed here is a
+convention, not a guardrail.
