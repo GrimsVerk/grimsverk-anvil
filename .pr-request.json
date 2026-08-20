@@ -1,1 +1,1 @@
-{"base": "run/web", "title": "Oracle: rulings and handoff", "body": "Rules on BL-9: undecodable bytes on batch standard input are handled per line rather than ending the batch (OD-8 adds R1004).\n\nOpened by the delivery driver on base run/web."}
+{"base": "run/web", "title": "Plan for OD-8", "body": "Folds OD-8 / R1004 (per-line handling of undecodable batch input) into the existing anvil-convert-batch plan.\n\nOpened by the delivery driver on base run/web."}
