@@ -1,0 +1,120 @@
+
+════════════════════════════════════════════════════════════════════
+  THIS RUN'S BASE BRANCH: run/local
+  Every pull request this run opens will merge into 'run/local',
+  and this run waits only on pull requests targeting 'run/local'.
+  Non-default base: every branch this run pushes is suffixed '--run-local'.
+
+════════════════════════════════════════════════════════════════════
+deliver-loop: checking whether this repository can run unattended…
+unattended-ready: GrimsVerk/grimsverk-anvil
+  ready    auto_merge: true in .copier-answers.yml
+  ready    auto-merge workflow is present
+  ready    repository allows auto-merge
+  ready    repository deletes head branches on merge
+  ready    required check 'plan' is configured
+  ready    required check 'template-sync' is configured
+  ready    required check 'secrets' is configured
+  ready    required check 'test-the-tests' is configured
+  ready    required check 'acceptance-criteria' is configured
+  ready    required check 'review' is configured
+  ready    required check 'checks' is configured
+  ready    a pull-request rule is active (merges only via PR)
+  ready    base branch 'run/local': pull-request rule binds
+  ready    base branch 'run/local': required check 'plan' binds
+  ready    base branch 'run/local': required check 'template-sync' binds
+  ready    base branch 'run/local': required check 'secrets' binds
+  ready    base branch 'run/local': required check 'test-the-tests' binds
+  ready    base branch 'run/local': required check 'acceptance-criteria' binds
+  ready    base branch 'run/local': required check 'review' binds
+  ready    base branch 'run/local': required check 'checks' binds
+  ready    CLAUDE_CODE_OAUTH_TOKEN is set (review gate can run)
+  ready    merge identity: GitHub App configured (a login that is not the owner's)
+  note     template reads are minted from this App — it must be installed on the TEMPLATE repository too, or template/ branches fail template-sync closed
+  ready    CODEOWNERS resolves cleanly (at run/local)
+  ready    docs/VISION.md is filled in
+
+unattended-ready: this repository can run unattended.
+deliver-loop: budget: weekly at 74% (model 82%), allowance 20 points, window resets Aug
+deliver-loop: iteration 1: phase ORACLE
+deliver-loop: dispatch oracle worker (oracle-20260820080937)
+remote: 
+remote: Create a pull request for 'docs/oracle-20260820080937--run-local' on GitHub by visiting:        
+remote:      https://github.com/GrimsVerk/grimsverk-anvil/pull/new/docs/oracle-20260820080937--run-local        
+remote: 
+deliver-loop: iteration 2: phase WAIT
+deliver-loop: waiting on PR #12 (docs/oracle-20260820080937--run-local) — mechanical watch, no model budget
+deliver-loop: PR #12 red (plan ) — dispatching a fix
+deliver-loop: dispatch fix session
+deliver-loop: iteration 3: phase STEWARD
+deliver-loop: dispatch steward worker (steward-od-1)
+remote: 
+remote: Create a pull request for 'docs/oracle-plan-od-1--run-local' on GitHub by visiting:        
+remote:      https://github.com/GrimsVerk/grimsverk-anvil/pull/new/docs/oracle-plan-od-1--run-local        
+remote: 
+deliver-loop: iteration 4: phase WAIT
+deliver-loop: waiting on PR #15 (docs/oracle-plan-od-1--run-local) — mechanical watch, no model budget
+deliver-loop: PR #15 merged
+deliver-loop: iteration 5: phase ORACLE
+deliver-loop: dispatch oracle worker (oracle-20260820083614)
+remote: 
+remote: Create a pull request for 'docs/oracle-20260820083614--run-local' on GitHub by visiting:        
+remote:      https://github.com/GrimsVerk/grimsverk-anvil/pull/new/docs/oracle-20260820083614--run-local        
+remote: 
+pull request create failed: GraphQL: No commits between run/local and docs/oracle-20260820083614--run-local (createPullRequest)
+deliver-loop: gh pr create for docs/oracle-20260820083614--run-local failed
+deliver-loop: iteration 6: phase ORACLE
+deliver-loop: dispatch oracle worker (oracle-20260820084350)
+remote: 
+remote: Create a pull request for 'docs/oracle-20260820084350--run-local' on GitHub by visiting:        
+remote:      https://github.com/GrimsVerk/grimsverk-anvil/pull/new/docs/oracle-20260820084350--run-local        
+remote: 
+pull request create failed: GraphQL: No commits between run/local and docs/oracle-20260820084350--run-local (createPullRequest)
+deliver-loop: gh pr create for docs/oracle-20260820084350--run-local failed
+deliver-loop: iteration 7: phase ORACLE
+deliver-loop: dispatch oracle worker (oracle-20260820084934)
+remote: 
+remote: Create a pull request for 'docs/oracle-20260820084934--run-local' on GitHub by visiting:        
+remote:      https://github.com/GrimsVerk/grimsverk-anvil/pull/new/docs/oracle-20260820084934--run-local        
+remote: 
+pull request create failed: GraphQL: No commits between run/local and docs/oracle-20260820084934--run-local (createPullRequest)
+deliver-loop: gh pr create for docs/oracle-20260820084934--run-local failed
+deliver-loop: iteration 8: phase ORACLE
+deliver-loop: dispatch oracle worker (oracle-20260820085521)
+remote: 
+remote: Create a pull request for 'docs/oracle-20260820085521--run-local' on GitHub by visiting:        
+remote:      https://github.com/GrimsVerk/grimsverk-anvil/pull/new/docs/oracle-20260820085521--run-local        
+remote: 
+pull request create failed: GraphQL: No commits between run/local and docs/oracle-20260820085521--run-local (createPullRequest)
+deliver-loop: gh pr create for docs/oracle-20260820085521--run-local failed
+deliver-loop: iteration 9: phase ORACLE
+deliver-loop: dispatch oracle worker (oracle-20260820090110)
+remote: 
+remote: Create a pull request for 'docs/oracle-20260820090110--run-local' on GitHub by visiting:        
+remote:      https://github.com/GrimsVerk/grimsverk-anvil/pull/new/docs/oracle-20260820090110--run-local        
+remote: 
+pull request create failed: GraphQL: No commits between run/local and docs/oracle-20260820090110--run-local (createPullRequest)
+deliver-loop: gh pr create for docs/oracle-20260820090110--run-local failed
+deliver-loop: iteration 10: phase ORACLE
+deliver-loop: dispatch oracle worker (oracle-20260820090807)
+remote: 
+remote: Create a pull request for 'docs/oracle-20260820090807--run-local' on GitHub by visiting:        
+remote:      https://github.com/GrimsVerk/grimsverk-anvil/pull/new/docs/oracle-20260820090807--run-local        
+remote: 
+deliver-loop: iteration 11: phase WAIT
+deliver-loop: waiting on PR #19 (docs/oracle-20260820090807--run-local) — mechanical watch, no model budget
+deliver-loop: PR #19 merged
+deliver-loop: iteration 12: phase STEWARD
+deliver-loop: dispatch steward worker (steward-od-1)
+deliver-loop: steward worker failed — see .claude/orchestration-logs/steward-od-1.log
+deliver-loop: iteration 13: phase STEWARD
+deliver-loop: dispatch steward worker (steward-od-1)
+remote: 
+remote: Create a pull request for 'docs/oracle-plan-od-1--run-local' on GitHub by visiting:        
+remote:      https://github.com/GrimsVerk/grimsverk-anvil/pull/new/docs/oracle-plan-od-1--run-local        
+remote: 
+deliver-loop: iteration 14: phase WAIT
+deliver-loop: waiting on PR #21 (docs/oracle-plan-od-1--run-local) — mechanical watch, no model budget
+deliver-loop: landing this run's evidence in docs/runs/20260820T080932Z ...
+deliver-loop: collect-evidence: 8 worker log(s) into docs/runs/20260820T080932Z/workers.
+deliver-loop: collect-evidence: 5 review(s) into docs/runs/20260820T080932Z/reviews (13 skipped).
