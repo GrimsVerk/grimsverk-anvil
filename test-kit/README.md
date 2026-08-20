@@ -51,4 +51,7 @@ no longer ungating the other, and a refusal to arm auto-merge on an unprotected
 base rather than merging on the spot — ESC-78..80 (v0.4.43) — and the one that
 explains a run dying with no cause at all: two drivers on one machine were
 indistinguishable, so one operator's pattern kill reached into the other
-project — ESC-81 (**v0.4.44**).
+project — ESC-81 (v0.4.44) — and the deadlock that stopped a lane at SETUP with
+no legal move left, where one required check demanded a document be append-only
+and another scanned that whole document for format errors — ESC-82
+(**v0.4.45**).

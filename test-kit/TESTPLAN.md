@@ -53,7 +53,7 @@ coder, blind test-writer, reviewer, acceptance, and the driver itself.
 The per-base-branch pipeline isolation this layout depends on landed in the
 template as the fix for ESC-46 (`deliver-loop.sh --base`, lane branch
 suffixes, `setup-github.sh --gate-branch`); everything the lanes need is in
-release **v0.4.44**, and Part 1 step 2 refuses anything older.
+release **v0.4.45**, and Part 1 step 2 refuses anything older.
 
 ---
 
@@ -103,7 +103,7 @@ pull request is opened AS THE APP by the scaffold's
 pull request server-side, where minting works (ESC-53: the dispatch API is
 unreachable from this credential and a dispatch-only workflow never
 registers off the default branch). This
-requires template **v0.4.44 or newer**. Template access for copier comes
+requires template **v0.4.45 or newer**. Template access for copier comes
 from the owner attaching BOTH repositories when creating the web session —
 grimsverk-anvil to work in, grimsverk-template only so copier can read it.
 
@@ -206,7 +206,7 @@ local lane only, **W:** the web lane only.
 
 ### 2. Confirm the template release
 
-The latest release of grimsverk-template must be **v0.4.44 or newer** (it
+The latest release of grimsverk-template must be **v0.4.45 or newer** (it
 carries the per-base lanes, the evidence recovery tools, the App-only
 credentials, the round-1 fixes, ESC-49's hook fix, ESC-50's server-side
 pull-request opener, ESC-51's REST-only session reads, and the round-2.1
@@ -228,9 +228,11 @@ readiness refusing on the leftover worktrees the driver refuses on, ESC-77
 the inert tool grants that camouflaged real errors, and round 3.4's three
 late ones — ESC-78 the branch sweep at every stop, ESC-79 gating one lane no
 longer ungating another, ESC-80 refusing to arm auto-merge on an unprotected
-base instead of merging on the spot, and ESC-81 — two drivers on one machine
-that can no longer reach each other — the lanes cannot merge anything
-without ESC-56/57). Both lanes:
+base instead of merging on the spot, ESC-81 — two drivers on one machine
+that can no longer reach each other — and ESC-82, the two required checks
+that deadlocked a repository permanently: an append-only document scanned
+whole-file for format errors could never be repaired by any legal action —
+the lanes cannot merge anything without ESC-56/57). Both lanes:
 `gh release view -R GrimsVerk/grimsverk-template --json tagName --jq
 .tagName`, or read the tag copier resolves in `.copier-answers.yml` after
 rendering — stop if it is older.
@@ -392,6 +394,39 @@ is disposable; your findings are the deliverable. These rules bind both lanes.
    Friction counts: a misleading message, a doc that says the wrong path, a
    step that needed a retry. If you are unsure whether something is a
    finding, it is a finding.
+
+4a. **The ledger is APPEND-ONLY, and one file per lane.** One file, added to —
+   never a new file per round and never a new branch. Nothing already pushed
+   may be deleted, renumbered, reworded or quietly dropped. A finding you now
+   think was wrong stays exactly where it is; you add a NEW entry that says so
+   and why. This branch has no pull request and no CI by design, so nothing
+   but you stands between a careless rewrite and evidence nobody can get back.
+
+   **One carve-out, and only one: taking out a register value (rule 13).** A
+   value that should never have been pushed is removed at once — but the
+   removal is itself recorded, in a `## Redaction log` section at the end of
+   the ledger, saying what was taken out, from where, and why the finding is
+   unchanged without it. A redaction that is not logged is indistinguishable
+   from evidence going missing.
+
+   **Run the check before every push:**
+
+   ```bash
+   test-kit/check-ledger.sh local     # or: web
+   ```
+
+   It refuses a push that loses a `### F<n>` heading the remote already has,
+   a file that shrank with no redaction log, and any register value or
+   register-shaped string (`/home/<name>`, `git@github.com-<alias>`) anywhere
+   in `test-kit/`. Both of those have happened here already: a value was
+   quoted as evidence inside a finding, and the frozen kit copies on the
+   ledger branches predated rule 13 and carried the app id in plain text.
+
+   **A redaction at the tip does NOT remove a value from git history.** If you
+   find one that was pushed earlier, redact the tip, log it, and say in the
+   ledger that the history still carries it. Rewriting a ledger branch's
+   history is a force-push, which this branch must never do — that call is the
+   owner's.
 5. **Record phase transitions.** Every time the detector reports a PHASE,
    append one line to the ledger: timestamp, PHASE, and its key fields. This
    is the comparison spine between the two lanes.
