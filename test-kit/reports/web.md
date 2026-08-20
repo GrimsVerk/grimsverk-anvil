@@ -1601,3 +1601,11 @@ round-1..2.1 history of this lane was operators misled by wrong refusals.
 
 **Bounded wait for gating started per step 7W**, polling every 3 minutes to a
 45-minute limit.
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 2026-08-20T01:26:27Z | 7W — gating wait, attempt 1 | Not gated: include = `~DEFAULT_BRANCH`. |
+| 2026-08-20T01:29:28Z | 7W — attempt 2 | **GATED.** include = `~DEFAULT_BRANCH`, `refs/heads/run/local`, `refs/heads/run/web`. Three minutes; the local agent's gating step landed well inside the bound. |
+| 2026-08-20T01:29:36Z | **7W — readiness check GREEN** | **`unattended-ready: this repository can run unattended.` EXIT=0.** All seven required checks and the pull-request rule bind on `run/web`; the ESC-50 note is emitted correctly; nothing missing. **This is the first time in six sessions that the web lane has passed setup.** Rounds 1-3 died on the App credential, round 4 on the GraphQL block, round 2.1 on the credential probe. v0.4.35 clears the door. |
+
+**PHASE log begins below (Part 2 rule 5).**
