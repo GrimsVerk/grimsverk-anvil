@@ -1,0 +1,4 @@
+Preparing worktree (new branch 'worker/oracle-20260820111019')
+HEAD is now at dac5b28 Scaffold and canned test design (run/local)
+=== spawn-worker[oracle-20260820111019] engine=claude branch=worker/oracle-20260820111019 base=run/local (dac5b282a63d961c105d5ecdf0b72bdec7b6051c) bypass=0 ===
+=== 2026-08-20T11:10:19Z ===
