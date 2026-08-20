@@ -1,0 +1,21 @@
+Preparing worktree (new branch 'worker/oracle-20260820084934')
+HEAD is now at 7a3430e Merge pull request #15 from GrimsVerk/docs/oracle-plan-od-1--run-local
+=== spawn-worker[oracle-20260820084934] engine=claude branch=worker/oracle-20260820084934 base=run/local (7a3430e751f4c44b9c8d83bb43fb94fef429a724) bypass=0 ===
+=== 2026-08-20T08:49:35Z ===
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).
+Push is blocked by this session's permissions, so the work stops at the local commit — which is where the oracle's job ends anyway ("commit both, on a branch, and stop"). The driver or orchestrator will need to push `docs/oracle-20260820084934--run-local` and open the PR.
+
+## Oracle report — run 2, scope BL-5
+
+**Ruling: BL-5 is decided as OD-4, adopting the steward's proposed default as filed.** An acceptance script lands with the command it invokes — never before. Concretely:
+
+- The **R1000 steward plan** delivers only the 12-significant-digit formatting rule and blind unit tests asserting exact printed strings, including the ESC-1 reproduction (0.1 km → m prints exactly `100`), red against the artifact and green against the fix. No acceptance script, no command-line path, no CLI-syntax decision.
+- **Milestone `convert`** delivers `acceptance/S1.sh` (fixed table with the 0.1 km → m row); **milestone `temperature`** delivers `acceptance/S2.sh` (`212`, `373.15`) — each comparing the installed command's exact stdout strings per OD-1. The same rule governs S3 and S5 when their milestones are planned, so this question does not return per script.
+- The ESC-1 correction row waits for `S1.sh` to merge (its stub names an acceptance script as the pending check) and is appended by that PR's author.
+
+What settled it: `acceptance-criteria.sh` already *reports rather than fails* a §13 criterion whose script doesn't exist yet, with a comment saying exactly why — failing would deadlock the run on its own definition of done before the first feature merges. Landing a red S1 now would recreate that deadlock by hand, and writing S1 now would also force the CLI syntax OD-1 deliberately left to the planner. The decision cites the vision's durable-evidence ruling, read as binding each observer to the change it can actually observe; the "not a follow-up, and not optional" clause was weighed as the statement against, and the decision records why it doesn't forbid the split. OD-4 amends only OD-1's allocation sentence; R1000 itself and its fixture values are untouched, so nothing is superseded.
+
+**Bookkeeping:** no waiver, no halt, no contradictions left undecided in scope. Handoff at `docs/oracle/handoff-2026-08-20-2.md`. Both files are committed as `62b6fdd` on branch `docs/oracle-20260820084934--run-local` — **unpushed, because `git push` requires approval this session lacks**. I verified the ledger against `oracle-decisions.sh`'s rules by hand (the script itself was also blocked from executing); both vision quotes are verbatim and the append-only comparison holds.
+
+**On the vision:** nothing ambiguous blocked this ruling, but one observation for the owner: the durable-evidence section is doing double duty — it both *mandates* measurements and, read closely, *sequences* them ("the thing that notices is part of the decision"). BL-5 existed because that sentence doesn't say what to do when the decision's observable surface spans multiple future plans. One added sentence — e.g. "a measurement ships with the change that makes it observable" — would have decided BL-5 directly and will decide its siblings (S3, S5) without another oracle round; OD-4 records that reading, but it currently rests on my inference rather than the owner's words.

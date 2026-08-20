@@ -1,0 +1,23 @@
+Preparing worktree (new branch 'worker/oracle-20260820080937')
+HEAD is now at 02e1506 Record the round 3.2 setup-github transcript (run/local)
+=== spawn-worker[oracle-20260820080937] engine=claude branch=worker/oracle-20260820080937 base=run/local (02e150675b4f4592e5860a55b3e76e8e8d3486b2) bypass=0 ===
+=== 2026-08-20T08:09:37Z ===
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).
+Done. The run is complete: three decisions are appended to `docs/DESIGN.oracle.md`, the handoff is written, and both are committed on `worker/oracle-20260820080937` (commit `6978667`) for the driver to turn into a pull request. I opened no PR and spawned nothing.
+
+**What was decided**
+
+- **OD-1 (resolves ESC-1)** — the only decision that adds work. It adds requirement **R1000**: every printed result is rounded to at most 12 significant digits (Python's `format(value, ".12g")`), so the observed artifact `100.00000000000001` prints as exactly `100`. Twelve digits keeps more precision than any real use of a unit converter needs, while staying safely below the range where floating-point noise shows up — the discarded digits are computer arithmetic residue, never information. Per the vision's durable-evidence section, the measurement is part of the decision: unit tests and the S1/S2 acceptance scripts must compare the tool's exact printed text (a numeric comparison would have accepted the artifact).
+- **OD-2 (resolves BL-3)** — declined. Adding the `rich` library is exactly what core tenet V5 forbids ("no runtime dependency"), and a tool that prints one value per line has nothing to tabulate. If you want this, the steering lever is editing V5, then a later decision can supersede OD-2.
+- **OD-3 (resolves BL-4)** — declined. Currency with live rates is an explicit non-goal in your own `docs/DESIGN.md` §3, breaks the offline requirement, and a fetched rate is a number the tool must present on trust — the confidently-wrong shape V1 names as the worst output. Reversing a non-goal you landed is yours, not the oracle's; the lever is editing §3/§5.
+
+Both declines were made as ordinary decisions rather than halt entries, deliberately: a halt is for a ruling a tenet *blocked*, whereas here the tenet and the non-goal *are* the ruling. No criterion was waived.
+
+**Not decided, and why:** BL-1 (unit aliases) and BL-2 (below absolute zero) were outside the driver's scope for this run. The handoff deliberately avoids naming their ids, because the driver marks every id a handoff mentions as processed — they'll reach the oracle unharmed in a later cycle.
+
+**Handoff:** `docs/oracle/handoff-2026-08-20-1.md`. It tells the orchestrator R1000 needs planning (either a steward plan or folded into the first `convert` milestone plan), that OD-2/OD-3 need nothing, and that the two remaining §11 open questions (CLI syntax, batch line format) are still the planner's to file.
+
+**Vision feedback — the part worth your minute:** the word *offline* does all the work in rejecting currency, yet it appears only in the unnumbered purpose paragraph, not as a numbered statement. OD-3 had to cite that whole paragraph. If offline-and-deterministic is a core tenet the way V5 is, giving it a number would make it citable — and haltable — cleanly. Second, smaller: the vision says nothing about how much precision output should carry, so OD-1's "12 digits" rests on my judgment of V1; one sentence about what precision means to you would let a future decision derive it instead of guessing it.
+
+**Verification honesty:** I could not execute the `oracle-decisions.sh` check locally (script execution needs an approval this unattended session doesn't have). I verified its load-bearing rule by hand — all five quoted vision sentences match `docs/VISION.md` verbatim under the same whitespace normalization the script uses — and the schema fields follow the enforced shape. The check itself will run for real on the pull request the driver opens.

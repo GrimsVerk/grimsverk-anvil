@@ -1,0 +1,17 @@
+## Review
+
+I verified the evidence citations directly against the base commit (`02e1506`) rather than trusting the diff's claims: `ESC-1` is logged in `docs/escapes.md`, and `BL-3`/`BL-4` are logged in `docs/BACKLOG.md`'s Proposed section — all pre-existing at the base commit, not invented by this PR. I also confirmed `docs/DESIGN.oracle.md` had zero prior `OD-` entries at the base commit, so `OD-1..3` and `R1000` are correctly the first of their kind (satisfying the "start at R1000" and "ids unique and increasing" rules), and confirmed the diff touches only `docs/DESIGN.oracle.md` and `docs/oracle/handoff-2026-08-20-1.md`.
+
+**Plan conformance / exemption (criterion 1).** Branch is `docs/oracle-...`, exempt from planning. Total added lines is 98 (over the general 50-line cap), but the entire diff sits inside `docs/DESIGN.oracle.md` and `docs/oracle/` — both named in AGENTS.md's list of uncapped document paths. Correctly exempt, not a violation.
+
+**Gate tampering (criterion 5).** No `.github/`, `.claude/`, `CODEOWNERS`, `docs/DESIGN.md`, or `docs/VISION.md` files touched. `docs/DESIGN.oracle.md` is explicitly the one design document an agent may write and land unattended (per its own text: "deliberately not owned"), so a bot-opened PR touching it is fine — the bot-authorship concern only applies to `DESIGN.md`/`VISION.md`, neither of which appears here.
+
+**Schema compliance.** All three decisions carry the full eight-field schema. I checked every quoted vision statement against `docs/VISION.md` verbatim, including the multi-clause ones (V1, V6, V5, V3, V2, the durable-evidence bullet, and the unnumbered purpose statement) — all are complete sentences, not fragments, consistent with the "quote only whole vision statements" fixup visible in the commit history. The "Vision statements against" field is used meaningfully in all three (not a rubber-stamped "(none)") — OD-1 names V6 and explains why it doesn't forbid the rounding rule, OD-2 and OD-3 each explain why the nearest candidate (V2 in both cases) doesn't tell against the decision.
+
+**Substance.** OD-1 resolves ESC-1 with a concrete, falsifiable rule (`.12g` formatting) and correctly defers both the implementation and the `docs/escapes.md` correction row to a future plan/PR rather than doing either here — appropriate, since no plan or code rides along (mechanical facts confirm no src changes). OD-2 declines BL-3 (a `rich` dependency) squarely on the V5 no-dependency tenet, which is exactly what tenets are for. OD-3 declines BL-4 (currency) citing `docs/DESIGN.md`'s existing non-goal, correctly noting the oracle can't overturn an owner-landed non-goal itself.
+
+**Minor nit (non-blocking).** OD-1's "Vision statement relied on" field cites two statements (V1 and the durable-evidence bullet) in one field rather than one — not prohibited by the schema and both are quoted verbatim with clear reasoning, so this doesn't rise to a defect.
+
+No blocking findings.
+
+REVIEW_VERDICT: PASS

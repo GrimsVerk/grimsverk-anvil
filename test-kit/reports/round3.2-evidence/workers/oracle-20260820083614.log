@@ -1,0 +1,24 @@
+Preparing worktree (new branch 'worker/oracle-20260820083614')
+HEAD is now at 7a3430e Merge pull request #15 from GrimsVerk/docs/oracle-plan-od-1--run-local
+=== spawn-worker[oracle-20260820083614] engine=claude branch=worker/oracle-20260820083614 base=run/local (7a3430e751f4c44b9c8d83bb43fb94fef429a724) bypass=0 ===
+=== 2026-08-20T08:36:14Z ===
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).
+Push is blocked by the permission config, so the work stops at the local commit — which is where the oracle's job ends anyway ("commit both, on a branch, and stop"). The orchestrator can push and open the PR from here.
+
+## Report
+
+**Ruled on BL-5 with OD-4, appended to `docs/DESIGN.oracle.md`, granting the steward's proposed default.** Whichever plan covers R1000 delivers only the formatting rule and unit tests asserting exact printed strings (including the ESC-1 reproduction, 0.1 km → m prints exactly `100`). Each acceptance script lands with the milestone plan that builds the command it invokes: S1 with `convert` (carrying the 0.1 km → m row), S2 with `temperature`, and by the same principle S3 with `convert` and S5 with `convert-batch`. This supersedes exactly one clause of OD-1's measurement prose — the sentence assigning both halves to the R1000 plan — and nothing else.
+
+The deciding fact was mechanical, read directly from `.github/scripts/acceptance-criteria.sh` rather than predicted: a *missing* script is reported ("no script yet") and never fails the check, while a *landed* script that exits non-zero fails the required check on every PR. So the literal reading of OD-1's clause would land a permanently red check that its own PR could never merge past — a wedged run, which the vision's purpose sentence defines as the project failing. I rejected three other shapes in the decision: guarded scripts that exit 0 when `anvil` is absent (green PASS for an unmeasured thing — the narrated-success shape V6 rejects), waiving S1/S2 (waivers are for "met by other means", and a landed waiver would keep skipping S1 even if the CLI merges broken), and building a stub CLI early (forces the syntax ruling OD-1 deliberately deferred).
+
+Other outcomes:
+
+- **No waiver, no halt.** OD-4 adds no requirements; it re-sequences delivery of a measurement OD-1 already defined, and the unscripted interval is itself observed by the existing check on every PR.
+- **ESC-1 consequence:** the stub's pending check is "expressed as an acceptance script", so the correction row in `docs/escapes.md` now waits for `acceptance/S1.sh` to merge with `convert` — unit tests alone don't discharge it.
+- **Handoff:** `docs/oracle/handoff-2026-08-20-2.md`. It also corrects run 1's handoff, which told the R1000 plan to carry the S1/S2 scripts (handoffs are immutable, so the correction lives in the new file).
+- **Not decided:** the two remaining §11 open questions (exact CLI syntax, batch line format) — no logged evidence asks about them yet; the planner files them when planning reaches them.
+- **Verification honesty:** the permission config blocked executing `.github/scripts/oracle-decisions.sh` locally and blocked `git push`. I verified OD-4 against every rule in that script by reading it in full (evidence resolves at base, all eight fields non-empty, the quoted vision span is verbatim and above the length floor, prior decisions byte-identical, id increasing) — but the check has not *run* against this commit; CI will be its first execution.
+- **Vision feedback:** the vision decided this one well — the purpose sentence ("without a human touching anything mid-run") genuinely settled it. One small gap: nothing in the vision or ledger schema says how to *partially* supersede a decision's prose (as opposed to a requirement). OD-4 names the exact sentence it replaces, which works, but a sentence in the vision blessing clause-level supersession would make future corrections less ad hoc.
+
+**Branch:** `docs/oracle-20260820083614--run-local`, one commit (`eace111`), local only — needs a push and a PR from the orchestrator.

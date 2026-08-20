@@ -1,0 +1,18 @@
+I reviewed the diff, which touches only `docs/BACKLOG.md`, adding a `BL-5` entry to the previously-empty "Uncertainties awaiting oracle ruling" section.
+
+**Context established from the facts/PR metadata:**
+- Branch `docs/oracle-plan-od-1--run-local` carries the `docs/` prefix, exempting it from the `plan` check.
+- The entire diff (28 lines) sits inside `docs/BACKLOG.md`, which AGENTS.md explicitly lists as passing the exemption cap **at any size**, not just under the 50-line limit — so the branch-prefix exemption is doubly justified here.
+- `autogrims[bot]` opened this PR (per criterion 5's guidance, that matters only for `docs/DESIGN.md`/`docs/VISION.md` edits — neither is touched here, so no block applies).
+- `test-the-tests` correctly did not run (no `src/` change, and this genuinely has no implementation to test).
+- No new dependencies, no excluded lockfiles, no blind-test trailers (expected — this is a docs-only change with nothing to blind-author), no other open PRs from this author.
+
+**Substance check:** The added `BL-5` entry is the steward process working as designed. `docs/DESIGN.oracle.md`'s OD-1 requires the covering plan to deliver acceptance-script evidence (S1/S2) alongside the formatting unit tests, but S1/S2 measure R1–R3, which no R1000-only plan can deliver — no CLI exists yet, and OD-1 itself leaves the CLI syntax undecided. That's a real, correctly-diagnosed conflict, not a manufactured one. Filing it as HIGH risk matches AGENTS.md's rule directly ("candidate answers change slice boundaries... unsure means HIGH"), and stopping planning until an oracle ruling cites it is exactly the unattended-planning process AGENTS.md prescribes ("Unattended, the oracle rules: a HIGH uncertainty is filed as a `BL-<n>`... and planning stops until a decision cites it"). The entry follows the required format (question, proposed default, risk class + one-line reason, `filed by:`), and BL-5 is a plausible next sequential id given OD-2/OD-3 already cite BL-3 and BL-4.
+
+The header placeholder text is also updated to acknowledge `/steward` as a valid filer alongside `/plan`, consistent with the general planning rule applying to steward runs too. This is the section's first-ever entry, so there's no append-only violation.
+
+**Minor nit (non-blocking):** the placeholder text's trailing example still reads `— filed by: plan` even though the sentence was updated to mention both `/plan` and `/steward`; cosmetically inconsistent but not misleading in effect. Also, the PR title "Plan for OD-1" is a little generous — no plan file was actually produced, only a blocking uncertainty was filed — but this is exactly the documented outcome when a HIGH-risk uncertainty is hit, so it's not a rule violation.
+
+No blocking findings.
+
+REVIEW_VERDICT: PASS

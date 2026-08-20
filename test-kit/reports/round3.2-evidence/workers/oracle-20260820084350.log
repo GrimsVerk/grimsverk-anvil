@@ -1,0 +1,27 @@
+Preparing worktree (new branch 'worker/oracle-20260820084350')
+HEAD is now at 7a3430e Merge pull request #15 from GrimsVerk/docs/oracle-plan-od-1--run-local
+=== spawn-worker[oracle-20260820084350] engine=claude branch=worker/oracle-20260820084350 base=run/local (7a3430e751f4c44b9c8d83bb43fb94fef429a724) bypass=0 ===
+=== 2026-08-20T08:43:50Z ===
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).
+Push requires interactive approval this unattended session cannot grant (only `spawn-worker.sh` and `git worktree` are allowlisted; a branch push is neither denied nor pre-approved). The commit is landed locally on the branch, which satisfies my instruction — "commit both, on a branch, and stop" — and the driver holds the push/PR machinery. My work is done; here is the report.
+
+---
+
+## Oracle report — run 2026-08-20-2 (scope: BL-5)
+
+**Decision written: OD-4, resolving BL-5.** The steward's proposed default is accepted as filed: an acceptance script lands with the milestone plan that builds the command it invokes, never before. Concretely:
+
+- The **R1000 steward plan** delivers only the formatting rule and its blind unit tests asserting exact printed strings (including the ESC-1 reproduction: 0.1 km → m formats to exactly `100`). No command-line path, no CLI-syntax ruling, no acceptance scripts.
+- **`acceptance/S1.sh` and `S3.sh` land with milestone `convert`; `S2.sh` with `temperature`; `S5.sh` with `convert-batch`** — each comparing the installed command's exact stdout strings, S1 carrying the 0.1 km → m row. (S3/S5 were not named by BL-5, but the same rule obviously governs them, so the decision says so rather than leaving two more filings to discover it.)
+- The **ESC-1 correction row** waits until `S1.sh` merges — the stub explicitly asks for an acceptance-script expression, so the R1000 plan alone does not close it.
+
+The ruling's confidence is high because the deadlock BL-5 describes is mechanical, and I verified it in `.github/scripts/acceptance-criteria.sh`: a landed script exiting non-zero fails the required check on every PR, while a merely missing script is only reported. Landing S1/S2 early would convert a deliberately-visible gap into a pipeline-stopping red. OD-4 supersedes nothing — R1000 stands; it refines OD-1's measurement clause by assigning its two halves to the plans that can each actually discharge them, and I verified the entry against every rule `oracle-decisions.sh` enforces by reading the script (I could not execute it — see caveat below).
+
+**Handoff:** `docs/oracle/handoff-2026-08-20-2.md`. It unblocks the stalled R1000 steward plan (cite OD-1 + OD-4), records the script obligations carried to the milestone plans, and flags what not to act on: the CLI syntax and batch line format stay open per §11, and the two unruled Proposed items are described without ids so the driver doesn't mark them processed.
+
+**Nothing found and left undecided** within scope; no waiver, no halt.
+
+**State of the branch:** both files are committed as `2f03e02` on `docs/oracle-20260820084350--run-local` (based on `run/local` at `7a3430e`, where BL-5 exists). Pre-commit passed (docs-only; code checks correctly skipped). Two honest caveats: **the branch is not pushed** — `git push` needs an approval this unattended session cannot obtain, so the driver must push it — and I could not execute the local gate (`uv run …` similarly blocked); CI remains the verifier, as it would be anyway.
+
+**On the vision:** nothing ambiguous this run. One observation worth passing up: the durable-evidence bullet "adding the thing that notices is part of the decision — not a follow-up, and not optional" has no word about *sequencing* when the measurement's substrate doesn't exist yet — OD-4 had to argue that a measurement cannot precede the behaviour it measures. One sentence there (e.g. "a measurement lands with the change that creates the behaviour it observes") would have decided BL-5 nearly by itself.

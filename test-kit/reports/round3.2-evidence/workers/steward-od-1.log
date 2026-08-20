@@ -1,0 +1,57 @@
+Preparing worktree (new branch 'worker/steward-od-1')
+HEAD is now at 6a5ed14 Merge pull request #12 from GrimsVerk/docs/oracle-20260820080937--run-local
+=== spawn-worker[steward-od-1] engine=claude branch=worker/steward-od-1 base=run/local (6a5ed14d3f073dacc03b09d6dc1d46651b79848c) bypass=0 ===
+=== 2026-08-20T08:30:23Z ===
+Permission allow rule (--allowed-tools): Write(docs/plans/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/plans/oracle/**) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/BACKLOG.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/BACKLOG.md) instead (Edit rules cover all file-editing tools).
+**Stopped: plan pending oracle ruling on BL-5.** No plan was written.
+
+## What happened
+
+OD-1 (the 12-significant-digit output rule, R1000) cannot be turned into a steward plan without making a second design decision, so I filed the missing half rather than deciding it myself.
+
+OD-1's measurement clause says the plan covering R1000 must make the rule observable **twice**: exact-string unit tests, *and* the S1/S2 acceptance scripts comparing the installed `anvil` command's exact stdout. A plan covering R1000 alone cannot deliver that second half:
+
+- There is no `anvil` command, no converter, and no plan for either — the tree holds only the scaffold.
+- S1 measures R1/R2 and S2 measures R3. R1000 delivers none of them.
+- OD-1 explicitly leaves the exact CLI syntax open "for the planner", so writing `acceptance/S1.sh` now means deciding that syntax — an external format the decision withheld.
+- A landed S1 script invoking a command nobody has built exits non-zero, and `acceptance-criteria.sh` is a required check on **every** pull request. That would go red on this pull request and stay red until the CLI merges — the deadlock that script's own header warns about.
+
+That is HIGH risk by the Planning rule's contract test (it moves every slice boundary, forces a ruling on an external format, and the wrong answer blocks every later pull request), so I did not rule on it.
+
+## What I filed
+
+`docs/BACKLOG.md`, **BL-5**, under "Uncertainties awaiting oracle ruling", committed alone on `worker/steward-od-1` (not pushed — the driver opens the pull request).
+
+My proposed default, for the oracle to accept or overturn: the R1000 plan delivers only the formatting rule and its blind unit tests including the ESC-1 reproduction; the S1 and S2 scripts ride with the milestone plans that build the command they invoke (S1 with `convert`, S2 with `temperature`), each carrying OD-1's exact-stdout constraint verbatim.
+
+## The rest of the report
+
+- **Plan path / slug:** none yet.
+- **Decision:** OD-1.
+- **Guessed at:** nothing — the one gap is filed rather than guessed.
+- **Existing plans made partly wrong:** none. `docs/plans/` holds only the template; the handoff's "nothing is invalidated" still holds.
+- **What OD-1 left unsaid:** which plan discharges the acceptance-script half of R1000's measurement when R1000 is planned on its own, before the output path it formats exists. The handoff's second shape — the `convert` milestone plan carrying R1000 in its `covers:` list — is a clean resolution the oracle can pick, and would make this steward dispatch unnecessary.
+
+One caveat on verification: the sandbox denied `uv run`, so I could not execute the test suite or the append-only check locally. The commit is one Markdown file touching no Python; pre-commit ran and skipped the Python hooks as having no files to check. CI is the real verdict.
+Preparing worktree (new branch 'worker/steward-od-1')
+HEAD is now at da15b7b Merge pull request #19 from GrimsVerk/docs/oracle-20260820090807--run-local
+=== spawn-worker[steward-od-1] engine=claude branch=worker/steward-od-1 base=run/local (da15b7ba912fd4398898ba3071d8d39a10dcb059) bypass=0 ===
+=== 2026-08-20T09:15:28Z ===
+Permission allow rule (--allowed-tools): Write(docs/plans/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/plans/oracle/**) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/BACKLOG.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/BACKLOG.md) instead (Edit rules cover all file-editing tools).
+Plan written and committed. Report:
+
+**Plan** — `docs/plans/oracle/output-precision-r1000.md`, slug `output-precision-r1000`, on branch `worker/steward-od-1` (commit `8a71ba2`). Not pushed: the delivery driver pushes this branch to `docs/oracle-plan-od-1--run-local` and opens the pull request.
+
+**Decision implemented** — OD-1 (requirement R1000, the 12-significant-digit output rule, resolving ESC-1), scoped by OD-4, which ruled that this plan delivers only the formatting rule and its blind unit tests, not the S1/S2 acceptance scripts.
+
+**Shape** — one vertical slice: a `format_result(value: float) -> str` function in a new `src/grimsverk_anvil/output.py` returning `format(value, ".12g")`, blind unit tests pinning its exact output strings (including the ESC-1 reproduction, `0.1 * 1000` printing exactly `100`), and the architecture doc. Estimate ~100 lines. It is one slice rather than the usual three to five because the ruled scope is a single pure function — splitting it would give a code slice and a test slice, which is the horizontal shape the planning rule exists to prevent. That departure is stated in the summary where the owner can refuse it.
+
+**What I had to guess at** — nothing that needed filing. Every choice traces to OD-1, OD-4, or R1000's own text, and the plan lists each derivation with the sentence that decided it, so the classification can be checked rather than trusted. Nothing was added to `docs/BACKLOG.md`; the one real gap here, BL-5, was already filed and ruled on as OD-4 before this run.
+
+**One honesty note carried into the plan** — this session could not execute Python (the sandbox refused it), so of the exact output strings in the plan's behaviour table, only the three OD-1 itself names (`100`, `212`, `373.15`) are normative. The rest are derived from CPython's documented `g` formatting rules. The plan says so explicitly, and says that where a derived row and CPython disagree the row is wrong rather than the implementation — with that licence limited to those rows, so it can't be read as permission to weaken a genuinely failing test.
+
+**Existing plans made partly wrong** — none. `docs/plans/` held only the template. Two future plans inherit constraints, and the plan names them: milestone `convert` must route its output through this function, must ship `acceptance/S1.sh`, and its implementer appends the ESC-1 correction row once that script runs green; milestone `temperature` does the same for `acceptance/S2.sh`.
+
+I did not run the test suite — the sandbox declined it. The commit adds one document and no code, and the pre-commit hooks that did run passed.

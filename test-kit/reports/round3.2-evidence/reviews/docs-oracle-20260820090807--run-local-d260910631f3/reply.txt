@@ -1,0 +1,17 @@
+I reviewed this PR: an oracle ruling (OD-4) appended to `docs/DESIGN.oracle.md`, resolving BL-5 (which plan delivers OD-1's split measurement obligations), plus a new handoff file at `docs/oracle/handoff-2026-08-20-2.md`.
+
+**Plan conformance.** No plan resolved, but the branch is `docs/`-prefixed and the entire diff sits inside `docs/DESIGN.oracle.md` and `docs/oracle/` — both explicitly named in AGENTS.md's list of paths exempt from the size cap ("the documents this process itself demands"). 67 added lines is not a violation here; the cap doesn't apply to this path set. This is exactly the shape of change the exemption exists for (an oracle ruling), not real work hiding behind a doc-branch name.
+
+**Gate tampering / ownership (criterion 5).** `docs/DESIGN.oracle.md` is explicitly *not* `CODEOWNERS`-owned — AGENTS.md says the oracle may append to it unattended, and that's the whole point of the file. The PR is bot-opened (`autogrims[bot]`), which would be blocking only if it touched `docs/DESIGN.md` or `docs/VISION.md`. It touches neither. No gate-path files (`.github/`, `.claude/`, CODEOWNERS, pre-commit config) are touched.
+
+**Append-only discipline.** The diff is pure addition — no existing lines in `docs/DESIGN.oracle.md` are changed, and OD-1/OD-2/OD-3 are untouched. OD-4 follows the append-only-with-supersession pattern correctly: it names OD-1 by id and clarifies one sentence of its prose without editing OD-1's text, and it doesn't touch any requirement id (Requirements superseded: (none) is correct — R1000 itself isn't superseded, only a scheduling detail in OD-1's prose is).
+
+**Schema compliance.** All required fields are present (Date, Evidence, Requirements added/superseded, Vision statement relied on, Vision statements against, Alternatives considered, Rationale). The "Vision statement relied on" quote matches `docs/VISION.md`'s durable-evidence bullet verbatim, and "Vision statements against" quotes V6 verbatim with a substantive rationale for why it isn't crossed (S1/S2 acceptance rows stay pending/empty rather than reporting false success) — not a search-and-cite exercise. Evidence (BL-5) was filed and merged in a prior PR (#15, base commit), satisfying the base-commit-evidence requirement.
+
+**Soundness.** The reasoning — splitting OD-1's "observable twice" obligation across the R1000 steward plan (unit tests) and the `convert`/`temperature` milestone plans (acceptance scripts, since they need the CLI to exist first) — is coherent and avoids the alternatives it rules out for good reasons (landing a script with no command to invoke would wrongly redden the required acceptance-criteria check).
+
+No test or implementation files are touched, so `test-the-tests` not running is expected and correct, not a gap.
+
+No blocking findings.
+
+REVIEW_VERDICT: PASS

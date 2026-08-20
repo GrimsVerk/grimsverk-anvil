@@ -1,0 +1,15 @@
+Findings from reviewing this plan-only PR:
+
+**Scope and branch exemption.** The branch is `docs/oracle-plan-od-1--run-local` (docs/ prefix) and the entire diff is a single new file, `docs/plans/oracle/output-precision-r1000.md`. AGENTS.md explicitly exempts `docs/plans/` from the 50-line cap that otherwise applies to `chore/`/`docs/` branches ("documents this process itself demands are exempt from that cap"), so the 205-line size is not a concern, and "no plan resolved" here correctly reflects that this diff *is* the plan being created, not work that skipped planning.
+
+**Criterion 5 (bot-opened DESIGN/VISION diffs).** Opened by `autogrims[bot]`. The diff touches only `docs/plans/oracle/output-precision-r1000.md` — it does not touch `docs/DESIGN.md` or `docs/VISION.md`, so the owner-authorship requirement for those two files does not apply here. Plans under `docs/plans/oracle/` are expected to be agent-written and agent-opened (this is exactly what the `steward` skill produces).
+
+**Oracle-decision conformance.** The plan cites OD-1 and OD-4 in `docs/DESIGN.oracle.md`, both already landed at the base commit, and covers only `R1000`, which OD-1 added — satisfying `oracle-decisions.sh`'s constraint that a plan under `docs/plans/oracle/` implement only landed work. The scope described (one pure `format_result` function + blind unit tests, explicitly no CLI, no converter, no acceptance scripts) matches OD-4's ruling that OD-1's measurement splits across plans, with this one delivering only the unit-test half. The "Out of scope" and "What this decision makes partly wrong" sections correctly attribute every exclusion to OD-2/OD-4/DESIGN.md rather than to preference, and correctly note the ESC-1 correction row is deferred to the `convert` implementer per OD-4.
+
+**Behaviour-contract table.** Spot-checked the `.12g` formatting rows (threshold behavior at 1e-4/1e-5, 1e11/1e12, negative zero, non-finite values, trailing-zero stripping) — they're consistent with Python's `format(x, '.12g')` semantics. The plan is honest that only 3 of the rows are normative (from OD-1 itself) and that the rest are the planning session's derivation since it couldn't execute Python, with an explicit, narrow license for the implementer to correct a wrong derived row (not the three normative ones) with a commit note — this is a reasonable, non-blocking process safeguard rather than a defect.
+
+**Other checks.** No dependencies added, no gate paths touched, no ratchet/escapes.md claims made prematurely (the plan explicitly defers the ESC-1 correction row rather than falsely claiming it), no lockfile drift, no prompt-injection attempts in the diff text, and blind-test-authorship having no trailer is expected for a docs-only plan PR.
+
+No blocking findings.
+
+REVIEW_VERDICT: PASS
