@@ -236,3 +236,40 @@ decision not to decide, recorded.
 
 <!-- Append decisions below, newest at the bottom. Never edit one that has
 landed; supersede it with a new decision naming its id. -->
+
+## OD-1 — Output is rounded to 12 significant digits; ESC-1's artifact is a defect, not the expected shape
+
+- **Date:** 2026-08-20
+- **Evidence:** ESC-1
+- **Requirements added:** R1000
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V1 — "Correct conversions come before everything else: a wrong number presented confidently is the worst output this tool can produce."
+- **Vision statements against:** V6 — "A conversion that is numerically wrong, however plausible it looks, is rejected outright — as is any run that reports success while a criterion's evidence cell is empty or narrated rather than executed." The nearest reading against is that rounding discards digits and so prints a less-than-exact number. It does not forbid this, because every digit the rule keeps is correct, while the digits it removes — the 16th onward in ESC-1's `100.00000000000001` — are binary floating-point noise: the unrounded output is itself the numerically-wrong-but-plausible result V6 rejects.
+- **Alternatives considered:** printing the float's shortest round-trip repr (rejected: it is what produced ESC-1 — it faithfully reports the double, not the conversion); a fixed count of decimal places, e.g. two or six (rejected: it destroys small magnitudes — 0.0001 m expressed in km prints as 0 at six decimals, a wrong number presented confidently); end-to-end `decimal.Decimal` arithmetic (rejected: heavier machinery for no gain 12 significant digits does not already deliver, against V3, and the factor table would have to be re-authored to benefit); fewer significant digits, e.g. six (rejected: discards legitimately correct precision for nothing — float noise lives around digits 16–17, so twelve already carries a wide margin).
+- **Rationale:** An IEEE-754 double carries roughly 15–17 significant decimal digits, and a hub conversion (value × to-base × from-base) perturbs at most the last couple of them, so every artifact of ESC-1's kind lives beyond the 15th digit. Rounding output to 12 significant digits keeps every digit that can be trusted and drops every digit that cannot, which is the strongest available reading of V1: the number printed is correct as printed. It is one format specification from the standard library, so V5 and V3 are untouched. Confidence is high; if a future category needs more printed precision, a superseding decision names this one.
+
+**R1000 — Output precision.** A conversion result is printed as Python's `format(result, ".12g")` renders it: at most 12 significant digits, trailing zeros and any bare trailing decimal point removed, scientific notation only where the `g` conversion resorts to it. So `0.1 km` to `m` prints `100`, never `100.00000000000001`. The rule applies to every printed result, including each result line in batch mode (R6). Error messages and usage text are prose, not results, and are unaffected.
+
+**Measurement, part of this decision** (docs/VISION.md, durable evidence: a change nothing can observe is a change nobody can evaluate). No new mechanism is needed — the acceptance scripts under `acceptance/` are the existing one. The plan that implements R1000 must put ESC-1's reproduction into S1's fixture table as an exact-string row — input `0.1 km` to `m`, expected output exactly `100` — and S1/S2/S5 fixtures must assert exact output strings, not numeric closeness, or the artifact class is invisible to them. Once that script has been observed red against the unrounded behaviour and green against the fix, the implementing work appends ESC-1's correction row in `docs/escapes.md` naming it.
+
+## OD-2 — BL-3 is refused: no `rich`, and no pretty-table output built in its place
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-3
+- **Requirements added:** (none)
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V5 — "No runtime dependency may be added: the Python standard library is the whole toolbox, and a diff that adds one violates this tenet."
+- **Vision statements against:** (none — no statement in docs/VISION.md tells against this refusal; nothing there ranks presentation or convenience anywhere, and V3's preference for a small tool that is obviously right tells with the refusal, not against it)
+- **Alternatives considered:** adopting `rich` as BL-3 asks (refused outright: a runtime dependency is the exact diff V5 names as a tenet violation, and R8 already requires standard library only); hand-rolled ANSI tables from the standard library (refused: BL-3 itself calls hand-rolling wasted effort, so building that satisfies nobody — and aligned, coloured output works against the script-author use cases in docs/DESIGN.md §4 and batch mode R6, where plain one-line results are the interface, as well as against OD-1's exact-string output contract); refusing the item and leaving the design unchanged (chosen).
+- **Rationale:** BL-3 collides with a core tenet, and a tenet is precisely what this role does not trade away on its own authority — V5 does not weigh `rich` against effort saved, it says the diff that adds it violates the tenet, which decides the item as filed. This is a refusal rather than a halt because no available ruling violates the tenet: the tenet itself decides, and recording that decision keeps the evidence trail that a silent non-action would lose. The steering path is the one the vision names — if the owner wants this, they edit V5, which is their sentence, and a later decision citing BL-3 supersedes this one. Until then nothing plans or builds pretty output.
+
+## OD-3 — BL-4 is refused: no currency conversion, no run-time data fetch; the offline non-goal stands
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-4
+- **Requirements added:** (none)
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V3 — "Simplicity comes before completeness: a small tool that is obviously right beats a large one that must be trusted." — and V1 — "Correct conversions come before everything else: a wrong number presented confidently is the worst output this tool can produce."
+- **Vision statements against:** (none — no statement in docs/VISION.md tells against this refusal; every listed priority — correctness V1, honest errors V2, simplicity V3, breadth-is-expendable V4, no-dependencies V5 — tells with it, and the purpose section describes the deliverable as a CLI that answers instantly and offline)
+- **Alternatives considered:** live exchange rates fetched at run time as BL-4 asks (refused: docs/DESIGN.md §3 names currency and any unit needing live data a non-goal and R8 requires fully offline, deterministic operation — this is not a gap the design left open but a decision it already made, and a fetched rate cannot be verified by the offline, deterministic suite, so every currency result would be a number the pipeline cannot check); bundled static rates with no network (refused: a hardcoded exchange rate is stale the day it lands, and a stale rate presented as a conversion is a wrong number presented confidently — worse than refusing loudly, per V2); refusing the item and leaving the design unchanged (chosen).
+- **Rationale:** The design already decides this — currency with live data is a named non-goal — and the oracle amends the design where logged evidence shows it wrong, not where an idea finds it incomplete. Nothing in the vision pulls the other way: completeness is explicitly subordinate to simplicity (V3) and breadth is explicitly the thing the owner would trade away (V4), so "feels half-finished" is an argument the vision has already priced and declined. If the owner wants currency, the steering path is theirs — amend docs/DESIGN.md's non-goals and R8, or the vision, and a later decision citing BL-4 supersedes this one.
