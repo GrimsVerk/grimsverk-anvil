@@ -2179,3 +2179,51 @@ two lanes, one finding, which is the twin-run design paying off.
 | 2026-08-20T08:06:2xZ | 4, 5 — canned inputs, `uv sync`, `pre-commit` | **OK.** Hooks ran real work on the commit: ruff check, ruff format, mypy, secrets — all Passed. |
 | 2026-08-20T08:06:34Z | 6 — `git push -f origin run/web` | **OK**, first attempt, no bypass banner (ruleset was main-only). |
 | 2026-08-20T08:06:4xZ | 7W — gating | Not yet gated (`["~DEFAULT_BRANCH"]`). Bounded wait started, 3-minute poll to a 45-minute limit. |
+
+## PHASE log — round 3.2 run
+
+- Run id `20260820T081013Z`, started 2026-08-20T08:10:13Z. Head `77df6c7`,
+  `docs/DESIGN.md` `448a080`, `docs/VISION.md` `9a57a1e`. Identity `GrimsVerk`
+  (ambient, ESC-50). `coverage.sh` rc 1. Limits 30 / 12h / 60.
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 2026-08-20T08:09:54Z | setup | `run/web` gated (3 min); readiness **GREEN**. |
+| 2026-08-20T08:10:13Z | **ORACLE** | `BASE=run/web REASON=evidence UNCITED=BL-3 BL-4 ESC-1`. Iteration 1. |
+| 2026-08-20T08:10:23Z | dispatch | Oracle worker, 6m25s, `exit=0 commits=1`. Three rulings again — OD-1 precision/R1000 (ESC-1), OD-2 **HALT** on BL-3 (V5), OD-3 currency rejected (BL-4). Third independent run, same three outcomes; only the id ordering differs. Contamination probe: 0. |
+| 2026-08-20T08:16:59Z | push + open | **PR #11 opened by `autogrims[bot]`**, marker retained. |
+| 2026-08-20T08:17:2xZ | checks | **`plan` SUCCESS — first time ever on this lane.** All mechanical gates green. |
+| 2026-08-20T08:19:02Z | review | **`review` SUCCESS**, 1m44s. |
+| 2026-08-20T08:19:05Z | **MERGED** | **PR #11 merged by `autogrims[bot]`. First merge on the web lane, in six rounds.** No human involved at any point. |
+
+---
+
+## ★ ESC-21 ANSWERED — the first live observation of a merged branch vanishing
+
+This is the item the TESTPLAN calls out as never once observed, with **four
+wrong theories on record**. The web lane has now watched it happen, with
+timestamps and the mechanism:
+
+| Event | Time (UTC) | Evidence |
+| --- | --- | --- |
+| `arm-auto-merge` | 08:17:18 → 08:17:25 (7s) | conclusion `success` |
+| `review` | 08:17:18 → 08:19:02 (1m44s) | conclusion `success` |
+| **Merge** | **08:19:05** | `merged=true`, `merged_by=autogrims[bot]`, merge commit `8de1fd446ba5` |
+| **`delete-merged-branch`** | **08:19:11 → 08:19:17 (6s)** | conclusion **`success`** |
+| `sweep-merged-branches` | 08:19:09 → 08:19:08 | conclusion **`skipped`** |
+| Branch gone | by 08:21:10 | `gh api .../branches/docs/oracle-…--run-web` → `404 Branch not found` |
+
+**The answer: immediately, by the `delete-merged-branch` job, six seconds after
+the merge — NOT by the nightly sweep.** `sweep-merged-branches` ran in the same
+workflow and reported `skipped`, so it can be ruled out rather than merely
+assumed innocent. The gap from merge to deletion is 6 seconds; from pull
+request opening to branch gone, 2 minutes 18 seconds.
+
+**ESC-36 is answered in the same breath:** `arm-auto-merge` appears in the check
+list, reports `success`, and the merge completes with **no human** — the merging
+identity is the App, and no approval, click or command from this session was
+involved. Both halves of that checklist item are now positively observed.
+
+**ESC-26 / ESC-35 hold:** the merged pull request was authored by
+`autogrims[bot]`, never the owner. Five App-authored pull requests across three
+rounds, zero owner-authored.
