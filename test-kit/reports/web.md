@@ -2305,3 +2305,73 @@ steward hit the gap first. Worth noting for the comparison, not a defect.
 App-authored, all auto-merged with no human. 5 oracle decisions (OD-1..OD-5),
 3 requirements added (R1000 precision, R1001 CLI syntax, R1002 non-finite),
 2 uncertainties filed and ruled (BL-5 HIGH, BL-6 LOW), 1 plan landed.
+
+### F29 — BLOCKER-SHAPED: `WORKER_RESULT` reported `commits=1` for a branch with zero commits, because the worker moved its work to a branch of its own
+- Where: `.claude/scripts/spawn-worker.sh` result line, and the `/deliver-loop`
+  instruction "push the worker branch under a `docs/`-prefixed name … via
+  `git push origin worker/<id>:docs/<ref>`".
+- What happened: the PLAN dispatch reported success —
+
+  ```
+  WORKER_RESULT id=plan-20260820091002 branch=worker/plan-20260820091002 \
+    worktree=.worktrees/plan-20260820091002 engine=claude exit=0 commits=1
+  ```
+
+  — but the named branch carried nothing:
+
+  ```
+  $ git diff --name-status run/web...worker/plan-20260820091002
+  (empty)
+  $ git merge-base run/web worker/plan-20260820091002
+  ff027f3…   # identical to run/web's head
+  ```
+
+  The work was real, on a different branch. Inside its worktree the worker had
+  created and switched to **`docs/plan-anvil-temperature--run-web`**, committing
+  `ffefedc "Plan the anvil temperature milestone, and file BL-7"` — 295 lines,
+  `docs/plans/oracle/anvil-temperature.md` with `slug: anvil-temperature`,
+  `covers: [R3, R7, R8]`.
+- Why this is dangerous rather than merely untidy: the driver is told to push
+  `worker/<id>` to a `docs/` ref. Following that instruction against this result
+  line pushes an **empty branch**, and the push-fired opener then opens a pull
+  request with **no content** — reported as a successful iteration, because
+  `exit=0 commits=1` said so. Nothing downstream would notice: the `plan` check
+  exempts `docs/` branches, CI passes on an empty diff, and the run would record
+  a merged plan that does not exist. Every earlier worker in this run left its
+  work on `worker/<id>` as expected, so this is intermittent, which makes it
+  worse.
+- The count is the specific defect: `commits=1` is true of *the worktree*, not
+  of the branch the same line names. A result line whose branch and count
+  disagree is worse than no result line.
+- Recovery, recorded as a deviation: the driver read the worktree, found the
+  real commit, and pushed **that** to the ref the worker had already named
+  correctly (`docs/plan-anvil-temperature--run-web` — it carries both the slug
+  and the lane suffix). Nothing was lost, but only because the driver checked
+  the diff instead of trusting the result line.
+- Severity: **bug, blocker-shaped** — it silently converts a successful
+  iteration into an empty one.
+
+### F30 — a headless worker asked a human to approve its push, in an unattended run
+- Where: the same PLAN worker's orchestration log,
+  `.claude/orchestration-logs/plan-20260820091002.log`.
+- What happened: the worker tried to push its own branch, was refused by the
+  sandbox, and ended its run with an interactive menu:
+
+  > **State right now.** … Branch `docs/plan-anvil-temperature--run-web` —
+  > committed locally. The push was blocked. It needs your approval.
+  >
+  > **What to do now.** Pick one:
+  > 1. **Approve the push** (Recommended). …
+  > 2. **Read the plan first**, then approve the push.
+  > 3. **Push it yourself:** `git push -u origin docs/plan-anvil-temperature--run-web`
+
+  There is nobody to pick. The run is unattended by construction, the worker is
+  headless, and its prompt carried the `UNATTENDED` marker.
+- Two distinct problems in one log: the worker **attempted a push at all** —
+  pushing is the driver's job, and the worker's grant correctly denies it — and
+  having been denied, it **addressed a human** instead of reporting machine-
+  readably to the driver that its work sits on branch X.
+- Impact: combined with F29 this is how an iteration silently produces nothing.
+  The driver sees `exit=0`, an empty `worker/<id>`, and a human-facing menu it
+  is not built to parse.
+- Severity: bug. The fix is in the worker prompt's unattended branch, not here.
