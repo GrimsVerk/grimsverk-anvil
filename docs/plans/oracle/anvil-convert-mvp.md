@@ -3,7 +3,7 @@ slug: anvil-convert-mvp     # MUST appear in every branch name working this plan
 status: draft               # draft | in-flight | merged
 created: 2026-08-20
 design: MVP — milestone `convert` (docs/DESIGN.md §12)
-covers: [R1, R2, R4, R5, R1000, R1001]
+covers: [R1, R2, R4, R5, R1000, R1001, R1002]
 ---
 
 # The `anvil` convert MVP — Plan
@@ -13,8 +13,9 @@ covers: [R1, R2, R4, R5, R1000, R1001]
 **What this builds.** The `anvil` command line tool, milestone `convert`: a
 single-shot conversion between length and mass units, printed under the output
 precision rule, with loud refusals on bad input. It implements **OD-1 / R1000**
-(the precision rule that resolves ESC-1) and **OD-4 / R1001** (the invocation
-syntax that resolves BL-5), and it delivers the design's R1, R2, R4 and R5.
+(the precision rule that resolves ESC-1), **OD-4 / R1001** (the invocation
+syntax that resolves BL-5) and **OD-5 / R1002** (non-finite values are refused,
+which resolves BL-6), and it delivers the design's R1, R2, R4 and R5.
 
 **Why this plan is the milestone plan and not an R1000-only plan.** OD-1 says
 so: *"the plan covering the MVP `convert` milestone must list R1000 in its
@@ -38,6 +39,10 @@ with nothing to format: a horizontal layer, which `AGENTS.md` forbids.
   script can tell a typo from a bad unit.
 - Unit symbols match **exactly** — `KM` is an unknown unit, not `km`. Aliases
   and casing are BL-1, owner-filed and not commissioned.
+- **R1002:** `inf`, `-inf` and `nan` inputs, and finite inputs whose conversion
+  overflows, are refused on the R4 path (exit 1) rather than printed. The tool
+  therefore never prints `inf` or `nan` as a result. `anvil 1e308 km mm` is an
+  error, not a number.
 - Conversion factors are the exact international definitions (1 mi = 1609.344 m,
   1 lb = 453.59237 g, and so on), pinned in the body.
 
@@ -58,10 +63,10 @@ pretty output (BL-3, halted). The ESC-1 correction row is **not** in this plan:
 `AGENTS.md` forbids a change carrying its own ledger entry, so it lands as a
 one-line `docs/` pull request after this work merges.
 
-**Open questions.** One, and it is LOW-risk so the work proceeds on the default:
-**BL-6** — whether `inf`/`nan` input, and conversions that overflow to infinity,
-are refused (the default taken here) or printed as `inf`. The oracle reviews it
-next cycle; nothing here waits on it.
+**Open questions.** None. The one this plan carried — **BL-6**, non-finite
+values — has since been ruled: **OD-5 / R1002** confirms the default taken here,
+so no code direction changes and `acceptance/S3.sh` gains the two rows that
+prove it.
 
 ## Uncertainties
 
@@ -74,8 +79,14 @@ next cycle; nothing here waits on it.
   boundary, changes no Signatures block, and S1 and S3 do not pin it. —
   **proposed:** refuse both on the R4 path — an error naming the offending
   input, exit 1 — so the tool never prints `inf` or `nan` as a result.
-  **Ruling:** proceeded on the default (LOW), filed as **BL-6** in
-  `docs/BACKLOG.md` for the oracle's next cycle.
+  **Ruling:** **OD-5 / R1002** (evidence **BL-6**) — refuse both, exactly as
+  proposed. The default this plan proceeded on is now a landed requirement, so
+  the slice-2 message table stands unchanged; what the ruling adds is the
+  measurement, its two rows in `acceptance/S3.sh` and the unit tests beside
+  them. Exact message wording stays with this plan, as R4 and R1002 both say.
+
+This plan raises no further uncertainty: OD-5 answers the only one it had, and
+nothing in this amendment reaches past what that decision names.
 
 ### Derived, not guessed
 
@@ -84,6 +95,8 @@ them. They are recorded here as derivations, with what answered them:
 
 - Output precision — **OD-1 / R1000**, `format(value, ".12g")`.
 - Positional order, `--batch`, bare `anvil` — **OD-4 / R1001**.
+- Non-finite inputs and overflowing results — **OD-5 / R1002**, refused on the
+  R4 path.
 - `--help` and any other unrecognised flag → usage, standard error, non-zero —
   **R1001**, "every other invocation".
 - Which exit code, given "non-zero" — delegated by **R4** and **R5**.
@@ -198,11 +211,13 @@ code — the console-script wrapper passes it to `sys.exit` — and reads
 
 ## Slice 2 — `anvil` refuses bad input loudly, and S3 proves it
 
-- **Delivers:** every refusal R4 and R5 name, with a message that says which
-  input was wrong, on standard error, with a non-zero exit — and `acceptance/S3.sh`
-  executing them against the installed command.
+- **Delivers:** every refusal R4, R5 and R1002 name, with a message that says
+  which input was wrong, on standard error, with a non-zero exit — and
+  `acceptance/S3.sh` executing them against the installed command.
 - **Files:** `src/grimsverk_anvil/convert.py`, `src/grimsverk_anvil/cli.py`, `acceptance/S3.sh`, `tests/test_cli_errors.py`, `docs/architecture.md`
-- **Estimate:** ~200 lines
+- **Estimate:** ~215 lines (was ~200; the two R1002 rows in `acceptance/S3.sh`
+  and their unit tests are what the ruling added — the refusal code itself was
+  always in this slice)
 
 The refusals, message shape, and exit code — the message is the contract both
 the coder and the test author work from:
@@ -226,15 +241,21 @@ The last five are R5 and R1001. The usage text is one line:
 `convert-batch` milestone lands, and usage that names an unimplemented flag is
 the silent guess V2 rejects.
 
-The two non-finite rows are the BL-6 default. Refusal happens in `convert.py`:
+The two non-finite rows are **R1002** (OD-5). Refusal happens in `convert.py`:
 a value that is not finite after parsing, and a result that is not finite when
-the inputs were, both raise `ConversionError`.
+the inputs were, both raise `ConversionError`. `tests/test_cli_errors.py` pins
+**both branches separately** — the input case (`inf`, `-inf`, `nan`, in any
+spelling `float()` accepts) and the overflow case (finite inputs, non-finite
+result) — because they are two code paths and one passing test would hide the
+other. That is R1002's measurement item (b).
 
 `acceptance/S3.sh` runs the unknown-unit, cross-category, non-numeric, missing,
-surplus and **bare `anvil`** rows through the installed command, asserting a
-non-zero exit and that the message names the offending input. The bare row is
-the measurement OD-4 names. It prints each command and what it observed —
-standard output is the evidence cell — and follows `acceptance/README.md`:
+surplus, **bare `anvil`** and **both non-finite** rows through the installed
+command, asserting a non-zero exit and that the message names the offending
+input. The bare row is the measurement OD-4 names; `anvil inf km m` and
+`anvil 1e308 km mm` are R1002's measurement item (a), and the script must
+assert that neither prints `inf` or `nan` on standard output. It prints each
+command and what it observed — standard output is the evidence cell — and follows `acceptance/README.md`:
 `set -euo pipefail`, exit 0 is pass, offline, no mocks.
 
 ### Signatures
