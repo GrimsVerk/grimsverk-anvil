@@ -29,10 +29,12 @@ Start here, in this order:
    gaps, backlog items the pipeline must rule on / halt on / dismiss, a
    slug-collision trap, and criteria that should fail honestly at least once.
    The bait map is in TESTPLAN Part 3. Do not "fix" any of it.
+
 Prerequisite releases, all met and pinned by Part 1 step 2: per-base lanes
 (v0.4.28), evidence recovery (v0.4.29), App-only credentials — two secrets
 total, zero PATs (v0.4.30), the round-1 blocker fixes — born-red `uv.lock`
 flow, wrong-ref CODEOWNERS probe (v0.4.31), the first-commit mypy hook fix —
 ESC-49 (v0.4.32), the server-side pull-request opener for web sessions —
-ESC-50 (v0.4.33), and REST-only session reads, because hosted platforms
-refuse GraphQL — ESC-51 (**v0.4.34**).
+ESC-50 (v0.4.33), REST-only session reads — ESC-51 (v0.4.34), the round-2.1
+batch — ESC-52..55 plus local F5/F6/F7 (v0.4.35), and round 3's five —
+ESC-56..60 (**v0.4.36**).
