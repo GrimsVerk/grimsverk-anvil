@@ -1,1 +1,1 @@
-{"base": "run/web", "title": "Oracle: rulings and handoff", "body": "Rules on BL-6: non-finite values are refused on the R4 error path (OD-5 adds R1002), so the tool never prints inf or nan as a conversion result.\n\nOpened by the delivery driver on base run/web."}
+{"base": "run/web", "title": "Plan for OD-5", "body": "Folds OD-5 / R1002 (refuse non-finite values on the R4 error path) into the existing anvil-convert-mvp plan rather than opening a second plan for one branch inside the converter.\n\nOpened by the delivery driver on base run/web."}
