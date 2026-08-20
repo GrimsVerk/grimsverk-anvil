@@ -3206,3 +3206,16 @@ debris to be right about: a dead run's worktree was in the way, the check would
 have refused, and clearing it is what let the run resume. The run continues
 from iteration 5 with nothing lost — the four merged pull requests, five oracle
 decisions and one plan all stand.
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 2026-08-20T13:49:15Z | ORACLE dispatch | **Failed on the account's usage limit — F37.** Run paused ~1h31m; nothing lost. |
+| 2026-08-20T15:24:00Z | **ORACLE** (resumed) | Iteration 5, `UNCITED=BL-6 BL-7 BL-8`. Three rulings in one pass — **OD-5, OD-6, OD-7** (invocation syntax, output contract, MVP coverage), 249 lines. **PR #50**, merge 5 at 15:36:17, `review` done 15:36:14 — **3s after**. |
+| 2026-08-20T15:38Z | **STEWARD** | Iteration 6, `ODS=OD-5 OD-6`. Plan `od5-convert-cli`, 306 lines, plus one more uncertainty. **PR #51**, merge 6 at 15:53:01, `review` done 15:52:58 — **3s after**. |
+| 2026-08-20T15:49:5xZ | **WAIT** | The detector reported `PHASE=WAIT PR=51 HEADREF=docs/oracle-plan-od-5--run-web` while review was still running — the in-flight state resolving correctly, and the first time this lane has seen WAIT name its own pull request rather than another lane's. |
+| 2026-08-20T15:55:46Z | **ORACLE** | Iteration 7, `UNCITED=BL-9`. |
+
+**F33 watch, six merges in:** every merge has followed its `review` by 2–3
+seconds. `arm-auto-merge` armed each time and has never refused — correct, the
+base has been gated throughout. **No pull request has merged with a check still
+running.** The failure mode F33 recorded has not recurred once under ESC-79/80.
