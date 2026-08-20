@@ -53,7 +53,7 @@ coder, blind test-writer, reviewer, acceptance, and the driver itself.
 The per-base-branch pipeline isolation this layout depends on landed in the
 template as the fix for ESC-46 (`deliver-loop.sh --base`, lane branch
 suffixes, `setup-github.sh --gate-branch`); everything the lanes need is in
-release **v0.4.37**, and Part 1 step 2 refuses anything older.
+release **v0.4.43**, and Part 1 step 2 refuses anything older.
 
 ---
 
@@ -103,7 +103,7 @@ pull request is opened AS THE APP by the scaffold's
 pull request server-side, where minting works (ESC-53: the dispatch API is
 unreachable from this credential and a dispatch-only workflow never
 registers off the default branch). This
-requires template **v0.4.37 or newer**. Template access for copier comes
+requires template **v0.4.43 or newer**. Template access for copier comes
 from the owner attaching BOTH repositories when creating the web session —
 grimsverk-anvil to work in, grimsverk-template only so copier can read it.
 
@@ -127,10 +127,33 @@ never needs it — the web side holds no private values at all (ESC-50). And
 the resolution goes one way only: values come OUT of the register into
 commands, never into anything committed, pushed, or logged (Part 2, rule 13).
 
+**Gating is shared, and naming one lane used to ungate the other.** The
+`grimsverk-gates` ruleset covers BOTH lanes and `main`. Before template
+v0.4.43, `setup-github.sh --gate-branch` replaced the whole target list, so
+`--gate-branch run/local` silently removed `run/web` — and the web lane then
+merged a pull request whose required `review` check was still running and
+later failed (ESC-79/80). From v0.4.43 the flag is additive and a removal is
+announced. **Always name every live lane in one call anyway:**
+`scripts/setup-github.sh --app --gate-branch run/local --gate-branch run/web`.
+
 **Wiping between rounds (owner):** delete every branch except `main`. Secrets,
 the ruleset, the App, and the web environment all stay; the stale ruleset
 still names the old lane branches, and the local agent's first setup run
 resets it (step 6a below).
+
+**Order matters, and the obvious order is wrong (anvil local F18).** Two
+things a sweep cannot tell apart:
+
+- *Stale work pull requests* — close them, by branch name or by prefix.
+- *The run's own evidence pull request* (`docs/run-<timestamp>--<lane>`) — this
+  is the artifact the round exists to produce. It may still be under
+  observation. Close it only after its readings are taken, and say in the
+  ledger which reading it was closed on.
+
+Never close "every open pull request on the base". And take every reading
+**before** the rebuild: force-pushing the lane base destroys the base any
+surviving pull request was measured against, so a reading taken afterwards is
+a reading of something else.
 
 ---
 
@@ -175,7 +198,7 @@ local lane only, **W:** the web lane only.
 
 ### 2. Confirm the template release
 
-The latest release of grimsverk-template must be **v0.4.37 or newer** (it
+The latest release of grimsverk-template must be **v0.4.43 or newer** (it
 carries the per-base lanes, the evidence recovery tools, the App-only
 credentials, the round-1 fixes, ESC-49's hook fix, ESC-50's server-side
 pull-request opener, ESC-51's REST-only session reads, and the round-2.1
@@ -183,8 +206,22 @@ fixes — ESC-52's network probe, ESC-53's push-triggered opener, ESC-54's
 lane-scoped evidence, ESC-55's pre-commit dependency, and round 3's five —
 ESC-56 marker carve-out, ESC-57 CI CODEOWNERS ref, ESC-58 engine install
 proof, ESC-59 nonce redaction, ESC-60 died-commit landing, ESC-61 no
-template escape ids in rendered gated documents — the lanes cannot
-merge anything without ESC-56/57). Both lanes:
+template escape ids in rendered gated documents, and round 3.2's four —
+ESC-64 self-committing setup transcript, ESC-65 budget reset with spaces,
+ESC-66 the empty-diff livelock stop, ESC-67 the budget line every iteration,
+and round 3.3's six — ESC-68 the result line naming the branch that carries
+the work, ESC-69 the written unattended contract, ESC-70 an evidence pull
+request that can actually merge, ESC-71 lane-scoped pull-request updates,
+ESC-72 refusing to start behind an open pull request, ESC-73 saying when a
+private repository's gates may not bind at all, and round 3.4's four —
+ESC-74 the budget ceiling no longer re-zeroing itself on a rounded
+timestamp, ESC-75 a stop nobody chose never reported as success, ESC-76
+readiness refusing on the leftover worktrees the driver refuses on, ESC-77
+the inert tool grants that camouflaged real errors, and round 3.4's three
+late ones — ESC-78 the branch sweep at every stop, ESC-79 gating one lane no
+longer ungating another, ESC-80 refusing to arm auto-merge on an unprotected
+base instead of merging on the spot — the lanes cannot merge anything
+without ESC-56/57). Both lanes:
 `gh release view -R GrimsVerk/grimsverk-template --json tagName --jq
 .tagName`, or read the tag copier resolves in `.copier-answers.yml` after
 rendering — stop if it is older.
@@ -421,6 +458,28 @@ is disposable; your findings are the deliverable. These rules bind both lanes.
     paths, remote URLs): replace the value with its `<key>` before
     committing. A register value found in anything pushed is itself a
     finding.
+
+14. **Two branches are yours. Every other branch is the pipeline's, and you
+    never invent one.** You push to exactly two branches of your own: your
+    lane base (`run/<lane>`) and your ledger (`chore/test-report-<lane>`).
+    Everything else you push must be a branch the template's own scripts
+    created and named — `docs/run-<timestamp>--<lane>`, `docs/oracle-*`,
+    `docs/plan-*`, `feat/*`, `template/<version>--<lane>`. Those are created
+    by the pipeline, merged by the pipeline, and deleted when they merge.
+
+    **Never invent a branch of your own.** No archive branch, no backup
+    branch, no copy, no parking spot, whatever the prefix. Anything worth
+    keeping goes on your ledger branch, under `test-kit/reports/`. If
+    something cannot be preserved that way, that is a finding — write it
+    down; do not solve it with a new branch. (This happened: a lane pushed
+    `evidence/run-<timestamp>--<lane>` holding a byte-identical copy of what
+    it had already committed to its own ledger.)
+
+    **Clean up your own lane at the end of every round**, as part of rule 6:
+    delete every branch of your lane that has merged or whose pull request
+    you closed, leaving your lane and your ledger standing. Read the wiping
+    drill in Part 0 first — the order matters. Never delete, merge, or push
+    to the other lane's branches, and never to `main`.
 
 ## Part 3 — What the owner compares afterwards
 

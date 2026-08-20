@@ -22,6 +22,14 @@ ledger, a commit, a log, or anything pushed** — this repository is public;
 refer to them by key, like `<app_pem_path>`, and redact any command output
 that embeds one before committing it (Part 2, rule 13).
 
+Two branches are yours: `run/local` (your lane) and `chore/test-report-local`
+(your ledger). Every other branch you push must be one the template's own
+scripts created and named. **Never invent a branch** — no archive, no
+backup, no copy, no parking spot. Anything worth keeping goes on your
+ledger branch under `test-kit/reports/`; if something cannot be kept that
+way, that is a finding, not a new branch (Part 2, rule 14). Clean up your
+own lane's spent branches at the end of every round, and only your own.
+
 Do this, in order:
 
 1. Read `test-kit/TESTPLAN.md` in full. Part 1 is YOUR setup — you do all of
