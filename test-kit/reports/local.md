@@ -796,3 +796,60 @@ fire". Resolving it from the first worker log of this round.
 | Time (UTC) | PHASE | Key fields |
 | --- | --- | --- |
 | 01:28:30Z | ORACLE | iteration 1. Worker `oracle-20260820012830`, base `run/local`. |
+
+### F6 — FIXED in v0.4.35, confirmed live
+
+The workspace-trust warning is **gone** from round 2.2's first worker log. Round
+2.1's oracle log opened with `Ignoring 2 permissions.allow entries from
+.claude/settings.json: this workspace has not been trusted`; round 2.2's opens
+straight into the run header with no such line, and the driver did not refuse.
+The unattended worker now runs with the full tool grant the template believes it
+has. **F6 closed.**
+
+### F7 — FIXED in v0.4.35 (substantive half); a cosmetic remainder, downgraded
+
+The missing partner is there. `.claude/scripts/spawn-worker.sh` at v0.4.35:
+
+```
+216:  "Write(docs/DESIGN.oracle.md)" "Edit(docs/DESIGN.oracle.md)"
+217:  "Write(docs/oracle/**)" "Edit(docs/oracle/**)"
+```
+
+Line 217 previously had no `Edit(...)` twin, which left the oracle with no
+effective grant for the directory its handoff must go in. It now has one, so the
+real defect is closed.
+
+**What remains is noise, not breakage.** The inert `Write(...)` halves are still
+in the list, and the engine still rejects each one on every worker start —
+verbatim, in round 2.2's log at v0.4.35:
+
+```
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file
+permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead
+(Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file
+permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead.
+```
+
+Worth removing, for one reason beyond tidiness: these two warnings are exactly
+what a genuinely missing grant looks like, so while they fire on every run they
+are the camouflage a real one would hide behind — which is precisely how F7 came
+to exist. **Severity downgraded to friction.**
+
+### F9 — CLOSED by owner ruling, 2026-08-20
+
+The owner accepts the published register values in this branch's history: no
+history rewrite, no GitHub Support ticket. Their reasoning, recorded because it
+is the standing policy from here: the `.pem` content never left their machine,
+and paths and aliases open no doors. The tip scrub stands, and **rule 13 governs
+everything from this point forward** — which this round already demonstrates
+(App identity rebuilt from the register by key, and rule-13 scans of both the
+full tracked tree and the setup transcript returning clean before either was
+pushed).
+
+### F8 — CLEARED, with the owner's independent proof
+
+Beyond the two green CI runs recorded above, the owner supplied a stronger
+proof than either lane could observe: **the v0.4.35 release tag both lanes
+rendered from was itself minted by an Actions job that ran to completion after
+the repositories went public.** The release exists, therefore Actions ran.
