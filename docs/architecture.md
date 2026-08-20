@@ -25,13 +25,32 @@ that's worth seeing. -->
 
 | Component | Responsible for |
 | --- | --- |
-| _name_ | _the single thing it is responsible for_ |
+| Unit table | Holding every known unit symbol with its category (length or mass) and its factor to that category's base unit — metre, gram. Symbols match exactly. |
+| Unit lookup | Answering "is this symbol known?" with the unit or with nothing. |
+| Converter | Turning a number plus two unit symbols into a number, through the category's base unit. It refuses an unknown symbol and a cross-category pair. |
+| Result formatter | Turning a converted number into the one printed form the precision rule fixes. |
+| Request path | The single shared route for one request: read the value, refuse a value or a result that is not finite, convert, format. Every refusal carries the user-facing reason with it. |
+| Batch line parser | Turning one input line into three fields, into nothing (a blank line), or into a refusal that quotes the offending line. |
+| Batch runner | Walking the input lines in order, numbering them from 1, writing one output line per request, and reporting whether any request failed. |
+| Command entry point | Choosing between batch mode, single-shot conversion and the usage error, and owning the exit code. |
 
 ## Data flow
 
 <!-- What moves between the components, in what direction, and in what form.
 Prose or a simple list is fine — `A --(what)--> B`. A diagram is welcome but
 never required; an accurate list beats a stale picture. -->
+
+- Command entry point --(three text fields)--> Request path
+- Batch runner --(one input line)--> Batch line parser --(three text fields)--> Request path
+- Request path --(number, two symbols)--> Converter --(symbol)--> Unit lookup --> Unit table
+- Converter --(number)--> Request path --(number)--> Result formatter --(one text line)-->
+  Request path
+- Request path --(refusal reason, raised)--> its caller, which decides where the reason is
+  printed and what the exit code becomes
+
+The refusal reason is written in one place and both modes use it. That is
+deliberate: the batch reason must be the single-shot reason character for
+character, so the two cannot drift apart.
 
 ## Main paths
 
@@ -41,9 +60,33 @@ observable result is. These are what someone reads to understand how the system
 actually behaves, and they are the first thing to go stale — check them at the
 end of each slice. -->
 
-### <path name>
+### Single-shot conversion — `anvil 0.1 km m`
 
-1.
+1. The command entry point sees exactly three arguments. It calls the request path.
+2. The request path reads the value, converts it, and formats the result.
+3. The result goes to standard output. The exit code is 0.
+4. If the request path refuses, the reason goes to standard error as
+   `anvil: <reason>` and the exit code is 1.
+
+### Batch conversion — `anvil --batch`
+
+1. The command entry point sees `--batch` alone. It decodes standard input itself,
+   as UTF-8, and replaces any byte it cannot decode with the replacement character.
+   This is why a bad byte cannot end a batch: the line stays a line.
+2. The batch runner walks the decoded lines and numbers them from 1. A blank or
+   whitespace-only line gives no output line, but it still uses up a number.
+3. Each other line goes to the batch line parser, then to the request path.
+4. The answer — a result, or `anvil: line <n>: <reason>` — goes to standard output
+   and is flushed at once, so each request is answered as it arrives. Per-request
+   output never goes to standard error.
+5. The exit code is 1 if any request failed, and 0 if none did. Empty input is a
+   successful batch of zero requests.
+
+### Wrong argument shape — `anvil`, `anvil --help`, `anvil --batch extra`
+
+1. The command entry point matches neither shape.
+2. The usage text goes to standard error, before any input is read. The exit code
+   is 2.
 
 ## State and storage
 
@@ -58,4 +101,13 @@ section that stops a future agent confidently "fixing" something load-bearing,
 and it's where the reviewer's "easy to change next time" findings should land
 when they're accepted rather than acted on. -->
 
--
+- **Every component above lives in one file, `src/grimsverk_anvil/cli.py`.** The
+  plans put the unit table and the converter in modules of their own. This slice
+  was built before those modules existed and was scoped to `cli.py` alone, so the
+  table, the lookup, the converter, the formatter and the refusal type were all
+  created there. Moving them later is a move, not a rewrite: the names and the
+  behaviour are already the ones the plans declare.
+- **The usage text names only the single-shot form**, although batch mode now
+  works. Slice 2 of the batch plan adds the second line.
+- **`pyproject.toml` has no `[project.scripts]` entry yet**, so there is no
+  installed `anvil` command. The entry point is called directly for now.
