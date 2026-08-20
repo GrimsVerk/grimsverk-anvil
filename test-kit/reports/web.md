@@ -2468,3 +2468,46 @@ because it is fragile — a planner that named its plan `anvil-convert` would
 still collide with `anvil-convert-batch`, and nothing in the plan template or
 `AGENTS.md` warns about substrings. The protection observed here is a
 convention, not a guardrail.
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 2026-08-20T10:10:37Z | **ORACLE** | Iteration 12, BL-9. **OD-8** adds **R1004** — undecodable batch input handled per line, not by ending the batch. Merge 12. |
+| 2026-08-20T10:19Z | **STEWARD** | `ODS=OD-8`. Iteration 13. Amended the `anvil-convert-batch` plan rather than opening a second. Merge 13. |
+| 2026-08-20T10:24:29Z | **ORCHESTRATE** | `SLUG=anvil-convert-batch` — **the design layer is complete enough to build.** Ten phases of oracle/steward/plan work reached code. |
+
+### F31 — `deliver-phase.sh` emits the plan template's inline comment as part of `SLUG`
+- Where: `.claude/scripts/deliver-phase.sh` (the detector) versus
+  `docs/plans/_TEMPLATE.md` (the plan skeleton the template ships).
+- What happened: the detector's ORCHESTRATE output is
+
+  ```
+  SLUG=anvil-convert-batch   # MUST appear in every branch name working this plan
+  ```
+
+  The plan's front matter is copied faithfully from the template's own
+  skeleton, which ships the comment inline:
+
+  ```
+  docs/plans/_TEMPLATE.md:2:slug: <kebab-case-id>      # MUST appear in every branch name working this plan
+  ```
+
+  so every plan generated from it carries the comment, and the detector takes
+  everything after `slug:` verbatim.
+- Impact: the `/deliver-loop` ORCHESTRATE instruction says to pass "the exact
+  feature-branch name (`feat/<slug>`, plus the lane suffix on a non-default
+  base)". Used as emitted, that is
+  `feat/anvil-convert-batch   # MUST appear in every branch name working this plan--run-web`
+  — spaces and a `#`, not a legal branch name. A driver that trusts the field
+  produces a broken push or a broken branch; this one caught it by eye.
+- The sharp edge: **`plan-resolve.sh` parses the same field correctly.**
+  `HEAD_REF=feat/anvil-convert-batch--run-web` resolves cleanly to
+  `docs/plans/oracle/anvil-convert-batch.md`. So two scripts read one field and
+  disagree about where it ends — the exact "two gates, one truth, drifting"
+  shape `AGENTS.md` warns about for its path lists.
+- Upstream fix (NOT applied — `.claude/` is off-limits): strip from the first
+  `#` and trim, in the detector; or drop the inline comment from
+  `_TEMPLATE.md` and put it on its own line.
+- **Forced deviation, recorded:** the driver used the real slug
+  `anvil-convert-batch` and branch `feat/anvil-convert-batch--run-web`, which is
+  what `plan-resolve.sh` — the gate that actually judges — expects.
+- Severity: bug.
