@@ -1833,3 +1833,65 @@ closing check 3 satisfied for this lane so far.
   can stop this loop at all.
 
 - **Severity: blocker.** The run cannot make progress and cannot stop itself.
+
+### F16 — CONFIRMED and still running at 09:03:46Z; the budget half is now settled
+
+The loop did not self-correct. **Five consecutive ORACLE iterations** (5, 6, 7,
+8, 9) and **four** `gh pr create` failures, one every ~6 minutes:
+
+```
+- 08:49:31Z gh pr create for docs/oracle-20260820084350--run-local failed
+- 08:55:21Z iteration 8: phase ORACLE
+- 09:01:07Z gh pr create for docs/oracle-20260820085521--run-local failed
+- 09:01:10Z iteration 9: phase ORACLE
+- 09:01:10Z dispatch oracle worker (oracle-20260820090110)
+```
+
+Roughly **27 minutes and five oracle model workers** spent since the last real
+merge at 08:36:11Z, producing nothing.
+
+**The budget line: printed exactly once, ever.**
+
+```
+$ grep -c "budget:" /tmp/anvil-local-driver.log
+1
+$ grep "budget:" /tmp/anvil-local-driver.log
+deliver-loop: budget: weekly at 74% (model 82%), allowance 20 points, window resets Aug
+```
+
+Nine iterations, one reading — taken at start and never revisited.
+
+**And the gauge has moved enormously in the meantime.** Read directly, at
+09:03Z:
+
+```
+$ .claude/scripts/budget-probe.sh
+session=59 week=1 week_model=1 reset=Aug 27, 11am (Europe/Amsterdam)
+```
+
+**week=1%, week_model=1%** — against the 74%/82% the driver is still holding
+from 08:09Z. The weekly window **rolled over** during this run, exactly the
+event the owner flagged as likely ("your limits reset in under 10 hours while
+the drivers may run 12"). So:
+
+- The probe itself is **healthy** — it runs, exits 0, and returns a live
+  reading that tracks a real reset. `budget-probe.sh` is not the defect.
+- The **driver** never re-reads it. Its ceiling is computed once, at start, from
+  a number that is now wrong by 73 percentage points.
+- Therefore `--budget-points 20` **cannot** stop this loop, in either direction:
+  it never re-evaluates, and post-reset the true usage is 1% anyway. The only
+  limit that will certainly fire is `--max-hours 12`.
+
+This settles the open question logged with F16. The rollover machinery the owner
+wanted exercised **was** exercised — and the finding is that the driver did not
+notice it happen.
+
+**Part 2 rule 8 status, stated plainly:** the start banner showed a real gauge
+(required, and satisfied — four times over across five rounds). The instruction
+to "confirm the budget line updates during the run" is now answered: **it does
+not update**. The weekly ceiling, which ESC-32 records as having shipped broken
+once before, is at present a start-time check rather than a running limit.
+
+Driver still ALIVE at 09:03:46Z, iteration 9, awaiting the owner's decision.
+Raw log to this point preserved as
+`test-kit/reports/local-driver-round3.2-partial.log`.
