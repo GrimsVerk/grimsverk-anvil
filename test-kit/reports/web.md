@@ -2707,3 +2707,60 @@ request in twelve went in before its required review, and the review said no.
 
 **Lane closed 2026-08-20T10:54Z.** Not restarted, no limit raised (Part 2 rule
 7). `main` untouched by this session.
+
+---
+
+# Round 3.4 — F33 diagnosed, leftovers reckoned with, lane updated to v0.4.43
+
+## C13 — F33's cause: ESC-79, a shared ruleset that `--gate-branch` rebuilt
+The owner traced it, and the correction belongs in this ledger next to the
+finding it corrects. **F33's conclusion was right; its two candidate mechanisms
+were both wrong.**
+
+What actually happened: at **10:22:55** the local lane ran
+`setup-github.sh --gate-branch run/local`. Before template v0.4.43 that call
+**replaced the ruleset's entire target list** rather than adding to it, so
+`refs/heads/run/web` was dropped from `grimsverk-gates` **while this run was
+mid-flight**. With no required checks bound to my base branch,
+`gh pr merge --auto` had nothing to wait for and GitHub merged PR #30
+immediately.
+
+That explains the detail F33 recorded but could not account for:
+`arm-auto-merge` reporting `success` **3 seconds after** the merge. It was not
+racing the review; it was arming a pull request that had already gone in,
+because the gate it assumed was there had been removed underneath it.
+
+So the merge path was **not** broken, and neither of F33's two hypotheses
+holds — the App did not bypass the ruleset, and auto-merge did not act inside
+a gap in the check set. The gates were simply absent. The two lanes share one
+ruleset, and one lane's setup call silently disarmed the other's base branch.
+**This is ESC-79.**
+
+**What `run/web` now carries.** Merge commit **`9ae8471bf3af687e78058d01d8f51dacb8937e13`**
+— "Merge pull request #30 from GrimsVerk/feat/anvil-convert-batch--run-web" —
+is on the lane's base branch, and the required `review` check for that pull
+request completed at 10:49:15 with conclusion **`failure`**. The base branch of
+this lane therefore holds a change the review gate rejected, merged without
+gates. It is not something this session may undo; it is recorded here so the
+owner can decide.
+
+**Fixed upstream in v0.4.43**, from this finding:
+- **ESC-79** — `--gate-branch` is additive; removing a gate now needs
+  `--ungate` or `--gates-only`, and a banner names what loses its gates.
+- **ESC-80** — the arming job verifies the base carries required status checks
+  **before** arming and fails closed if not, then re-reads the pull request
+  afterwards: already merged means the base was unprotected, and that is a red
+  check. This is the ratchet applied properly — the defect buys a check that
+  would have caught it.
+- **ESC-78** — a branch sweep runs at every driver stop.
+
+**Live ruleset state, read now (2026-08-20T11:58Z):**
+
+```
+grimsverk-gates include = ["~DEFAULT_BRANCH", "refs/heads/run/local", "refs/heads/run/web"]
+```
+
+`run/web` **is** in the target list at this moment — so the gates have been
+restored since the incident, whether by the owner or by a later local-lane
+setup call. Recorded as an observation, not as a clearance: no run is being
+started here, per the owner's instruction.
