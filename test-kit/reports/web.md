@@ -2075,3 +2075,73 @@ asking an agent to delete the owner's file. **F22: closed.**
   forbids. The ledger records what escaped in THIS project.
 - Severity: **blocker**, and the widest-reaching finding of the test so far: it
   affects every project generated from v0.4.36, not only this lane.
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 2026-08-20T02:40Z | STOP + evidence | **PR #9** opened by `autogrims[bot]` for `docs/run-20260820T022911Z--run-web`, carrying `run.md`, `reviews/`, `workers/`. Marker retained — no deviation needed this round (ESC-56). |
+
+### C11 — the review gate PASSED for the first time on this lane
+`review` on PR #7: **success**, 02:36:39 → 02:38:39, **2m00s**. Round 3's
+`review` failed at its "Headless review" step in 15 seconds, and this lane
+could not tell an honest rejection from an engine failure (F25). The local
+lane's ESC-58 (re-run `install.cjs`, prove the engine with `--version` before
+any review) fixed it. Two things follow:
+
+1. **The judgment gate genuinely approved the oracle's rulings.** OD-1, OD-2
+   and OD-3 were read by an independent reviewer against `AGENTS.md`, both
+   design documents and the mechanical facts, and passed.
+2. **A duration worth recording for ESC-45.** 2m00s is what a real LLM review
+   costs; the 15s failure was visibly not one. The contrast is the clearest
+   example this test has produced of why the duration column matters.
+
+## Observation checklist — round 3.1 (Part 2 rule 9)
+
+| Checklist item | Round 3.1 observation |
+| --- | --- |
+| Head branch disappears after merge (ESC-21) | **Still unobserved.** Nothing merged. `delete-merged-branch` and `sweep-merged-branches` present, both `skipped` — correct, no merge. |
+| `arm-auto-merge` present; merge completes with no human (ESC-36) | **First half observed again** — present on both pull requests, `success` in 7s. Second half still unobservable while `plan` is red. |
+| Every pipeline PR authored by the App (ESC-26, ESC-35) | **Observed, positively.** PR #7 and PR #9 both `autogrims[bot]`. Four App-authored pull requests across two rounds now, zero owner-authored. The push-fired opener (ESC-53) has not once failed. |
+| DURATION of every required check (ESC-45) | **Observed, and this round produced the sharpest data yet.** PR #7: `checks` 10s, `secrets` 10s, `acceptance-criteria` 7s, `arm-auto-merge` 7s, `open-pr` 7s, `plan` 6s (red), **`review` 2m00s (green)**. No check finished in ~1s claiming success; skipped jobs reported `skipped`. The review gate's jump from 15s-red to 2m-green is exactly the signal ESC-45 exists to make visible. |
+| `docs/runs/<ts>/` report, `reviews/` (ESC-43), `workers/` (ESC-42); evidence PR merged (ESC-40) | **Report: yes.** **`reviews/`: lane-scoped (1 collected, 6 skipped) but still a `MISSING.md`** — the artifact cannot be downloaded from a web session (F25, unchanged). **`workers/`: present.** **Evidence PR: opened as the App (PR #9), cannot merge** while F27 stands. ESC-40 still unobserved. |
+| Cross-lane `update-open-prs` (ESC-17) | **Present, `skipped`.** The other lane merged nothing while my pull requests were open. |
+| Does the ruleset hold? (Part 3 closing check 3) | **Yes, as policy.** `run/web`'s first-parent history is the scaffold commit on `main` and nothing else; both pull requests sit `blocked`, so the gates are refusing to merge red work. |
+
+**Contamination probe (Part 2 rule 10): clean.** Zero `test-kit` references in
+the oracle's diff.
+
+---
+
+## Summary block — web lane, round 3.1 (Part 2 rule 6)
+
+- **Driver's exit reason:** the required `plan` check is red because
+  `AGENTS.md`, as shipped, cites an escape id no generated project can resolve
+  (F27). The fix is in a CODEOWNERS-owned template document; fabricating the
+  missing ledger row was the only alternative and is forbidden.
+- **Phases reached:** `SETUP` (green) → **`ORACLE`** → `WAIT` → stop. One
+  iteration of sixty.
+- **Pull requests opened: 2 (PR #7, PR #9), merged: 0.** Both App-authored.
+  Plus PRs #5 and #6 from round 3 closed with a reason at the owner's
+  instruction.
+- **Oracle decisions written: 3 — OD-1 (adds R1000, cites ESC-1), OD-2 (BL-4
+  declined), OD-3 (BL-3 HALTED against V5).** Identical in substance to round
+  3's, independently regenerated — the oracle is reproducible.
+- **Uncertainties filed (BL ids): none** — the planner never ran, so the CLI
+  syntax and batch-format gaps remain untested. OD-1 deliberately left both to
+  the planner.
+- **Criteria status:** untouched.
+- **Limits:** 30 / 12h / 60. Used 2 pull requests, ~11 minutes, 1 iteration.
+- **Findings this round:** C8, C9, C10, C11 (four confirmations — ESC-56,
+  ESC-57's code, the licensing wording, and the review gate working), and
+  **F27 (blocker, regression, affects every project generated from v0.4.36)**.
+- **Net movement:** three of round 3's four blockers are gone and the review
+  gate now works. The pipeline got one step further along the `plan` job —
+  steps 3 and 4 pass where they used to fail — and stopped at step 5 for a new
+  reason introduced by the very fix that cleared step 3.
+- **Still untested on the web lane:** everything after the oracle. Steward,
+  planner, orchestrator, coder, blind test-writer and acceptance have never
+  run here, and no pull request has ever merged on this lane.
+
+**Lane closed 2026-08-20T02:41Z.** Not restarted, no limit raised (Part 2
+rule 7). `main` untouched by this session. PR #7 and PR #9 are left open for
+the owner: they carry the oracle's rulings and this run's evidence, and both
+merge the moment F27 is fixed.
