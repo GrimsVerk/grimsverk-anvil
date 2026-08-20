@@ -86,3 +86,25 @@ _append-only, so a landed item never changes position.)_
 _(nothing yet — filed by `/plan` when a design leaves a question open; format:_
 _`BL-<n>` — the question, the proposed default, HIGH or LOW risk, one line on_
 _why that class, and `— filed by: plan`.)_
+
+- **BL-5** — Which plan carries R1000, and under what command-line invocation
+  syntax? OD-1 requires "the plan that implements R1000" to carry the ESC-1
+  reproducer as a row in `acceptance/S1.sh` — 0.1 km to m printing exactly
+  `100` — but nothing prints yet: there is no converter and no CLI, S1 measures
+  "the installed `anvil` command", and `docs/DESIGN.md` §11 deliberately leaves
+  the invocation syntax undecided, so that row cannot be written at all. A
+  steward plan under `docs/plans/oracle/` covering R1000 alone would therefore
+  deliver a formatting function with no printed output to govern, and would
+  have to invent the syntax to write the row. **Proposed default:** fold R1000
+  into the `convert` milestone plan as `docs/oracle/handoff-2026-08-20-1.md`
+  recommends — `covers: [R1, R2, R4, R5, R1000]`, that plan creating
+  `acceptance/S1.sh` with the 0.1 km to m row and filing the invocation syntax
+  as its own uncertainty — and cut no steward plan for OD-1; if instead a
+  standalone plan under `docs/plans/oracle/` is wanted, the syntax must be
+  ruled here, and the proposal is three positional arguments,
+  `anvil <value> <from-unit> <to-unit>`, printing the converted value alone on
+  stdout. **HIGH risk** — the invocation syntax is an external format that S1,
+  S3, S5 and every later plan are written against, and it fixes the slice
+  boundaries and Signatures of whichever plan owns R1000; `docs/DESIGN.md`'s
+  own test note reserves this question for the oracle rather than the planning
+  layer — filed by: steward
