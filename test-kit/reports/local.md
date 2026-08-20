@@ -707,3 +707,92 @@ Raw log preserved: `test-kit/reports/local-driver-round2.1.log`.
   cost of going public mid-test, and rule 13 is the fix.
 - **Severity: bug** (rule 13 makes it a finding by definition; the exposure
   itself is low, and the remaining decision is the owner's).
+
+---
+
+# ROUND 2.2 — owner-directed restart at template v0.4.35
+
+Owner's instruction, 2026-08-20 ~01:1xZ: v0.4.35 carries **F5, F6 and F7 from
+this ledger**, plus the web lane's four fixes; both repositories are now
+**public**; the kit gained the owner's identity register (Part 0) and **Part 2
+rule 13**. All earlier findings stand. Kit re-read in full from `main`
+(`09a5e4f`, 504 lines) before acting.
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 01:1xZ | Stop round 2.1 | `SIGTERM` sent, but the driver had **already stopped itself** — see the round 2.1 section. Evidence landed unaided; PR #3 opened by the App. |
+| 01:2xZ | Re-read the kit | Done. Local-lane deltas: values now come from the register by key, minimum release v0.4.35, new rule 13, and Part 3 closing action 3 rewritten around F16 (the web credential is owner-grade, so "the ruleset held" is verified, never assumed). |
+| 01:2xZ | 1. Reset ruleset to main-only | OK. `include` → `["~DEFAULT_BRANCH"]`. |
+| 01:2xZ | 2. Clear round-2.1 leftovers | PRs **#2** ("Oracle: rulings and handoff") and **#3** (run evidence) closed with a comment; local worktrees pruned; `docs/oracle-20260819234457--run-local` and `docs/run-20260819T234453Z--run-local` deleted locally and on the remote. |
+| 01:2xZ | 3. Rebuild at v0.4.35 | `git checkout -B run/local origin/main`, unstage + clean, re-render. `_commit: v0.4.35`, `_src_path` canonical https. `main` now also carries a `LICENSE` (MIT, go-public). App identity rebuilt **from the register by key** (`app_id`, `app_pem_path`) — values never echoed to the terminal or a file. `App identity OK`. |
+| 01:2xZ | 3. Toolchain, commit, push -f | All four hooks **Passed**. 73 files, 13 419 insertions. Rule-13 scan of every tracked file before pushing: **NONE — clean**. `git push -f` → `+ 8ea3a52...7a26bd9`. |
+| 01:24Z–01:27Z | 4. Bounded wait for `run/web` at v0.4.35 | 2 polls, 3 minutes. Attempt 1: `v0.4.34`. Attempt 2: **`v0.4.35`**. Well inside the 45-minute bound. |
+| 01:28Z | 4. Gate both lanes | OK. `include` → `["~DEFAULT_BRANCH","refs/heads/run/local","refs/heads/run/web"]`. |
+| 01:28Z | 5. Full readiness | **GREEN.** `unattended-ready: this repository can run unattended.` |
+| 01:28Z | 5. Start the driver | pid 234053, `--budget-points 20 --max-prs 30 --max-hours 12`. |
+
+**Start conditions verified for the third time.**
+
+```
+  THIS RUN'S BASE BRANCH: run/local
+deliver-loop: budget: weekly at 67% (model 70%), allowance 20 points, window resets Aug
+deliver-loop: iteration 1: phase ORACLE
+deliver-loop: dispatch oracle worker (oracle-20260820012830)
+```
+
+Weekly meter across the three starts: **61% → 62% → 67%** (model 62% → 64% →
+70%). The probe tracks a real, moving subscription.
+
+---
+
+### F8 — CLEARED at 01:2xZ
+
+Actions billing is resolved (both repositories going public is the likely
+cause). Observed directly, rather than assumed:
+
+```
+$ gh api repos/GrimsVerk/grimsverk-anvil/actions/runs \
+    --jq '.workflow_runs[0:2][] | "\(.created_at) \(.name) \(.head_branch) -> \(.status)/\(.conclusion)"'
+2026-08-20T01:26:05Z CI run/web -> completed/success
+2026-08-20T01:24:14Z CI run/local -> completed/success
+```
+
+Jobs start and finish green on both lanes. Every observation-checklist item
+that F8 made unobservable — branch deletion after merge, auto-merge completing,
+per-check durations of real runs, cross-lane `update-open-prs` — is back in
+play for round 2.2.
+
+### F5 — FIXED in v0.4.35, confirmed live
+
+The setup script now announces the bypass it grants, in its own output:
+
+```
+setup-github: ruleset bypass: repository admins, always — direct admin pushes are WAIVED, not blocked; the App and every non-admin stay fully gated.
+```
+
+That is exactly the gap F5 named. The bypass itself still exists and still
+fires — pushing the setup transcript to the gated `run/local` produced
+`Bypassed rule violations … 7 of 7 required status checks are expected` — but
+it is now declared rather than silent, and the declaration correctly states
+that the App stays gated. **F5 closed.**
+
+### F7 — partly answered by round 2.1
+
+Round 2.1's oracle pull request was titled **"Oracle: rulings and handoff"**,
+so the handoff file *was* written under v0.4.34 despite the missing `Edit`
+grant for `docs/oracle/**`. The grant gap was real (the engine said so
+verbatim) but did not block the write in practice. v0.4.35 fixes the grant
+regardless. Watching round 2.2's oracle phase to confirm the warning is gone.
+
+### F6 — watch item for round 2.2
+
+v0.4.35 is said to make the driver refuse untrusted workspaces. The round 2.2
+start banner shows **no trust warning and no refusal**, which is consistent
+with either "fixed and the workspace is now trusted" or "the check did not
+fire". Resolving it from the first worker log of this round.
+
+## Phase transitions — round 2.2 (Part 2 rule 5)
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 01:28:30Z | ORACLE | iteration 1. Worker `oracle-20260820012830`, base `run/local`. |
