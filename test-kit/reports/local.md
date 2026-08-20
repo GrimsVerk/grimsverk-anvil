@@ -1770,3 +1770,66 @@ closing check 3 satisfied for this lane so far.
 | Cross-lane `update-open-prs` (ESC-17) | job runs; scenario still not fired (see F15) |
 | Budget gauge live | **CONFIRMED** — five readings, monotonic |
 | Contamination probe (rule 10) | **CLEAN** — no artifact has referenced `test-kit/` |
+
+| 08:43:47Z | ORACLE | iteration 5 result: `gh pr create for docs/oracle-20260820083614--run-local failed` |
+| 08:43:50Z | ORACLE | iteration 6 — re-dispatched immediately |
+| 08:49:31Z | ORACLE | iteration 6 result: same failure, next branch |
+| 08:49:34Z | ORACLE | iteration 7 — re-dispatched again |
+
+### F16 — BLOCKER: the driver loops the ORACLE phase indefinitely when a worker's branch produces no diff, spending a full model worker per turn with no stop rule to catch it
+- **Where:** `.claude/scripts/deliver-loop.sh`, ORACLE phase, round 3.2 from iteration 5 onward.
+- **What happened:** after the real work merged (PRs #12 and #15), every
+  subsequent oracle iteration ends like this:
+
+  ```
+  pull request create failed: GraphQL: No commits between run/local and docs/oracle-20260820083614--run-local (createPullRequest)
+  deliver-loop: gh pr create for docs/oracle-20260820083614--run-local failed
+  deliver-loop: iteration 6: phase ORACLE
+  deliver-loop: dispatch oracle worker (oracle-20260820084350)
+  pull request create failed: GraphQL: No commits between run/local and docs/oracle-20260820084350--run-local (createPullRequest)
+  deliver-loop: gh pr create for docs/oracle-20260820084350--run-local failed
+  deliver-loop: iteration 7: phase ORACLE
+  deliver-loop: dispatch oracle worker (oracle-20260820084934)
+  ```
+
+  Three iterations so far, roughly six minutes apart, each dispatching a fresh
+  oracle worker. The cause is that there is nothing left to rule on: the
+  oracle's three decisions landed in PR #12 and the steward's plan in PR #15, so
+  a new oracle re-derives the same ledger, its branch carries no diff against
+  `run/local`, and GitHub refuses the pull request.
+
+- **The worker reports success, which is why nothing catches it:**
+
+  ```
+  WORKER_RESULT id=oracle-20260820083614 branch=worker/oracle-20260820083614 engine=claude exit=0 commits=1
+  WORKER_RESULT id=oracle-20260820084350 branch=worker/oracle-20260820084350 engine=claude exit=0 commits=1
+  ```
+
+  `exit=0 commits=1` — so `spawn-worker.sh`'s exit-3 guard ("the engine exited 0
+  but committed nothing") never fires. The commit exists on the *worker* branch;
+  what is empty is the *lane* branch's diff against its base. Those are different
+  facts, and only the second one predicts the pull request failing.
+
+- **No stop rule covers it.** The three-strike rule that ended rounds 2.1, 2.2
+  and 3.1 keys on *the same checks failing three times on one branch*. Here no
+  checks ever run, because no pull request is ever created, and each iteration
+  uses a **new** branch name — so the signature never repeats and the counter
+  never accumulates. The `failure-signatures` buffer holds a single hash and is
+  not growing.
+
+- **Why this is the most expensive defect found so far:** it consumes the
+  resource Part 2 rule 8 names as this lane's primary limit — a full oracle
+  model worker every ~6 minutes, producing nothing, with `--max-hours 12` as the
+  only backstop that will certainly fire. The template's own escape record
+  (ESC-32) is that the weekly budget ceiling shipped broken once without anyone
+  noticing; this is the shape of failure that would exhaust it unnoticed.
+
+- **Related observation, not yet a finding:** the `budget:` line has been
+  printed **once**, at start, and has not reappeared across seven iterations.
+  Rule 8 asks me to "confirm the budget line updates" during the run. It has not
+  updated so far. Whether the probe re-reads and only logs on change, or does not
+  re-read at all, is not yet distinguishable from outside — recorded as an open
+  question rather than asserted, and it decides whether `--budget-points 20`
+  can stop this loop at all.
+
+- **Severity: blocker.** The run cannot make progress and cannot stop itself.
