@@ -3,7 +3,7 @@ slug: anvil-convert-batch   # MUST appear in every branch name working this plan
 status: draft               # draft | in-flight | merged
 created: 2026-08-20
 design: Later — milestone `convert-batch` (docs/DESIGN.md §12)
-covers: [R6, R1003]
+covers: [R6, R1003, R1004]
 ---
 
 # `anvil` batch mode — Plan
@@ -12,10 +12,10 @@ covers: [R6, R1003]
 
 **What this builds.** Milestone `convert-batch`: `anvil --batch` reads conversion
 requests from standard input and writes exactly one line per request. It
-implements **OD-7 / R1003** — the batch line format that resolves BL-8 — and
-delivers the design's **R6**, with `acceptance/S5.sh` as its evidence. It is
-third in the build order: it extends the MVP plan's `cli.py` and `convert.py`,
-and is independent of the `temperature` plan, touching no unit table.
+implements **OD-7 / R1003** (the batch line format, resolving BL-8) and **OD-8 /
+R1004** (undecodable input, resolving BL-9), and delivers the design's **R6**,
+with `acceptance/S5.sh` as its evidence. It is third in the build order: it
+extends the MVP plan's `cli.py` and `convert.py`, and touches no unit table.
 
 **Decisions that are expensive to reverse.**
 
@@ -35,6 +35,8 @@ and is independent of the `temperature` plan, touching no unit table.
   is the silent guess V2 rejects.
 - **Output is written and flushed line by line**, so a batch answers each request
   as it is typed rather than at end of input.
+- **Standard input is decoded with `errors="replace"`** — **OD-8 / R1004**: a bad
+  byte becomes U+FFFD, its line refuses under an existing reason, the rest runs.
 
 **What it costs you.** One new required check, `acceptance/S5.sh`, on every pull
 request from here on; one user-visible change outside this milestone, the
@@ -45,10 +47,9 @@ two-line usage text. No dependency (V5 holds), no new module, no new exit code �
 aliases (BL-1), absolute zero (BL-2), pretty output (BL-3, halted at OD-2),
 currency (BL-4, rejected at OD-3).
 
-**Open questions.** One, LOW: what `anvil --batch` does with input that is not
-valid UTF-8. Filed as **BL-9**, proceeded on the default that standard input is
-read with `errors="replace"`, so an undecodable line refuses like any other bad
-line instead of killing the batch.
+**Open questions.** None. The one this plan carried — **BL-9** — is now ruled by
+**OD-8 / R1004**, which confirms the default: no code direction changes, and
+slice 1 gains the tests that prove it.
 
 ## Uncertainties
 
@@ -64,8 +65,15 @@ line instead of killing the batch.
   `errors="replace"`, so undecodable bytes become U+FFFD and the affected line
   refuses through the ordinary R4 path — `unknown unit`, `not a number` or
   `malformed line`, whichever fits — while the remaining lines still run.
-  **Ruling:** proceeded on the default (LOW), filed as **BL-9** for the oracle's
-  next cycle.
+  **Ruling:** **OD-8 / R1004** (evidence **BL-9**) — decode with
+  `errors="replace"`, exactly as proposed. The default this plan proceeded on is
+  now a landed requirement, so slice 1's code direction stands unchanged and no
+  reason text, exit code or output shape is added; what the ruling adds is the
+  measurement, the `main`-driven tests in slice 1, because the decode happens in
+  `main` and a test driving `run_batch` cannot observe it.
+
+This plan raises no further uncertainty: OD-8 answers the only one it had, and
+nothing in this amendment reaches past what that decision names.
 
 ### Derived, not guessed
 
@@ -82,6 +90,13 @@ is recorded here with what gave it:
 - Every result line's text — **OD-1 / R1000**, `format(value, ".12g")`.
 - Refusal of non-finite values and overflowing results inside a batch —
   **OD-5 / R1002**.
+- That standard input is decoded with `errors="replace"`, that an affected line
+  refuses like any other bad line, and that the batch never dies on a bad byte —
+  **OD-8 / R1004**, in terms.
+- Which existing reason a replaced line refuses under — **R1004** ("an existing
+  reason") together with the MVP's message table: a field holding U+FFFD parses
+  as no float and names no unit, so it lands on `not a number` or
+  `unknown unit`, whichever field carried the byte.
 - The reason text for each refusal — the MVP plan's message table, which R4
   delegated to it; R1003 requires the batch reason to be that same text.
 - The malformed-line reason's wording — delegated by **R1003** ("stays with the
@@ -120,11 +135,18 @@ line below goes to **standard output**, in input order.
 | `5 km` | `anvil: line <n>: malformed line: '5 km'` |
 | `5 km mi extra` | `anvil: line <n>: malformed line: '5 km mi extra'` |
 | `` (blank or whitespace only) | *no output line; `<n>` still advances* |
+| `\xff km m` (a byte that is not valid UTF-8) | `anvil: line <n>: not a number: '<U+FFFD>'` |
 
-Every reason except the last two is the MVP's, character for character — that is
-R1003's requirement, not a nicety. The quoted line in a malformed reason is the
-input line with leading and trailing whitespace stripped and no trailing
-newline; internal spacing is left as the user typed it.
+Every reason except the two `malformed line` rows is the MVP's, character for
+character — that is R1003's requirement, not a nicety. The quoted line in a
+malformed reason is the input line with leading and trailing whitespace stripped
+and no trailing newline; internal spacing is left as the user typed it.
+
+The last row is **R1004** and adds no reason of its own: the bad byte is already
+U+FFFD by the time the line is parsed, and U+FFFD parses as no float, so the line
+lands on the `not a number` row above, with the replaced text echoed as the
+offending input. A bad byte inside the from-unit or to-unit field lands on
+`unknown unit` the same way.
 
 **Exit codes.** 0 when no request failed — an empty standard input is a
 successful batch of zero requests. 1 when any request failed. 2 for a wrong
@@ -143,9 +165,12 @@ the format call is right and the disagreement is a finding for assembly.
   `1.609344` and exits 0. A blank line produces no output line. Empty input
   produces no output and exits 0. A request the converter refuses prints
   `anvil: line <n>: <reason>` on standard output and makes the exit 1. Single-shot
-  conversions still print exactly what they printed before.
+  conversions still print exactly what they printed before. Bytes on standard
+  input that are not valid UTF-8 never end the batch: the affected line refuses
+  with an ordinary reason and every later line still converts (R1004).
 - **Files:** `src/grimsverk_anvil/cli.py`, `tests/test_batch_stream.py`, `docs/architecture.md`
-- **Estimate:** ~190 lines
+- **Estimate:** ~215 lines (was ~190; the three `main`-driven decode tests below
+  are what OD-8 added — the decode argument itself was always in this slice)
 
 **Scope of this slice.** Three functions in `cli.py`, plus the `--batch` branch
 in `main`, plus the refactor that makes single-shot and batch share one path.
@@ -168,8 +193,18 @@ malformed reason for any other field count. Splitting on runs of whitespace is
 
 `run_batch` iterates the input with `enumerate(..., start=1)`, writes each output
 line followed by `"\n"` and flushes, and returns 1 if any request failed and 0
-otherwise. `main` reads `sys.stdin` with `errors="replace"` before handing it
-over (the BL-9 default) and passes `sys.stdout`.
+otherwise.
+
+`main` decodes standard input itself instead of using the decoder `sys.stdin`
+already carries: it wraps `sys.stdin.buffer` in
+`io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8", errors="replace")`, passes
+that to `run_batch` with `sys.stdout`, and holds the wrapper for the life of the
+call. That one argument is **R1004**: a byte that is not valid UTF-8
+becomes U+FFFD instead of raising `UnicodeDecodeError`, so the line survives as a
+line and refuses through an existing reason while the rest of the batch runs.
+Going through `.buffer` rather than `sys.stdin.reconfigure(errors="replace")` is
+what makes the requirement testable — the tests below replace the binary stream,
+which a reconfigured `sys.stdin` gives no way to do.
 
 `tests/test_batch_stream.py` drives `run_batch` with `io.StringIO`, offline and
 deterministic: the two-request happy path, a batch whose every line converts,
@@ -177,6 +212,25 @@ blank lines in the middle and at the end, whitespace-only lines, empty input,
 input whose last line has no trailing newline, and a mixed batch returning 1. One
 test uses a recording stream to assert one write per request in input order,
 which is the streaming property the flush exists for.
+
+Three further tests in the same file drive `main(["--batch"])` rather than
+`run_batch`, with `sys.stdin` replaced by a stand-in whose `.buffer` is an
+`io.BytesIO`. They have to go through `main`, because the decode happens there
+and a `StringIO` cannot observe it — OD-8's measurement paragraph says so in
+terms. Each asserts standard output exact-match, the exit code, and that standard
+error is empty:
+
+| Bytes on standard input | Standard output | Exit |
+| --- | --- | --- |
+| `b"\xff km m\n1 mi km\n"` | `anvil: line 1: not a number: '<U+FFFD>'` then `1.609344` | 1 |
+| `b"1 k\xffm m\n5000 m km\n"` | `anvil: line 1: unknown unit: 'k<U+FFFD>m'` then `5` | 1 |
+| `b"0.1 km m\n1 mi km\n"` | `100` then `1.609344` | 0 |
+
+The first two are R1004's own case: the later line still converts, which is R6's
+"a bad line does not stop the remaining lines" proven against a bad *byte*. The
+third proves the wrapper leaves ordinary input alone. The expected reason texts
+come from the contract table above, not from a new message; the test author reads
+the replaced field as U+FFFD, exactly as the tool will print it.
 
 ### Signatures
 
@@ -301,6 +355,10 @@ declared them.
 
 - **Anything R1003 did not decide about batch:** a file argument, a header line,
   a delimiter option, comment lines, per-line timing, parallelism.
+- **A dedicated "not valid UTF-8" reason**, and any byte-level reading of
+  standard input beyond the one `errors="replace"` wrapper — OD-8 weighed that as
+  its alternative (3) and rejected it, so building it here would re-decide a
+  landed decision.
 - **`acceptance/S1.sh` and `acceptance/S2.sh`** — other plans' criteria. This
   plan must leave every expected string in both byte-identical; slice 1's
   refactor is judged by that.
