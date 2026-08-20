@@ -2511,3 +2511,37 @@ convention, not a guardrail.
   `anvil-convert-batch` and branch `feat/anvil-convert-batch--run-web`, which is
   what `plan-resolve.sh` — the gate that actually judges — expects.
 - Severity: bug.
+
+### F32 — the detector picks the next plan to build in ALPHABETICAL filename order, ignoring milestone dependencies
+- Where: `.claude/scripts/deliver-phase.sh:325` — `done < <(find "$PLANS_DIR"
+  -name '*.md' 2>/dev/null | sort)` — and the ORCHESTRATE phase it feeds.
+- What happened: three plans have landed and none is built, so the detector must
+  choose. It chose by filename sort order:
+
+  ```
+  docs/plans/oracle/anvil-convert-batch.md   <- selected
+  docs/plans/oracle/anvil-convert-mvp.md
+  docs/plans/oracle/anvil-temperature.md
+  ```
+
+  `SLUG=anvil-convert-batch`. But the batch milestone (R6, R1003, R1004) is
+  `anvil --batch` reading conversion requests from standard input — it consumes
+  the single-shot converter that the **`anvil-convert-mvp`** plan (R1, R2, R4,
+  R5, R1000, R1001) builds and that does not exist yet. `docs/DESIGN.md` §12
+  orders the milestones `convert` then `convert-batch`; the oracle's own OD-4
+  refers to "the plan covering the `convert-batch` milestone" as later work. The
+  detector reads none of that.
+- Impact: the first feature this run builds is the one that depends on code that
+  has not been written. The likely outcomes are a coder inventing a converter
+  the MVP plan will later build differently, or a slice that cannot pass its own
+  tests. Either way the run's first code lands out of order, and nothing in the
+  machinery notices.
+- Upstream fix (NOT applied — `.claude/` is off-limits): order candidate plans
+  by the milestone order in `docs/DESIGN.md` §12, or have the plan front matter
+  declare a `depends-on` and sort topologically. Alphabetical order is a
+  coincidence, not a sequence.
+- **Followed anyway, deliberately.** The machinery's instruction is the test;
+  the driver builds `anvil-convert-batch` as told and records what happens
+  rather than second-guessing the detector. Improvising the "sensible" order
+  would hide exactly the defect the anvil exists to find.
+- Severity: bug.
