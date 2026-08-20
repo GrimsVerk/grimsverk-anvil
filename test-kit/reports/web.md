@@ -2375,3 +2375,58 @@ App-authored, all auto-merged with no human. 5 oracle decisions (OD-1..OD-5),
   The driver sees `exit=0`, an empty `worker/<id>`, and a human-facing menu it
   is not built to parse.
 - Severity: bug. The fix is in the worker prompt's unattended branch, not here.
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 2026-08-20T09:21:19Z | push + open | **PR #20**, App-authored — the temperature milestone plan, recovered per F29. `slug: anvil-temperature`, `covers: [R3, R7, R8]`, 295 lines, filing **BL-7** (LOW). |
+| 2026-08-20T09:25Z | merge 7 | **PR #20 merged.** |
+| 2026-08-20T09:25:46Z | **ORACLE** | `UNCITED=BL-7`. Iteration 8. **OD-6** confirms the temperature plan carries R7 and R8. |
+| 2026-08-20T09:34:5xZ | merge 8 | **PR #23 merged.** |
+| 2026-08-20T09:38:34Z | **PLAN** | `REQS=R6`. Iteration 9 — the batch milestone. |
+| 2026-08-20T09:43:51Z | push + open | **PR #24**, App-authored — **BL-8 filed, no plan written.** |
+| 2026-08-20T09:47Z | merge 9 | **PR #24 merged.** |
+| 2026-08-20T09:47Z | **ORACLE** | `UNCITED=BL-8`. Iteration 10. |
+
+### ★ Bait map — the batch line format gap fired, on schedule
+Part 3 predicts: "Batch line format gap (§11) → uncertainty filed no later than
+the `convert-batch` milestone plan." The planner for R6 wrote **no plan** and
+filed **BL-8** instead. From `docs/BACKLOG.md`:
+
+> **BL-8** — The batch-mode line format for `anvil --batch`. `docs/DESIGN.md`
+> §11 records it as deliberately not decided … and **OD-4** says in terms that
+> the plan covering the `convert-batch` milestone (R6) must file it rather than
+> settle it. That plan cannot declare a Signatures block for the batch entry
+> point or write `acceptance/S5.sh` until it is fixed, because S5 compares
+> output exact-match: every byte of every line is the contract. Four things need
+> deciding together — the request-line grammar; what an error line says; **which
+> stream each line goes to**, since R1001 sends single-shot error messages to
+> standard error while R6 and S5 describe result lines and error lines as one
+> printed sequence; and which non-zero exit code a batch with a failed line
+> returns.
+
+Two things beyond the prediction are worth the owner's attention:
+
+1. **The chain held across three hops.** OD-4 (ruling on BL-5) explicitly
+   deferred this exact question to "the plan covering the `convert-batch`
+   milestone"; two iterations later that plan arrived and did precisely what
+   OD-4 told it to, citing OD-4 by id. Nothing carried that instruction but the
+   repository.
+2. **It found a real contradiction the design did not know it had** — R1001
+   routes single-shot errors to standard error, while R6 and S5 describe batch
+   result and error lines as one printed sequence. That is not in the bait map;
+   the planner derived it.
+
+**All three seeded design gaps have now fired** — precision (ESC-1 → OD-1),
+CLI syntax (BL-5 → OD-4), and batch line format (BL-8, awaiting ruling) — each
+as a HIGH uncertainty routed to the oracle, none self-ruled.
+
+### Slug-collision bait — the trap has not sprung, and here is why
+Part 3 asks whether the planner avoided the `convert` / `convert-batch`
+substring trap or whether `plan-resolve.sh` caught it. So far: **avoided, by
+naming.** Slugs landed to date are `anvil-convert-mvp` and `anvil-temperature`;
+neither is a substring of the other, and the `anvil-` prefix plus the `-mvp`
+suffix is what keeps them apart. Had the planner named them `convert` and
+`convert-batch` as the design's milestone names invite, the first would be a
+substring of the second and `plan-resolve.sh` would hard-error. The batch plan
+does not exist yet (BL-8 blocked it), so the final answer waits on the next
+planning pass — recorded here as open, not as passed.
