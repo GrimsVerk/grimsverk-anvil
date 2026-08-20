@@ -119,3 +119,19 @@ _why that class, and `— filed by: plan`.)_
   block, alters no acceptance script's fixed table, and is a few lines to
   reverse. Proceeded on the default in `docs/plans/oracle/anvil-convert-mvp.md`
   — filed by: steward
+- **BL-7** — Which plan covers the two non-functional requirements: a Python
+  CLI installed as the console command `anvil` from package `grimsverk_anvil`,
+  and standard library only, fully offline and deterministic. `docs/DESIGN.md`
+  §12 names two remaining milestones — `temperature` and `convert-batch` — and
+  neither names either requirement; both are evidenced only by S4, which §13
+  marks **(owner)**, so no acceptance script can ever cover them and
+  `.github/scripts/coverage.sh` reports them unplanned until some plan lists
+  them in its `covers`. **Proposed default:** the `temperature` plan carries
+  them alongside its functional requirement, because it is the first plan whose
+  acceptance script runs the installed `anvil` console command end to end —
+  which is the platform requirement's whole substance — and because it adds no
+  dependency, which is the other's. **Risk: LOW** — the whole question is one
+  line of front matter: it moves no slice boundary, changes no Signatures
+  block, alters no acceptance script's expected values and no external format,
+  and reversing it is a one-line `docs/` pull request. Proceeded on the default
+  in `docs/plans/oracle/anvil-temperature.md` — filed by: plan
