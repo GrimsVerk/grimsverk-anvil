@@ -34,6 +34,12 @@ that's worth seeing. -->
 | Batch runner | Walking the input lines in order, numbering them from 1, writing one output line per request, and reporting whether any request failed. |
 | Command entry point | Choosing between batch mode, single-shot conversion and the usage error, and owning the exit code. |
 
+The components sit in three modules, as the plans declare. The unit table and
+the unit lookup are one module. The converter, the result formatter and the
+refusal type are the second. The command entry point, the request path, the
+batch line parser and the batch runner are the third, and it reads from the
+other two.
+
 ## Data flow
 
 <!-- What moves between the components, in what direction, and in what form.
@@ -101,12 +107,10 @@ section that stops a future agent confidently "fixing" something load-bearing,
 and it's where the reviewer's "easy to change next time" findings should land
 when they're accepted rather than acted on. -->
 
-- **Every component above lives in one file, `src/grimsverk_anvil/cli.py`.** The
-  plans put the unit table and the converter in modules of their own. This slice
-  was built before those modules existed and was scoped to `cli.py` alone, so the
-  table, the lookup, the converter, the formatter and the refusal type were all
-  created there. Moving them later is a move, not a rewrite: the names and the
-  behaviour are already the ones the plans declare.
+- **The convert MVP milestone has not been built yet**, although its three
+  modules now exist. The batch plan was built first, so `units.py`, `convert.py`
+  and `cli.py` were created here, holding only what batch mode needs. The MVP
+  slices add to them rather than creating them.
 - **The usage text names only the single-shot form**, although batch mode now
   works. Slice 2 of the batch plan adds the second line.
 - **`pyproject.toml` has no `[project.scripts]` entry yet**, so there is no
