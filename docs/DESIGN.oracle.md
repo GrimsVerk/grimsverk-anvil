@@ -236,3 +236,58 @@ decision not to decide, recorded.
 
 <!-- Append decisions below, newest at the bottom. Never edit one that has
 landed; supersede it with a new decision naming its id. -->
+
+## OD-1 — Results print at 12 significant digits, so float artifacts never reach output
+
+- **Date:** 2026-08-20
+- **Evidence:** ESC-1
+- **Requirements added:** R1000
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V1 — "Correct conversions come before everything else: a wrong number presented confidently is the worst output this tool can produce."
+- **Vision statements against:** V6 — "A conversion that is numerically wrong, however plausible it looks, is rejected outright — as is any run that reports success while a criterion's evidence cell is empty or narrated rather than executed." Rounding discards digits, and discarding digits could be read as making the printed number numerically wrong. It does not: the digits discarded are binary floating-point noise beyond the precision of every factor in the unit table, and the artifact ESC-1 records — `100.00000000000001` for an exact 100 — is itself the numerically wrong presentation. The rounded value is closer to the true result, not further from it.
+- **Alternatives considered:** (1) Shortest round-trip repr, Python's default float printing — rejected: it is what produced ESC-1, because `100.00000000000001` is the shortest string that round-trips that float. (2) A fixed count of decimal places, e.g. always six — rejected: it pads exact results to `100.000000`, flattens small magnitudes toward zero, and adds nothing for large ones; significant digits scale with magnitude, decimal places do not. (3) Decimal arithmetic end-to-end — rejected: it removes binary artifacts at the source but rewrites the converter and every factor to fix a presentation defect a one-line formatter fixes, against V3's simplicity ranking. (4) Fifteen significant digits — rejected: chained conversions through a base unit can accumulate error into the fifteenth digit; twelve leaves a safety margin while still exceeding the certified precision of every factor the design names.
+- **Rationale:** §11 of `docs/DESIGN.md` deliberately left output precision undecided, and ESC-1 is the logged evidence that undecided precision produces a confidently wrong-looking number. Twelve significant digits is far more precision than any conversion factor in §5 carries, and far less than where float artifacts live, so it prints every honest digit and none of the noise. Confidence is high on the shape (significant digits, not decimal places) and moderate on the count; if twelve proves wrong in either direction, superseding this costs one entry.
+
+**R1000** — Every result value `anvil` prints — single-shot, and each batch
+result line — is formatted with Python's `format(value, '.12g')`: at most 12
+significant digits, correctly rounded, trailing zeros stripped, `g`-style
+exponent notation where 12 significant digits cannot render the magnitude
+plainly. In particular `anvil 0.1 km m` prints `100`, never
+`100.00000000000001`.
+
+This decides only §11's precision question. The command-line syntax and the
+batch line format stay open, for planning to file uncertainties on as
+`AGENTS.md` requires.
+
+Measurement, per the durable-evidence section of `docs/VISION.md` ("When a
+decision alters behaviour that no existing check, test, run report or review
+artifact would notice, adding the thing that notices is part of the decision —
+not a follow-up, and not optional"): no measurement of output formatting exists
+today, so the plan implementing R1000 carries two. First, blind tests asserting
+the exact printed string for the ESC-1 case and for boundary cases (an exact
+integer result, a sub-unity result, a temperature). Second, the fixed table in
+`acceptance/S1.sh` — the S1 criterion covers R1, and `0.1 km` to `m` is a
+length conversion — must include that case expecting the exact string `100`.
+That is the "acceptance script" ESC-1's pending check column asks for, without
+minting a new criterion id, which only the owner may do in §13. Once the check
+has been observed red against the defect and green against the fix, the
+implementing work appends ESC-1's correction row in `docs/escapes.md`.
+
+## OD-2 — Currency conversion declined; the design's offline non-goal stands
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-4
+- **Requirements added:** (none)
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V3 — "Simplicity comes before completeness: a small tool that is obviously right beats a large one that must be trusted."
+- **Vision statements against:** (none — no statement in docs/VISION.md tells against this; the nearest candidates both point the same way as the decision: V2 ranks clear errors above feature breadth, and V4 declares breadth of units expendable for exactly the qualities live currency data would cost.)
+- **Alternatives considered:** (1) Live rates fetched with stdlib `urllib` — no new dependency, so V5 untouched — rejected: R8 requires fully offline and deterministic, §3 names "Currency, time zones, or any unit that needs live data" a non-goal, and a result that varies with the network is one no offline acceptance script can pin. (2) A bundled static rate table — rejected: exchange rates decay in hours, so a stale rate presented as a conversion is V1's "wrong number presented confidently", the worst output this tool can produce. (3) Accepting BL-4 and adding a requirement — rejected: it would use a Proposed backlog item to overrule the owner's own design document, inverting the authority order this repository is built on.
+- **Rationale:** BL-4 argues from completeness — "a converter that cannot do money feels half-finished" — and V3 ranks simplicity above completeness by name. The design already decided this question in §3 and R8; the evidence adds a preference, not a fact that contradicts the design, so the design stands. No requirement is added and no plan follows. If the owner wants currency, the move is theirs and it is two edits, both owner-landed: §3/R8 in `docs/DESIGN.md`, and the priority order in `docs/VISION.md`. This decision changes no behaviour, so no new measurement is owed.
+
+## OD-3 — HALTED: BL-3's pretty tables require the `rich` dependency V5 forbids
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-3
+- **Tenet relied on:** V5 — "No runtime dependency may be added: the Python standard library is the whole toolbox, and a diff that adds one violates this tenet."
+- **What a decision would have said:** Add a requirement that results print as aligned, colored tables rendered by the `rich` library, and hand it to planning. BL-3 admits no narrower reading: it names `rich` "specifically" and calls hand-rolling ANSI codes "wasted effort", so a stdlib-only variant would not be a ruling on this evidence but a substitution of it.
+- **What it needs from the owner:** One edit, in either direction. To get BL-3: amend V5 in `docs/VISION.md` with a carve-out — for example, naming display-only dependencies the owner exempts — and the next oracle run decides BL-3 under the amended tenet. To keep V5: file a new backlog item superseding BL-3 that asks for readable output achievable with the standard library, which the oracle can then weigh under V2 and V3 — or simply leave BL-3 where it sits, in Proposed, where nothing builds it unprompted. As filed, BL-3 and V5 cannot both be honoured, and a core tenet outranks a proposal.
