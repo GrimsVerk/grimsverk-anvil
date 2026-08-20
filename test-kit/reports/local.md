@@ -13,7 +13,7 @@ All times are UTC.
 
 | Time (UTC) | Step | Outcome |
 | --- | --- | --- |
-| 2026-08-19 20:41Z | 1. Get the repository | OK. `git clone git@github.com-grimsverk:GrimsVerk/grimsverk-anvil.git` into `~/code/GrimsVerk`. No friction. |
+| 2026-08-19 20:41Z | 1. Get the repository | OK. `git clone git@<ssh_host>:GrimsVerk/grimsverk-anvil.git` into `<repos_root>`. No friction. |
 | 2026-08-19 20:43Z | 2. Confirm the template release | OK. `gh release view -R GrimsVerk/grimsverk-template --json tagName --jq .tagName` → `v0.4.31`. Meets the "v0.4.31 or newer" floor. |
 | 2026-08-19 20:44Z | 3. Lane branch + copier render | OK, with one note (see N1). `git switch -c run/local origin/main`, then copier rendered 72 paths. `.copier-answers.yml` records `_commit: v0.4.31` and `_src_path: https://github.com/GrimsVerk/grimsverk-template.git` (canonical https, no token, no local path — as Part 1 step 3 requires). No overwrite prompts. |
 | 2026-08-19 20:45Z | 4. Install canned inputs | OK. DESIGN.md, VISION.md, BACKLOG.md, escapes.md copied over the rendered stubs. |
@@ -66,7 +66,7 @@ in Part 3, in case the web lane answered interactively.
   environment:
 
   ```
-  $ /home/loke/.cache/pre-commit/repoafysa_uk/py_env-python3.14/bin/python -m pip list | grep -Ei 'mypy|pytest'
+  $ <home>/.cache/pre-commit/repoafysa_uk/py_env-python3.14/bin/python -m pip list | grep -Ei 'mypy|pytest'
   mypy                           2.3.0
   mypy_extensions                1.1.0
   ```
@@ -75,7 +75,7 @@ in Part 3, in case the web lane answered interactively.
   what is really wrong:
 
   ```
-  $ /home/loke/.cache/pre-commit/repoafysa_uk/py_env-python3.14/bin/mypy tests/conftest.py
+  $ <home>/.cache/pre-commit/repoafysa_uk/py_env-python3.14/bin/mypy tests/conftest.py
   tests/conftest.py:24: error: Cannot find implementation or library stub for module named "pytest"  [import-not-found]
   tests/conftest.py:47: error: Untyped decorator makes function "no_network" untyped  [untyped-decorator]
   Found 2 errors in 1 file (checked 1 source file)
@@ -196,10 +196,10 @@ Both findings keep severity **blocker** for the release they were found in
 | 21:28Z | 4. Install canned inputs | OK. Same four files. |
 | 21:28Z | 5. `uv sync` + `pre-commit install` | OK. Python 3.14.7, `uv.lock` written, hook installed at `.git/hooks/pre-commit`. |
 | 21:29Z | 5. `git commit` (hooks ACTIVE) | **OK — F1 is gone.** ruff check / ruff format / mypy (uv run) / gitleaks all Passed. 72 paths committed. |
-| 21:29Z | 5. Identity check | OK. `git log -1 --format='%an <%ae>'` → `GrimsVerk <github@grimsverk.com>`. |
+| 21:29Z | 5. Identity check | OK. `git log -1 --format='%an <%ae>'` → `GrimsVerk <<owner_email>>`. |
 | 21:30Z | 6. `git push -u origin run/local` | OK, first attempt, no rejection. The "required status checks have not succeeded" rejection the plan warns about did NOT occur — no stale ruleset survived the wipe (confirmed at 6a-1 below, which reports the ruleset as *created*, not updated). |
 | 21:30Z | 6a-1. `scripts/setup-github.sh --app` | OK. Merge settings asserted (auto-merge on, merge commits on, delete-on-merge on). Secrets left alone — `CLAUDE_CODE_OAUTH_TOKEN`, `APP_ID`, `APP_PRIVATE_KEY`, `AUTO_MERGE_TOKEN` all already set. Ruleset `grimsverk-gates` **created** with required checks: `checks secrets plan template-sync test-the-tests acceptance-criteria review`. Ran with stdin closed; it prompted for nothing. See F4 for its closing advice. |
-| 21:30Z | 6a-2. App identity file | OK. `cp .claude/app-identity.example .claude/app-identity`, filled `APP_ID=4635498` and `APP_PRIVATE_KEY=/home/loke/.config/grimsverk/find-best-mobo.pem`. Confirmed gitignored (`.gitignore:18`). `.claude/scripts/app-token.sh >/dev/null && echo "App identity OK"` → **App identity OK**. |
+| 21:30Z | 6a-2. App identity file | OK. `cp .claude/app-identity.example .claude/app-identity`, filled `APP_ID=<app_id>` and `APP_PRIVATE_KEY=<app_pem_path>`. Confirmed gitignored (`.gitignore:18`). `.claude/scripts/app-token.sh >/dev/null && echo "App identity OK"` → **App identity OK**. |
 | 21:31Z | 6a-3. Push the lane | OK. Setup transcript committed and pushed on `run/local` *before* gating, so the direct push was still allowed. |
 | 21:31Z | 6a-4. Wait for `run/web` | Started. `git ls-remote --heads origin 'run/*'` → `run/local` only. Polling every 3 min, bound 45 min (deadline 22:16Z). |
 
@@ -269,7 +269,7 @@ lane-vs-lane comparison is not read as the local lane deviating from Part 1.
   remote:
   remote: - 7 of 7 required status checks are expected.
   remote:
-  To github.com-grimsverk:GrimsVerk/grimsverk-anvil.git
+  To <ssh_host>:GrimsVerk/grimsverk-anvil.git
      7cb807d..e52101d  run/local -> run/local
   $ echo $?
   0
@@ -410,7 +410,7 @@ or a `MISSING.md`. That is the ESC-43 shape behaving.
   evidence branch (`docs/run-20260819T231559Z--run-web`) sat on the same remote
   throughout and neither run touched the other.
 - **Worker commit authorship:** the oracle's *git commit* is authored
-  `GrimsVerk <github@grimsverk.com>` — the owner. Not a defect: workers commit
+  `GrimsVerk <<owner_email>>` — the owner. Not a defect: workers commit
   locally under the machine's gitconfig, and it is the *pull request* author
   that ESC-26/ESC-35 are about. Noted so the two are not confused later.
 - Branch deletion after merge, auto-merge arming, per-check durations,
@@ -443,7 +443,7 @@ Flagged for round 2.1, where the same step runs uninterrupted.
   ```
   Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted.
   Run Claude Code interactively here once and accept the trust dialog, or set
-  projects["/home/loke/code/GrimsVerk/grimsverk-anvil"].hasTrustDialogAccepted: true in /home/loke/.claude.json.
+  projects["<home>/code/GrimsVerk/grimsverk-anvil"].hasTrustDialogAccepted: true in <home>/.claude.json.
   ```
 
 - **Expected:** `.claude/settings.json` describes its allow list as "a scoped
@@ -512,9 +512,9 @@ rewrite) or Part 0 rig.
 | 23:39Z | Stop round 2.0 | `SIGTERM` to pid 179897. Evidence landed by the template's own `EXIT` trap — see the round 2.0 section above. |
 | 23:41Z | Clear round 2.0 leftovers | Necessary implication of the restart, not in the owner's list: PR #1 (evidence, round 2.0) was still **open against `run/local`**, and AGENTS.md allows only one pipeline pull request in flight per base branch — the new driver would have waited on a pull request whose base tree was about to be rewritten. Closed with a comment saying why; deleted `docs/run-20260819T232721Z--run-local` locally and on the remote, removed the oracle worktree, deleted `worker/oracle-20260819232725`. Its contents are preserved in this ledger. |
 | 23:43Z | 1. Reset ruleset to main-only | OK. `scripts/setup-github.sh --app` → `updated in place (id 21061515)`; `.conditions.ref_name.include` now `["~DEFAULT_BRANCH"]`. Both lane branches ungated so they can be rewritten. |
-| 23:43Z | 2. Rebuild the lane | `git fetch origin main && git checkout -B run/local origin/main`, then `git reset` + `git clean -fdx` (the F3 correction again — a bare `git clean` would have kept anything staged). Tree back to `main` exactly. **`.claude/app-identity` is gitignored and was destroyed by the clean**, as the owner warned; recreated from the example with App ID `4635498` and key `/home/loke/.config/grimsverk/find-best-mobo.pem`, re-proved: `App identity OK`. |
+| 23:43Z | 2. Rebuild the lane | `git fetch origin main && git checkout -B run/local origin/main`, then `git reset` + `git clean -fdx` (the F3 correction again — a bare `git clean` would have kept anything staged). Tree back to `main` exactly. **`.claude/app-identity` is gitignored and was destroyed by the clean**, as the owner warned; recreated from the example with App ID `<app_id>` and key `<app_pem_path>`, re-proved: `App identity OK`. |
 | 23:44Z | 2. Re-render at v0.4.34 | OK. `_commit: v0.4.34`, `_src_path` canonical https. New file present that v0.4.32 did not have: `.github/workflows/open-pr.yml` (ESC-50's server-side pull-request opener). |
-| 23:44Z | 2. Canned inputs, toolchain, commit | OK. All four pre-commit hooks **Passed** (F1 stays fixed). 73 files, 13 161 insertions. Identity `GrimsVerk <github@grimsverk.com>`. |
+| 23:44Z | 2. Canned inputs, toolchain, commit | OK. All four pre-commit hooks **Passed** (F1 stays fixed). 73 files, 13 161 insertions. Identity `GrimsVerk <<owner_email>>`. |
 | 23:44Z | 2. `git push -f origin run/local` | OK, clean force-update `e52101d...b5db1b5`. **No `Bypassed rule violations` line this time** — the branch was genuinely ungated, so nothing had to be waived. That is the F5 contrast: when the gate does not apply, the push is silent; when it does apply and is waived, GitHub says so. |
 | 23:45Z | 3. Wait for the web lane at v0.4.34 | **No wait needed.** `git show origin/run/web:.copier-answers.yml` already read `_commit: v0.4.34` on the first check — the web lane re-rendered first. Bounded 45-min poll not required. |
 | 23:45Z | 3. Gate BOTH lanes | OK. `.conditions.ref_name.include` → `["~DEFAULT_BRANCH","refs/heads/run/local","refs/heads/run/web"]`. Setup transcripts committed and pushed before the driver started, so the tree was clean at launch. |
@@ -614,3 +614,96 @@ exercised. Recording what it does at the reset.
   sessions is a genuine template design question — logged here, pending the
   owner, and deliberately not filed as a defect against v0.4.34 without their
   ruling.
+
+---
+
+## Round 2.1 ended on its own terms at 23:5xZ — the driver stopped itself
+
+The owner-directed restart to v0.4.35 arrived while round 2.1 was in WAIT. A
+`SIGTERM` was sent to the driver, but **it had already decided to stop before
+the signal took effect**:
+
+```
+deliver-loop: iteration 4: phase WAIT
+deliver-loop: PR #2 red (acceptance-criteria arm-auto-merge checks checks plan review secrets secrets template-sync test-the-tests ) — dispatching a fix
+deliver-loop: dispatch fix session
+deliver-loop: iteration 5: phase WAIT
+deliver-loop: the same checks failed three times on docs/oracle-20260819234457--run-local (…) — stopping (deliver.md step 5)
+deliver-loop: landing this run's evidence in docs/runs/20260819T234453Z ...
+deliver-loop: collect-evidence: 1 worker log(s) into docs/runs/20260819T234453Z/workers.
+deliver-loop: collect-evidence: 1 review(s) into docs/runs/20260819T234453Z/reviews (1 skipped).
+```
+
+**This answers the open template question left hanging in F8, in the
+template's favour.** F8 asked whether the driver would spend budget forever on
+fix sessions it cannot succeed at. It does not: three identical failures on one
+branch and it stops, cites the rule it stopped under (`deliver.md` step 5), and
+lands its evidence. Against a billing outage no diff could fix, it burned
+**two** fix sessions and quit. That is the correct bounded behaviour, and the
+concern logged in F8 is withdrawn — the design question it raised is answered.
+
+**Evidence landed unaided, again — no failsafe.** `--land-evidence` was not
+needed for the second time. Evidence pull request **#3**
+(`docs/run-20260819T234453Z--run-local` → `run/local`), authored by
+`app/autogrims`. Contents:
+
+```
+docs/runs/20260819T234453Z/run.md
+docs/runs/20260819T234453Z/workers/oracle-20260819234457.log
+docs/runs/20260819T234453Z/reviews/index.md
+docs/runs/20260819T234453Z/reviews/docs-oracle-…-737aaf5cb40d/MISSING.md
+```
+
+**The `MISSING.md` is ESC-43 working, not failing.** Rule 9 asks for `reviews/`
+payloads *with no* `MISSING.md`, so this needs saying plainly: the marker is
+present because the review job never started (F8, billing), and the file exists
+precisely to make that gap visible:
+
+> The run happened; its artifact could not be downloaded (expired, never
+> uploaded, or the job died before the upload step). This file exists so the
+> gap is visible rather than indistinguishable from a review that never ran.
+
+`index.md` closes with `Collected 1 review(s); 1 skipped or unavailable.` The
+gate is honest about its own blind spot. **Not a finding — a positive
+observation of ESC-43's mechanism under a real outage.**
+
+Raw log preserved: `test-kit/reports/local-driver-round2.1.log`.
+
+---
+
+### F9 — register values were already published: this ledger carried them before rule 13 existed
+- **Where:** this ledger and its log copies on `chore/test-report-local`, commits from 2026-08-19 20:4xZ onward; TESTPLAN Part 2 rule 13 (new in the v0.4.35 kit).
+- **What happened:** rule 13 says "A register value found in anything pushed is
+  itself a finding", so this is filed as one against myself. Every ledger entry
+  before this round was written while the repository was private and the kit
+  told me to take the App id and key path from my prompt. The repository is now
+  public, and those commits are public with it. Counted at the moment rule 13
+  landed, across `test-kit/reports/`:
+
+  | Register key | Occurrences found |
+  | --- | --- |
+  | `<home>` | 6 |
+  | `<owner_email>` | 3 |
+  | `<app_pem_path>` | 2 |
+  | `<ssh_host>` | 2 |
+  | `<app_id>` | 2 |
+  | `<repos_root>` | 1 |
+
+- **What was done:** every occurrence is replaced by its `<key>` in the working
+  tree and committed, so the branch **tip** is clean and verified clean
+  (`grep` for each literal returns 0). All future entries use keys only.
+- **What was NOT done, and needs the owner's decision:** scrubbing the tip does
+  not remove the values from the branch's **history**. They remain in earlier
+  commits, and on a public repository those commits stay reachable by SHA even
+  after a force-push, until GitHub garbage-collects — which for a fork-network
+  repository may require asking GitHub Support. Only the owner can weigh that.
+  Note what is and is not exposed: the `.pem` **contents** were never written
+  anywhere (only its path), and an App id is not a credential. The genuinely
+  personal values are the home directory, the repos root, the SSH host alias
+  and the owner's git email.
+- **Expected:** the kit's own instruction chain produced this — Part 0 and the
+  local prompt supplied these values directly until v0.4.35 moved them to the
+  register. It is not a template defect and not a lane deviation; it is the
+  cost of going public mid-test, and rule 13 is the fix.
+- **Severity: bug** (rule 13 makes it a finding by definition; the exposure
+  itself is low, and the remaining decision is the owner's).
