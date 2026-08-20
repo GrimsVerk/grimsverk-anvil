@@ -2545,3 +2545,53 @@ convention, not a guardrail.
   rather than second-guessing the detector. Improvising the "sensible" order
   would hide exactly the defect the anvil exists to find.
 - Severity: bug.
+
+## ★ ORCHESTRATE — the blind code/test split, observed live
+
+Iteration 14 built Slice 1 of `anvil-convert-batch` on branch
+`feat/anvil-convert-batch--run-web`, with two workers spawned in parallel off
+the same commit, each given the **same contract block quoted verbatim** (the
+plan's slice 1 section, 148 lines) and disjoint files:
+
+| Worker | Role | Files | Result |
+| --- | --- | --- | --- |
+| `coder-acb-1` | coder | `src/grimsverk_anvil/cli.py`, `docs/architecture.md` | exit 0, +206 lines |
+| `tw-acb-1` | test-writer | `tests/test_batch_stream.py` | exit 0, +319 lines |
+
+Neither could see the other's worktree. Both committed. **The blind test file is
+larger than the implementation**, which is the shape the arrangement wants.
+
+### The split did its job on the first slice it ever ran
+Assembly failed at collection:
+
+```
+ImportError while importing test module 'tests/test_batch_stream.py'
+tests/test_batch_stream.py:37: from grimsverk_anvil.convert import ConversionError
+E   ModuleNotFoundError: No module named 'grimsverk_anvil.convert'
+```
+
+The tests import from `grimsverk_anvil.convert`; the implementation put
+everything in `cli.py`. **The plans decide, and they side with the tests:**
+`anvil-convert-mvp.md` declares "Three modules — `units.py` (the table),
+`convert.py` (conversion + the R1000 formatter), `cli.py` (argument shapes,
+printing, exit codes)", and the batch plan says it "extends the MVP plan's
+`cli.py` and `convert.py`" and "No fourth module. Batch lives in `cli.py`, as
+the MVP plan said it would."
+
+So the **test-writer followed the plan and the coder did not** — and the reason
+the coder did not is **F32**: the driver selected the batch milestone before the
+MVP that creates `units.py` and `convert.py`, so the coder found no modules to
+extend and collapsed them into `cli.py`.
+
+This is the single most valuable observation of the run so far. It is exactly
+what `AGENTS.md` says the separation is for — "an agent that writes both
+describes what its code happens to do, bugs included" — and here a structural
+divergence surfaced at assembly rather than merging green with the tests quietly
+reshaped to fit. Two mechanisms had to work together for it to be caught: the
+blindness, and the plan being specific enough to arbitrate.
+
+**Handled per the process, not by smoothing:** a fix was dispatched to the same
+branch instructing the coder to create `units.py` and `convert.py` as the plans
+declare, keeping every message text unchanged, and forbidding any edit under
+`tests/` — weakening a blind test to fit the implementation is a blocking
+finding under `AGENTS.md`. The tests were not touched.
