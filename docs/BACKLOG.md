@@ -105,3 +105,17 @@ _why that class, and `— filed by: plan`.)_
   Signatures block in the plan and the exact command lines S1 and S3 execute,
   and changing it after the fact rewrites the CLI slice and both acceptance
   scripts — filed by: steward
+- **BL-6** — Non-finite values in `anvil`. Two cases the design layer does not
+  reach: a value that parses to a non-finite float (`anvil inf km m`,
+  `anvil nan km m`), and a conversion of finite inputs whose result overflows to
+  infinity (`anvil 1e308 km mm`). R1000 says every printed result is
+  `format(value, ".12g")`, which prints `inf` and `nan` as results; R4 covers "a
+  value that is not a number", which reads onto `nan` but not onto overflow.
+  **Proposed default:** refuse both on the R4 path — an error naming the
+  offending input on standard error, exit non-zero — so the tool never prints
+  `inf` or `nan` as a conversion result, per the vision's refusal of a
+  confidently wrong number. **Risk: LOW** — every candidate answer is a single
+  branch inside the converter; it moves no slice boundary, changes no Signatures
+  block, alters no acceptance script's fixed table, and is a few lines to
+  reverse. Proceeded on the default in `docs/plans/oracle/anvil-convert-mvp.md`
+  — filed by: steward
