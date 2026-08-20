@@ -236,3 +236,122 @@ decision not to decide, recorded.
 
 <!-- Append decisions below, newest at the bottom. Never edit one that has
 landed; supersede it with a new decision naming its id. -->
+
+## OD-1 — Results print at 12 significant digits, trailing zeros stripped
+
+- **Date:** 2026-08-20
+- **Evidence:** ESC-1
+- **Requirements added:** R1000
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V1 — "Correct conversions come before everything else: a wrong number presented confidently is the worst output this tool can produce."
+- **Vision statements against:** V3 — "Simplicity comes before completeness: a
+  small tool that is obviously right beats a large one that must be trusted."
+  A rounding rule is added machinery, but it is one format specification
+  applied at the single point where a result is printed; shipping raw float
+  noise would make the tool *less* obviously right, so the statement does not
+  forbid this — it argues for the smallest rule that removes the artifact,
+  which is what was chosen.
+- **Alternatives considered:** (a) print the raw float `repr` — rejected: that
+  is exactly what produced ESC-1's `100.00000000000001`, an artifact presented
+  as a result; (b) a fixed count of decimal places — rejected: the tool spans
+  magnitudes (mg→kg is 1e-6), so any fixed count either pads integer results
+  with noise zeros or truncates small results to nothing; (c) `decimal.Decimal`
+  arithmetic throughout — rejected: temperatures are affine functions and the
+  whole factor table would need re-expressing; real machinery to suppress noise
+  that sits far below any physical measurement, against V3; (d) 15 or more
+  significant digits — rejected: a double carries ~17, and error accumulated
+  through the base-unit hop can reach past the 15th digit, so artifacts could
+  still surface; 12 leaves margin below the noise floor while remaining far
+  more precision than any practical conversion needs.
+- **Rationale:** ESC-1 is the failure V1 names, observed by hand before the
+  first run: a floating-point artifact printed as if it were the answer, and a
+  design (§11, deliberately) silent on whether that is a defect. It is a
+  defect. 0.1 km is exactly 100 m; a tool whose correctness is its first
+  priority must not print `100.00000000000001` for it. Rounding to 12
+  significant digits collapses one-ulp noise from the base-unit hub to the
+  mathematically exact value in every case the unit table can produce, while
+  leaving every meaningful digit of every real conversion intact. Confidence
+  is high on the rule's intent and moderate on the digit count — if 12 proves
+  wrong in either direction, a superseding decision costs one entry.
+
+**R1000 — Output precision.** A printed result value is formatted to at most
+12 significant digits with trailing zeros stripped — Python
+`format(value, ".12g")` semantics, including `%g`'s switch to scientific
+notation at extreme magnitudes — in single-shot and batch output alike.
+Error and usage messages are prose, not results, and are untouched by this
+rule. *Evidenced by:* S1, whose fixed table must include ESC-1's own case:
+`0.1 km` to `m` prints exactly `100`.
+
+**Measurement.** This decision changes printed output, and the existing
+mechanism that observes printed output is the §13 acceptance scripts, run on
+every pull request. `acceptance/S1.sh` asserts exact expected strings, so the
+rule is observed there once its table carries the ESC-1 case above — which is
+also precisely the script ESC-1's check column left pending ("whatever
+precision rule the design layer settles, expressed as an acceptance script").
+The plan that implements R1000 carries that table row; once it has merged,
+ESC-1 takes its correction row in `docs/escapes.md` naming the demonstrated
+check. Per the vision's durable-evidence section: "A change nothing can
+observe is a change nobody can evaluate."
+
+Downstream: R1000 belongs to the MVP `convert` milestone's print layer; no
+plan exists yet, so it is new-plan work, not a change to a landed one. The
+other §11 gaps (CLI syntax, batch line format) have no logged evidence yet and
+are deliberately not ruled on here.
+
+## OD-2 — HALTED: BL-3's aligned, colored tables via the `rich` library
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-3
+- **Tenet relied on:** V5 — "No runtime dependency may be added: the Python standard library is the whole toolbox, and a diff that adds one violates this tenet."
+- **What a decision would have said:** grant BL-3 as filed — add `rich` as a
+  runtime dependency and print results as aligned, colored tables. BL-3 asks
+  for `rich` *specifically* and calls hand-rolled ANSI codes wasted effort, so
+  the stdlib route the tenet permits is exactly what the item rules out; there
+  is no reading of BL-3 that both satisfies it and keeps V5. The oracle also
+  does not simply reject it: BL-3 is owner-filed and V5 is owner-written, and
+  adjudicating one owner artifact against another is not steering the oracle
+  can do from the vision — it is the vision in conflict with its own author,
+  which is the one case this ledger records instead of deciding.
+- **What it needs from the owner:** one sentence, either way. Edit V5 to carve
+  out what BL-3 needs (for example, a named exception for display-only
+  dependencies), and BL-3 becomes plannable as filed. Or withdraw the `rich`
+  requirement by filing a successor to BL-3, and the remaining question —
+  plain output versus hand-rolled alignment — becomes decidable under V3.
+  Until one happens, nothing plans or builds BL-3.
+
+## OD-3 — Currency conversion (BL-4) is rejected; the offline non-goal stands
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-4
+- **Requirements added:** (none)
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V3 — "Simplicity comes before completeness: a small tool that is obviously right beats a large one that must be trusted." Also V1 — "Correct conversions come before everything else: a wrong number presented confidently is the worst output this tool can produce."
+- **Vision statements against:** (none — no statement in docs/VISION.md tells
+  against this). The vision was read whole looking for one: BL-4's own
+  argument is completeness — "a converter that cannot do money feels
+  half-finished" — and completeness is exactly what V3 ranks below
+  simplicity; V4 goes further and calls breadth expendable. Nothing in the
+  file argues the other way.
+- **Alternatives considered:** (a) grant BL-4 as filed, with live rates
+  fetched at run time over stdlib `urllib` — rejected: it deletes the design's
+  offline/deterministic requirement (R8) and its §3 non-goal, adds a network
+  failure mode to every invocation, and makes the test suite's offline rule
+  unable to cover the feature; a large trust surface bought for breadth, the
+  trade V3 forbids. (b) currency with fixed, compiled-in rates — rejected:
+  unlike metres per mile, an exchange rate decays, so a compiled-in rate is a
+  wrong number presented confidently within days of shipping — the V1 worst
+  case wearing a feature's clothes. (c) defer for a future run — rejected:
+  a pending decision is the failure this role exists to prevent; if the owner
+  wants currency they can re-file with the vision amended, and a superseding
+  decision costs one entry.
+- **Rationale:** BL-4 contradicts the design twice over — §3 names "currency,
+  time zones, or any unit that needs live data" a non-goal, and R8 requires
+  fully offline and deterministic operation — and the vision backs the design
+  on both counts, so the design stands and the item is rejected rather than
+  metabolised. No requirement changes. A currency symbol given to `anvil`
+  today is an unknown unit, and R4 already requires the loud, named error
+  that V2 wants for it. Nothing about this decision changes behaviour, so
+  there is nothing new to measure: the existing R4/S3 error path is the
+  observable surface, and it is already gated on every pull request.
+  Confidence is high — this is the vision agreeing with the design against a
+  single-sentence proposal.
