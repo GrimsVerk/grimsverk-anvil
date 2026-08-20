@@ -1842,3 +1842,49 @@ Both collected reviews are `docs-oracle-…--run-web`; the six skipped are the
 other lane's. Round 2.1's cross-lane contamination does not recur. **F18:
 closed.** `workers/` was also populated for the first time — ESC-42's worker
 log is present (`workers/oracle-20260820013147.log`).
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 2026-08-20T01:43:09Z | WAIT (fix pushed) | Marker removed; `plan` still red — cause is F24, not the marker. |
+| 2026-08-20T01:50:0xZ | STOP + evidence | **PR #6** opened by `autogrims[bot]` for `docs/run-20260820T013038Z--run-web`, carrying `run.md`, `reviews/` and `workers/`. |
+| 2026-08-20T01:51Z | final state | PR #5 and PR #6 both `mergeable=true`, `mergeable_state=blocked`, failing `plan` and `review`. Run stopped. |
+
+### F26 — landing the run's evidence at a stop necessarily breaks the "one pull request in flight per base branch" rule
+- Where: `/deliver-loop`, "What never changes between the two frontends" — "One
+  pipeline pull request in flight per base branch … two pull requests into ONE
+  base is still illegal" — versus the same file's "The run leaves evidence
+  behind, and that is your job here", which requires opening an evidence pull
+  request at every stop, "even when the run failed".
+- What happened: the run stopped **because** PR #5 could not go green. The
+  evidence instruction then required PR #6 into the same base, so `run/web` now
+  has two open pipeline pull requests — the state the file calls illegal.
+- Why it is not avoidable by ordering: the rule assumes the in-flight pull
+  request merges before anything else opens. At a stop caused by an unmergeable
+  pull request, that assumption is exactly what has failed, and the evidence
+  instruction is emphatic that this is the case where evidence matters most.
+- Impact: modest in practice, real in principle — a driver following both rules
+  must break one, and neither says which wins. A future reader of the base
+  branch cannot tell "driver misbehaved" from "driver obeyed the evidence rule".
+- Suggested resolution (for the template, not applied here): say plainly that
+  the evidence pull request is exempt from the one-in-flight rule, or have the
+  stop path close/park the stuck pull request first.
+- Severity: docs / friction.
+
+---
+
+## Observation checklist — round 3 (Part 2 rule 9)
+
+| Checklist item | Round 3 observation |
+| --- | --- |
+| Head branch disappears after merge, and by which path (ESC-21) | **Still unobserved.** Nothing merged. `delete-merged-branch` and `sweep-merged-branches` both appear in the check list and both reported `skipped` — correct, there was no merge to sweep. |
+| `arm-auto-merge` in every PR's check list; merge completes with no human (ESC-36) | **First half OBSERVED, positively.** `arm-auto-merge` is present on both pull requests and reported `success` (9s on PR #5). The second half is unobservable here: it cannot complete while a required check is red (F24). |
+| Every pipeline PR authored by the App, never the owner (ESC-26, ESC-35) | **OBSERVED, positively, for the first time on this lane.** PR #5 and PR #6 are both authored by `autogrims[bot]`. ESC-53's push-fired opener works: commit `.pr-request.json`, push a `docs/**` branch, and the pull request appears as the App within a minute. The owner-authored path was never used. |
+| DURATION of every required check (ESC-45) | **OBSERVED, no skip-reporting-success.** On PR #5 head `ee4ccbd`: `checks` 12s, `secrets` 9s, `template-sync` 12s, `test-the-tests` 10s, `acceptance-criteria` 7s, `arm-auto-merge` 9s, `plan` 11s (red), `review` 15s (red), `open-pr` 3s. All plausible for a scaffold with one placeholder test; nothing finished in ~1s while claiming success, and genuinely skipped jobs reported `skipped`, never green. Worth re-checking once real code exists — `test-the-tests` at 10s is honest now and would not be against a real suite. |
+| `docs/runs/<ts>/` has report, `reviews/` (ESC-43), `workers/` (ESC-42); evidence PR merged (ESC-40) | **Report: yes.** **`reviews/`: collected and lane-scoped (C7), but both entries are `MISSING.md` — see F25**, the artifacts exist and are healthy but cannot be downloaded from this session. **`workers/`: OBSERVED for the first time** — `workers/oracle-20260820013147.log` is present (ESC-42 satisfied). **Evidence PR: opened as the App (PR #6) but cannot merge**, blocked by F24. ESC-40 still unobserved. |
+| Cross-lane auto-update of an open PR (`update-open-prs`, ESC-17) | **Present but not yet exercised** — the job appears in the check list and reported `skipped`; the other lane merged nothing while my pull requests were open. |
+| Does the ruleset hold? (Part 3 closing check 3) | **Verified for this round: yes, as policy.** The only direct pushes to `run/web` were the sanctioned scaffold commit and the round-2.1 probe (reverted). Both pull requests are `mergeable_state=blocked` — the gates are refusing to merge red work, which is the merge-path integrity F16 said the bypass does not touch. |
+
+**Contamination probe (Part 2 rule 10): clean.**
+`git diff run/web worker/oracle-… | grep -i test-kit` returns nothing. The
+oracle's rulings cite only `docs/` evidence ids (ESC-1, BL-3, BL-4) and vision
+statements. No pipeline artifact referenced `test-kit/` at any point.
