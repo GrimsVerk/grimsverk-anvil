@@ -3102,3 +3102,41 @@ advisory:** the check refuses to start a run whose base carries no rules. Had
 this existed in round 3.2, the run would have stopped the moment `run/web` was
 ungated instead of merging a rejected change into it. Bounded gating wait
 started, 3-minute poll to a 45-minute limit.
+
+## PHASE log — round 3.6 run
+
+- Run id `20260820T130509Z`, started 2026-08-20T13:05:09Z. Head `a658c66`,
+  `docs/DESIGN.md` `448a080`, `docs/VISION.md` `9a57a1e`. Identity `GrimsVerk`
+  (ambient, ESC-50). `coverage.sh` rc 1. Limits **30 pull requests / 12
+  wall-clock hours / 60 iterations**.
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 2026-08-20T13:04:48Z | setup | `run/web` gated 3m41s after the push; readiness **GREEN**. |
+| 2026-08-20T13:05:09Z | **ORACLE** | `BASE=run/web REASON=evidence UNCITED=BL-3 BL-4 ESC-1`. Iteration 1. |
+| 2026-08-20T13:05:22Z | dispatch | Oracle worker, 8m18s, `exit=0 commits=1`. Same three rulings a fourth time. |
+| 2026-08-20T13:14:15Z | push + open | **PR #43** opened by `autogrims[bot]`, marker retained. |
+| 2026-08-20T13:16:17Z | **MERGED** | Merge 1. |
+| 2026-08-20T13:16:5xZ | **STEWARD** | `ODS=OD-1`. Iteration 2. |
+
+### ★ The F33 watch — first merge, and the ordering is right this time
+This is the observation the round exists for, and it is the direct contrast
+with F33. On PR #43:
+
+| Check | Window | Result |
+| --- | --- | --- |
+| `arm-auto-merge` | 13:14:33 → 13:14:39 (6s) | **success** — it armed, so it found the base protected |
+| `review` | 13:14:32 → **13:16:15** (1m43s) | success |
+| **merge** | **13:16:17** | **2 seconds AFTER review finished** |
+| `delete-merged-branch` | 13:16:24 → 13:16:29 (5s) | success |
+| `update-open-prs` | 13:16:24 → 13:16:32 (8s) | success |
+
+In round 3.2 the equivalent merge landed **10 seconds after `review` started and
+2m31s before it reported**, because the base had been silently ungated. Here the
+merge waits for the last required check and follows it by two seconds. **No pull
+request merged with a check still running.**
+
+**ESC-80 did not refuse, and that is the correct outcome here** — the base *was*
+protected, so arming was legitimate. The refusal is the thing to watch for on a
+lane whose gates have gone missing; recording each time it does not fire is what
+makes it meaningful when it does.
