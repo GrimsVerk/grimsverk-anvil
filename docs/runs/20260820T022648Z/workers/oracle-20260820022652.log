@@ -1,0 +1,29 @@
+Preparing worktree (new branch 'worker/oracle-20260820022652')
+HEAD is now at 96ece73 Record the round 3.1 setup-github transcript (run/local)
+=== spawn-worker[oracle-20260820022652] engine=claude branch=worker/oracle-20260820022652 base=run/local (96ece731c88dcc6895c95663341292d0bc790a28) bypass=0 ===
+=== 2026-08-20T02:26:52Z ===
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).
+Push isn't permitted in this session, which is fine — the oracle's job ends at the commit anyway; the branch is local and the driver can push or open the PR from it. Done. Final report:
+
+## Oracle run complete — 3 rulings, all scoped evidence resolved
+
+**Branch:** `worker/oracle-20260820022652`, commit `55e878e` (based on `run/local` @ 96ece73, where all cited evidence resolves). Committed, not pushed (push needs approval here); not my PR to open.
+
+### Decisions written (`docs/DESIGN.oracle.md`)
+
+- **OD-1 — ESC-1 (float artifact):** adds **R1000** — every result prints as Python `format(value, ".12g")`, so 0.1 km → m prints exactly `100` and representation noise never reaches output. Relied on V1 (correctness first); weighed V6 against (rounding is not wrongness — the artifact digits *are* the wrong number). Per the observability rule, the measurement is part of the decision: `acceptance/S1.sh` must carry the ESC-1 reproduction as an exact-string case, which is exactly the shape ESC-1's pending-check column already promised.
+- **OD-2 — BL-3 (rich tables): declined.** The ask is a runtime dependency, which core tenet V5 forbids outright; the stdlib-ANSI fallback fails V3/V4 on its own. This is a decision, not a halt — a halt records a ruling a tenet blocked, and no reading of this evidence made `rich` the right call. Steering lever if the owner disagrees: edit V5.
+- **OD-3 — BL-4 (live currency): declined.** Every variant is either not offline (violates R8 and §3's explicit non-goal) or confidently wrong over time (stale rates, V1/V6). Reversing a §3 non-goal is an owner edit to `docs/DESIGN.md`, not an oracle decision.
+
+### Not decided, and why
+
+BL-1 (unit aliases) and BL-2 (below absolute zero) — outside this run's scope; still open evidence for a future run. The CLI syntax and batch line format stay deliberately undecided per §11; the handoff tells the planner to file them as uncertainties rather than guess.
+
+**Handoff:** `docs/oracle/handoff-2026-08-20-1.md` — recommends folding R1000 into the MVP `convert` plan (no plans exist yet, so a separate steward plan would serialize two PRs for one output line), and lists BL-3/BL-4 as do-not-act.
+
+### Vision feedback (the useful part)
+
+- **"Offline" is load-bearing but unnumbered.** It lives only in the purpose paragraph and in DESIGN R8. OD-3 had to lean on V1+V3 and argue offline-ness secondhand. If offline-at-runtime is a tenet — and BL-4 suggests the owner will keep getting proposals that test it — promote it to a numbered statement (a V7) so it can be cited directly.
+- **Nothing in the vision speaks to output presentation** in either direction; OD-2's "against" field had to stretch V2 to find a near-miss. That's probably correct as-is, but worth knowing it's silent there.
+- No halts this run; the single tenet (V5) decided a case cleanly rather than blocking one, which is the list working as intended.

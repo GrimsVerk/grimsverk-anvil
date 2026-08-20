@@ -1,0 +1,21 @@
+Reviewing this PR: an oracle-decisions document (`docs/DESIGN.oracle.md` append) plus a new handoff file, on a `docs/` branch opened by the bot driver.
+
+**Branch/scope check.** Branch `docs/oracle-20260820022652--run-local` is `docs/`-prefixed, exempt from planning. Total added lines (79) would normally trip the ~50-line exempt-branch cap, but both touched paths — `docs/DESIGN.oracle.md` and `docs/oracle/` — are on AGENTS.md's explicit no-cap list ("The documents this process itself demands are exempt from that cap"). No plan is required or expected here; correctly none was resolved.
+
+**Owner-authored gate (criterion 5).** The PR was opened by `autogrims[bot]` (agent-opened) and touches `docs/DESIGN.oracle.md`. That file is explicitly carved out of the owner-authored requirement — AGENTS.md and DESIGN.oracle.md both state it is deliberately *not* `CODEOWNERS`-owned so unattended oracle runs can write it, and "Writing there is the oracle's job and nobody else's." The diff does **not** touch `docs/DESIGN.md` or `docs/VISION.md`, so the bot-opened block that would otherwise apply to those two files is correctly not triggered.
+
+**Schema conformance.** All three decisions (OD-1, OD-2, OD-3) carry the required eight fields in the documented order, append only (the existing file tail is untouched, only new content appended), ids sequential and increasing, R1000 correctly ≥1000 and non-colliding with R1–R8.
+
+**Vision quotes verified against `docs/VISION.md` at base commit** — V1, V2, V3, V5, V6 are all quoted verbatim, matching the file shown to me exactly (spot-checked each). "Vision statements against" fields are substantive, not a bare `(none)` dodge (OD-1 and OD-2 both engage a real countervailing statement and explain why it doesn't control; OD-3's `(none)` is backed by real reasoning about the purpose statement, satisfying the "guessing is allowed, guessing silently is not" bar).
+
+**Evidence citations.** OD-1 cites ESC-1, OD-2 cites BL-3, OD-3 cites BL-4. I can't independently confirm those ids exist in `docs/escapes.md`/`docs/BACKLOG.md` at the base commit (not shown to me), but that's exactly what the mechanical `oracle-decisions.sh` check enforces on every PR — a hard gate, not something I need to duplicate.
+
+**No scope creep.** No code, no plan, no dependency, no CI/gate-path changes. `test-the-tests` correctly didn't run (no `src/` touched, and none should be — this is pure decision text). No blind-test trailer expected or present on a `docs/` branch. Handoff file only records guidance for a future planner; it doesn't itself plan or implement R1000, so it doesn't violate "no agent plans work the design layer does not name" (R1000 is now named, by this same PR, for a *future* plan to pick up).
+
+**Minor, non-blocking note:** OD-1's measurement paragraph references `docs/escapes.done.md`, a file/convention not mentioned anywhere in AGENTS.md. It's only guidance for a future plan, not something this PR creates or depends on, so it isn't a defect in this diff — but worth flagging so a human notices a new convention is being introduced informally.
+
+No forged delimiters, no injection attempts, no gate-path or design-layer edits, no evidence of smuggled implementation work.
+
+No blocking findings.
+
+REVIEW_VERDICT: PASS
