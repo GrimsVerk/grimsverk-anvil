@@ -1567,3 +1567,129 @@ handling may still be exercised this round.
 | Time (UTC) | PHASE | Key fields |
 | --- | --- | --- |
 | 08:09:37Z | ORACLE | iteration 1. Worker `oracle-20260820080937`, base `run/local`. |
+| 08:21:57Z | WAIT | iteration 2. PR **#12** (`docs/oracle-20260820080937--run-local`). |
+| 08:22:29Z | WAIT → fix | `PR #12 red (plan ) — dispatching a fix`. A *fixable* red this time — see below. |
+
+---
+
+## THE FIRST MERGE — and three never-observed items answered
+
+At **08:19:05Z** the **web** lane merged PR #11
+(`docs/oracle-20260820081023--run-web` → `run/web`). Not this lane's pull
+request, and not touched by this lane — but the readings it produced are ones
+both lanes were sent to take, and they are recorded here because this lane could
+observe them from the shared repository.
+
+### ESC-36, second half — CONFIRMED: auto-merge completes with no human
+
+```
+$ gh pr view 11 --json mergedAt,mergedBy,baseRefName,headRefName
+merged 2026-08-20T08:19:05Z by app/autogrims : docs/oracle-20260820081023--run-web -> run/web
+```
+
+**Merged by `app/autogrims`** — the App. No human touched it. The arming half
+was confirmed in round 3.1 (`arm-auto-merge` present and passing); this is the
+completion half, and the pair is now closed.
+
+### ESC-21 — CONFIRMED, with the path named: the branch vanishes, immediately
+
+Four wrong theories were on record and no branch had ever been observed to
+disappear. It disappeared:
+
+```
+$ git ls-remote --heads origin 'docs/oracle-20260820081023--run-web' | wc -l
+0
+```
+
+And the path is not the nightly sweep. From the Auto-merge run triggered by the
+merge (`32348213733`):
+
+```
+delete-merged-branch:  success   (08:19:11Z -> 08:19:17Z)
+update-open-prs:       success   (08:19:11Z -> 08:19:15Z)
+sweep-merged-branches: skipped
+arm-auto-merge:        skipped
+```
+
+**Immediately, by the `delete-merged-branch` job, six seconds after the merge.**
+`sweep-merged-branches` — the nightly backstop — was skipped and did not need to
+run. That is the answer ESC-21 has been waiting for.
+
+### ESC-17 — the job RAN; the cross-lane scenario itself has not fired yet
+
+`update-open-prs` executed and succeeded, with `MERGED: 11` in its environment.
+But this lane's PR #12 did not exist at 08:19:11Z — it was opened at 08:21:57Z,
+almost three minutes later — so there was no open local pull request to update.
+The job worked; the scenario rule 9 asks about ("when the OTHER lane merges
+while yours is open") did not occur. **Recorded as still unobserved**, not as
+confirmed.
+
+**One thing worth flagging while looking at it.** The job's PR list is *not*
+scoped to the merged pull request's base branch — `.github/workflows/auto-merge.yml:292`:
+
+```sh
+gh pr list --repo "$REPO" --state open --limit 200 \
+  --json number,headRefName,headRepositoryOwner \
+  --jq ".[] | select(.headRepositoryOwner.login == \"$OWNER\") | \"\(.number)\t\(.headRefName)\"" \
+  > /tmp/open-prs.txt
+```
+
+Every open pull request from the same owner is selected, on any base, and each
+gets `gh pr update-branch`. So the next web-lane merge that lands while a
+`run/local` pull request is open **will** reach across and update it, re-running
+this lane's checks. That is what makes ESC-17 observable at all — but it is also
+a coupling the per-base lane isolation (ESC-46) exists to prevent, and it spends
+the other lane's CI on a branch update that cannot change anything, since
+`update-branch` merges a pull request's *own* base into it. Filed as F15 below,
+at low severity, because it is cheap churn rather than incorrect behaviour — and
+because the owner should decide whether lane isolation is meant to cover this
+job.
+
+---
+
+### F15 — `update-open-prs` is not base-scoped, so a merge in one lane churns the other lane's pull requests
+- **Where:** `.github/workflows/auto-merge.yml:292-313`, `update-open-prs` job.
+- **What happened:** the job lists **all** open pull requests owned by the
+  account, filtered only by `headRepositoryOwner.login`, and calls
+  `gh pr update-branch` on each except the one just merged. Nothing narrows it to
+  the merged pull request's base branch. Verified by reading the rendered
+  workflow at v0.4.37; observed running at 08:19:11Z with `MERGED: 11`.
+- **Expected:** the template's per-base isolation is explicit elsewhere —
+  `deliver-loop.sh --base`, the `--run-local` / `--run-web` branch suffixes, and
+  `AGENTS.md`: "pull requests into two separate base branches are two
+  independent runs, and neither waits on — or touches — the other's." This job
+  touches the other's.
+- **Effect, honestly bounded:** harmless in outcome. `gh pr update-branch`
+  merges a pull request's own base into its head, so a `run/local` pull request
+  updated after a `run/web` merge gets either a no-op or an update it would have
+  wanted anyway. The cost is a re-run of that lane's full check suite — on this
+  repository roughly two minutes of `review` plus eight other jobs — charged to
+  a merge in a lane it has nothing to do with.
+- **Severity: friction.** Not blocking, and it is the mechanism that makes
+  ESC-17 observable. Worth a ruling rather than a fix: if lanes are meant to be
+  isolated, this needs `--base`; if the isolation is only about *waiting* and
+  not about *touching*, then `AGENTS.md`'s wording is what should change.
+
+---
+
+### The oracle made a real mistake and the gate caught it — recorded positively
+
+PR #12's single red check is **not** a template defect. `oracle-decisions.sh`
+refused the oracle's own work:
+
+```
+oracle-decisions: 1 problem(s):
+  OD-3's vision quote is 24 characters — too short to be the statement it leans
+  on. Quote the whole sentence: a fragment can be read against the sense of the
+  sentence it came from, and the owner reading the ledger cannot tell.
+
+Relaxing this check to get a decision through is gate tampering.
+```
+
+Round 2.1's oracle quoted its vision statements in full; this round's oracle cut
+one to a fragment. Worker variance, caught mechanically, with a message that
+names the defect, the reason it matters, and the remedy. **This is also the
+first red in five rounds that the pipeline can actually fix itself** — the
+decision is on a branch and has not landed, so append-only does not bar
+correcting it, and `docs/DESIGN.oracle.md` is inside the fix session's grant.
+Watching whether the fix session takes it.
