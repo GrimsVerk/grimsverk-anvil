@@ -53,7 +53,7 @@ coder, blind test-writer, reviewer, acceptance, and the driver itself.
 The per-base-branch pipeline isolation this layout depends on landed in the
 template as the fix for ESC-46 (`deliver-loop.sh --base`, lane branch
 suffixes, `setup-github.sh --gate-branch`); everything the lanes need is in
-release **v0.4.43**, and Part 1 step 2 refuses anything older.
+release **v0.4.44**, and Part 1 step 2 refuses anything older.
 
 ---
 
@@ -103,7 +103,7 @@ pull request is opened AS THE APP by the scaffold's
 pull request server-side, where minting works (ESC-53: the dispatch API is
 unreachable from this credential and a dispatch-only workflow never
 registers off the default branch). This
-requires template **v0.4.43 or newer**. Template access for copier comes
+requires template **v0.4.44 or newer**. Template access for copier comes
 from the owner attaching BOTH repositories when creating the web session —
 grimsverk-anvil to work in, grimsverk-template only so copier can read it.
 
@@ -126,6 +126,14 @@ Wherever this kit writes `<repos_root>`, `<ssh_host>`, `<app_id>` or
 never needs it — the web side holds no private values at all (ESC-50). And
 the resolution goes one way only: values come OUT of the register into
 commands, never into anything committed, pushed, or logged (Part 2, rule 13).
+
+**Stopping a driver: never by pattern.** From template v0.4.44 the driver
+writes `.claude/deliver-loop<lane>/driver.pid` and prints it at start. Stop a
+run with `kill $(cat .claude/deliver-loop/driver.pid)` from that repository,
+never `pkill -f deliver-loop` — two projects' drivers can carry byte-identical
+command lines, and one operator's pattern kill destroyed the other project's
+twelve-hour run along with its evidence (ESC-81). Liveness is `kill -0 <pid>`
+on the pid you captured, never `pgrep -f`.
 
 **Gating is shared, and naming one lane used to ungate the other.** The
 `grimsverk-gates` ruleset covers BOTH lanes and `main`. Before template
@@ -198,7 +206,7 @@ local lane only, **W:** the web lane only.
 
 ### 2. Confirm the template release
 
-The latest release of grimsverk-template must be **v0.4.43 or newer** (it
+The latest release of grimsverk-template must be **v0.4.44 or newer** (it
 carries the per-base lanes, the evidence recovery tools, the App-only
 credentials, the round-1 fixes, ESC-49's hook fix, ESC-50's server-side
 pull-request opener, ESC-51's REST-only session reads, and the round-2.1
@@ -220,7 +228,8 @@ readiness refusing on the leftover worktrees the driver refuses on, ESC-77
 the inert tool grants that camouflaged real errors, and round 3.4's three
 late ones — ESC-78 the branch sweep at every stop, ESC-79 gating one lane no
 longer ungating another, ESC-80 refusing to arm auto-merge on an unprotected
-base instead of merging on the spot — the lanes cannot merge anything
+base instead of merging on the spot, and ESC-81 — two drivers on one machine
+that can no longer reach each other — the lanes cannot merge anything
 without ESC-56/57). Both lanes:
 `gh release view -R GrimsVerk/grimsverk-template --json tagName --jq
 .tagName`, or read the tag copier resolves in `.copier-answers.yml` after

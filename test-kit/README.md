@@ -48,4 +48,7 @@ readiness blind to the debris the driver refuses on, and two inert tool grants
 that camouflaged real errors — ESC-74..77 (v0.4.42) — and the three the web
 lane's top-severity finding produced: a stop-time branch sweep, gating one lane
 no longer ungating the other, and a refusal to arm auto-merge on an unprotected
-base rather than merging on the spot — ESC-78..80 (**v0.4.43**).
+base rather than merging on the spot — ESC-78..80 (v0.4.43) — and the one that
+explains a run dying with no cause at all: two drivers on one machine were
+indistinguishable, so one operator's pattern kill reached into the other
+project — ESC-81 (**v0.4.44**).
