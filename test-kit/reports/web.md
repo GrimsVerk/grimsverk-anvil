@@ -1725,3 +1725,120 @@ this is the web lane's first evidence on it:
   survives in the branch's history as the audit record ESC-53 intends. Pushed
   01:43:09Z.
 - Severity: **blocker** (every web-lane pull request; nothing merges without it).
+
+### F24 — BLOCKER: ESC-48's fix was never propagated to the required `plan` check, so `CODEOWNERS actually binds` fails on every pull request in BOTH lanes
+- Where: `.github/workflows/ci.yml`, `plan` job, step "CODEOWNERS actually
+  binds" — versus `.github/scripts/unattended-ready.sh`, where the identical
+  code was already fixed as **ESC-48**.
+- What happened: the `plan` check went red on PR #5. Every planning script
+  passed; the job's own step list names the culprit:
+
+  ```
+  3  Resolve the plan for this branch                  | success
+  4  Every plan in the tree must parse                 | success
+  5  Escape citations must resolve at the base commit  | success
+  6  The escape ledgers are append-only                | success
+  7  The backlog and its done-log are append-only      | success
+  8  Oracle decisions are append-only and evidence-backed | success
+  9  The design and the vision are landed by their owner  | success
+  10 The vision must be finished before work is planned   | success
+  11 Unattended readiness (advisory)                   | success
+  12 CODEOWNERS actually binds                         | FAILURE
+  ```
+
+  The step is:
+
+  ```sh
+  errs="$(gh api "repos/${GITHUB_REPOSITORY}/codeowners/errors" \
+            --jq '.errors | length' 2>/dev/null || true)"
+  if   [ -z "$errs" ];    then echo "cannot read the validation API here — not treating that as a failure."
+  elif [ "$errs" = "0" ]; then echo "resolves cleanly"
+  else  ...  exit 1
+  fi
+  ```
+
+  Two defects, and they are **the same two ESC-48 already recorded and fixed
+  elsewhere**:
+
+  1. **No `?ref=`**, so the query validates the DEFAULT branch. `main` in this
+     repository carries no `.github/` at all, so the endpoint 404s.
+  2. **`gh` prints an API error body on stdout**, so `2>/dev/null` does not
+     suppress it and the 404 JSON flows into `errs`. Emulated exactly:
+
+     ```
+     captured errs=[{"message":"Not Found","documentation_url":"...","status":"404"}] len=124
+     -> would FAIL
+     ```
+
+     `errs` is non-empty and not `"0"`, so control reaches the `else` and the
+     step exits 1. The designed "cannot read = note, not a block" branch can
+     never fire.
+
+  CODEOWNERS itself is **clean**: `gh api ".../codeowners/errors?ref=run/web"`
+  → `{"errors":[]}`. Nothing is wrong with the file; the check is wrong about
+  how to ask.
+- The ratchet gap, which is the real finding: `unattended-ready.sh` carries a
+  comment naming both defects verbatim — "The query carried no `?ref=` … And
+  the API's failure status was ignored: gh prints the error body on stdout, so
+  a 404 flowed INTO the count and was printed as raw JSON inside a refusal,
+  while the designed cannot-read note never fired" — and fixes both, requiring
+  `[[ "$CO_ERRORS" =~ ^[0-9]+$ ]]`. The identical code in the **required CI
+  check** was left untouched. An escape was logged, fixed at one site, and the
+  second site — the one that actually blocks merges — was never swept.
+- Impact: **`plan` is a required check, so nothing merges.** Observed on both
+  lanes: `run/local`'s oracle pull request shows `plan failure` too. Both lanes
+  are stopped by one unpropagated fix, and the web lane cannot even read the
+  log that says so (F25).
+- Upstream fix (NOT applied — Part 2 rule 3, and `.github/` is CODEOWNERS-owned):
+  port ESC-48's two corrections into `ci.yml` — add `?ref=` for the pull
+  request's base, and require the count to match `^[0-9]+$` before comparing.
+- Severity: **blocker.**
+
+### F25 — BLOCKER for diagnosis: a web session cannot read CI job logs or download run artifacts; the proxy refuses the storage host
+- Where: everywhere the `/deliver-loop` command file tells the driver to read a
+  failure — "read that workflow run's log, report it, and stop" — and
+  `.claude/scripts/collect-evidence.sh`.
+- What happened: both reads resolve to Azure blob storage, which this session's
+  proxy refuses.
+
+  ```
+  $ gh api repos/.../actions/jobs/96285439125/logs
+  Get "https://productionresultssa11.blob.core.windows.net/actions-results/.../job-logs.txt?...": Forbidden
+
+  $ gh api repos/.../actions/artifacts/9390089930/zip > /tmp/a.zip
+  Get "https://productionresultssa1.blob.core.windows.net/actions-results/.../review-5-....zip?...": <refused>
+  EXIT=1, /tmp/a.zip is 0 bytes
+  ```
+
+  The check-run API carries no substitute: `output.title` and `output.summary`
+  are both `null` for the failing checks, and the annotations say only
+  "Process completed with exit code 1".
+- Consequences, both observed this round:
+  1. **F24 was diagnosable only by reconstruction** — reading the workflow file,
+     emulating the step locally, and inspecting the job's per-step conclusions
+     over REST. The step list is the one thing that survives; without it this
+     round would have ended at "plan is red, cause unknown".
+  2. **The review gate's evidence can never be collected on this lane.**
+     `collect-evidence.sh` wrote `MISSING.md` for both review runs, and its
+     stated causes — "expired, never uploaded, or the job died before the
+     upload step" — are all wrong here. The artifact exists and is healthy:
+     `review-5-ee4ccbdb… | 32090 bytes | expired=false`. There is a fourth
+     cause the marker does not name: **the collecting session cannot reach the
+     download host.** So the review payload and reply — the whole point of
+     ESC-43 — are unreachable from the lane that most needs them, and the
+     marker misattributes why.
+- Severity: **blocker for diagnosis** (not for merging). It is the reason this
+  lane cannot tell a reviewer's honest rejection from an engine failure: the
+  `review` check failed at its "Headless review" step, and I have no way to
+  read what it said.
+
+### C7 — F18 / ESC-54 FIXED: evidence collection is lane-scoped now
+```
+$ RUN_BASE=run/web .claude/scripts/collect-evidence.sh --run-dir /tmp/ev --since ...
+collect-evidence: 1 worker log(s) into /tmp/ev/workers.
+collect-evidence: 2 review(s) into /tmp/ev/reviews (6 skipped).
+```
+Both collected reviews are `docs-oracle-…--run-web`; the six skipped are the
+other lane's. Round 2.1's cross-lane contamination does not recur. **F18:
+closed.** `workers/` was also populated for the first time — ESC-42's worker
+log is present (`workers/oracle-20260820013147.log`).
