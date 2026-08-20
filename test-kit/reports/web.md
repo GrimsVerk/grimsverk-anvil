@@ -2764,3 +2764,65 @@ grimsverk-gates include = ["~DEFAULT_BRANCH", "refs/heads/run/local", "refs/head
 restored since the incident, whether by the owner or by a later local-lane
 setup call. Recorded as an observation, not as a clearance: no run is being
 started here, per the owner's instruction.
+
+### F34 — a hosted session can CREATE a ref but cannot DELETE one; six web-lane branches are stranded for the owner to sweep
+- Where: TESTPLAN Part 2 rule 14's end-of-round cleanup ("delete every branch of
+  your lane that has merged or whose pull request you closed"), and ESC-78's
+  branch sweep.
+- What happened: both routes are refused, and they fail differently, which is
+  worth recording because the second message is the informative one.
+
+  **By git:**
+
+  ```
+  $ git push origin --delete docs/run-20260819T231559Z--run-web
+  error: RPC failed; HTTP 403 curl 22 The requested URL returned error: 403
+  send-pack: unexpected disconnect while reading sideband packet
+  fatal: the remote end hung up unexpectedly
+  Everything up-to-date
+  $ echo $?
+  1
+  ```
+
+  **By REST:**
+
+  ```
+  $ gh api -X DELETE repos/GrimsVerk/grimsverk-anvil/git/refs/heads/docs/run-20260819T231559Z--run-web
+  {"message":"Write access to this GitHub API path is not permitted through this proxy.",
+   "documentation_url":"https://docs.anthropic.com/en/docs/claude-code/github-actions"}
+  HTTP 403
+  ```
+
+  The REST refusal names the cause outright: the platform proxy allows some
+  write paths and not others. The git refusal is a bare 403 with a misleading
+  tail — "Everything up-to-date" after a failed delete reads like success to
+  anything parsing loosely.
+- **The asymmetry, confirmed in this lane:** creating refs works and has worked
+  all session — this run pushed a dozen branches, including
+  `feat/anvil-convert-batch--run-web` and six `docs/` branches, every one
+  accepted. Deleting a ref is refused by both routes. So a hosted driver can
+  accumulate branches and can never clean them up. **No probe branch was
+  created to demonstrate this**: rule 14 forbids inventing a branch, and the
+  session's own push history already proves the create half.
+- **Consequence for ESC-78:** the branch sweep now running at every driver stop
+  cannot work from a web session. It will attempt the deletions and be refused,
+  so on this lane the sweep is a no-op that must not be read as "the branches
+  were swept". Confirming that in the web lane is the useful half of this
+  finding — the local lane's sweep presumably works, and the two lanes will
+  therefore leave very different amounts of litter behind.
+- **Branches this lane cannot remove, for the owner to delete:**
+
+  | Branch | What it held | Its pull request |
+  | --- | --- | --- |
+  | `docs/run-20260819T231559Z--run-web` | round 4 run report | never opened (F13) |
+  | `docs/run-20260819T233920Z--run-web` | round 2.1 run report + reviews | never opened (F20) |
+  | `docs/run-20260820T013038Z--run-web` | round 3 run report | #9, closed unmerged |
+  | `docs/run-20260820T022911Z--run-web` | round 3.1 run report + worker log | closed unmerged |
+  | `docs/oracle-20260820013147--run-web` | round 3 oracle rulings | #5, closed unmerged |
+  | `docs/oracle-20260820022922--run-web` | round 3.1 oracle rulings | #7, closed unmerged |
+
+  Everything on them that was not already in this ledger has been copied to
+  `test-kit/reports/web-unlanded/` on this branch, with a README saying what
+  was copied and what was deliberately not. Round 3.2's evidence is not in that
+  list because its pull request (#31) **merged**, so it lives on `run/web`.
+- Severity: friction, and a real gap in ESC-78's reach.
