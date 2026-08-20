@@ -2132,3 +2132,103 @@ For Part 1's restart drill and any future round teardown:
 | Time (UTC) | PHASE | Key fields |
 | --- | --- | --- |
 | 10:23:17Z | ORACLE | iteration 1. Worker `oracle-20260820102317`, base `run/local`, template v0.4.41. |
+
+---
+
+## Round 3.3 stopped after 5 minutes, at exit code 0, having done nothing
+
+The whole run, verbatim:
+
+```
+deliver-loop: budget: weekly at 6% (model 6%), allowance 20 points, window resets Aug 27, 10:59am (Europe/Amsterdam)
+deliver-loop: the weekly window reset mid-run (Aug 27, 10:59am (Europe/Amsterdam) -> Aug 27, 11am (Europe/Amsterdam)) — re-baselining the allowance
+deliver-loop: iteration 1: phase ORACLE
+deliver-loop: dispatch oracle worker (oracle-20260820102317)
+deliver-loop: landing this run's evidence in docs/runs/20260820T102313Z ...
+Terminated   timeout "$SESSION_TIMEOUT" "$SPAWN" --id "$id" --role "$role" ...
+deliver-loop: collect-evidence: 1 worker log(s) into docs/runs/20260820T102313Z/workers.
+deliver-loop: collect-evidence: 0 review(s) into docs/runs/20260820T102313Z/reviews (19 skipped).
+```
+
+The trigger is in the worker's own log — the engine died:
+
+```
+=== spawn-worker[oracle-20260820102317] engine=claude branch=worker/oracle-20260820102317 base=run/local (b16c5cb) bypass=0 ===
+=== 2026-08-20T10:23:17Z ===
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks …
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks …
+Execution error
+```
+
+Evidence landed and pull request **#29** opened, so the self-recording chain
+held. What it recorded is the problem.
+
+### F19 — the driver reads a sub-minute rounding difference as a weekly window reset and re-baselines the budget on it
+- **Where:** `deliver-loop.sh` budget handling, round 3.3, three seconds into the run.
+- **What happened:**
+
+  ```
+  10:23:14Z window resets Aug 27, 10:59am (Europe/Amsterdam)
+  10:23:17Z the weekly window reset mid-run (Aug 27, 10:59am (Europe/Amsterdam) -> Aug 27, 11am (Europe/Amsterdam)) — re-baselining the allowance
+  ```
+
+  Those two strings name the **same instant**, three seconds apart, rendered
+  either side of a minute boundary — `10:59am` and `11am`. A genuine weekly
+  reset moves the boundary by **seven days**, as this lane observed for real at
+  09:03Z (74% → 6%, `reset=Aug 27, 11am`). This is the gauge rounding, not a
+  reset.
+- **Why it matters rather than being cosmetic:** re-baselining the allowance is
+  how the driver decides it has a fresh budget. A comparison that fires on a
+  string difference will fire at most once a minute, every run, near a minute
+  boundary — and each time it resets the accounting that `--budget-points 20` is
+  supposed to enforce. F16's other half was the ceiling never being re-read;
+  this is the ceiling being re-zeroed on noise. Both defeat the same limit from
+  opposite directions.
+- **Expected:** the reset boundary should be compared as an instant, not as a
+  rendered string; ESC-65 fixed the truncation that hid this field, which is
+  what made the flaw visible at all.
+- **Severity: bug.** It did not cause this stop, and it is not blocking — but it
+  silently disarms the lane's primary limit.
+
+### F20 — the run stopped at **exit code 0** with no reason given, after its only worker died; the report asserts the opposite in the same breath
+- **Where:** round 3.3, `docs/runs/20260820T102313Z/run.md`, landed on PR #29.
+- **What happened:** the landed report, in full at its end:
+
+  ```
+  - 10:23:17Z dispatch oracle worker (oracle-20260820102317)
+
+  Stopped 2026-08-20T10:28:24Z with exit code 0.
+
+  See .claude/scripts/deliver-loop.sh's header for what each exit code
+  means. Every stop says why; none degrades silently.
+  ```
+
+  Five minutes, one dispatched worker, that worker dead of `Execution error`,
+  zero work pull requests — reported as **exit code 0**, the success code, with
+  no stop line naming a rule, a limit, a pattern or a failure. The driver log
+  has no `stopping (…)` line either; earlier rounds always had one
+  (`stopping (deliver.md step 5)`).
+- **The sentence that makes it a finding rather than a gap:** the report closes
+  with "**Every stop says why; none degrades silently.**" This stop said nothing
+  and degraded silently, and the claim to the contrary is inside the artifact
+  that fails it. An owner reading `docs/runs/20260820T102313Z/` in the morning
+  sees a clean exit and would have no reason to look further.
+- **Distinct from the worker error itself.** A worker engine failing is
+  ordinary; `spawn-worker.sh` has exit codes for it and the driver is entitled to
+  stop. What is wrong is reporting that stop as success and giving no cause. A
+  non-zero exit with "the oracle worker's engine failed" would have been correct
+  behaviour on the same facts.
+- **Severity: blocker** for unattended trust specifically — this is the exact
+  failure mode the run report exists to prevent, and it is the one an owner is
+  least likely to catch, because nothing looks wrong.
+
+### F7 — still present at v0.4.41
+
+The two inert `Write(...)` grants still emit their rejection warnings on every
+worker start, unchanged since round 2.0. Still friction, still worth removing:
+in this round's log they are the two lines immediately above `Execution error`,
+which is precisely the camouflage problem F7 described.
+
+**Driver not restarted** (rule 7). Raw log:
+`test-kit/reports/local-driver-round3.3.log`. Evidence pull request #29 open;
+left alone this time, per the F18 amendment — its readings have not been taken.
