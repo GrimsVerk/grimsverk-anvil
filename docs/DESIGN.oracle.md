@@ -236,3 +236,40 @@ decision not to decide, recorded.
 
 <!-- Append decisions below, newest at the bottom. Never edit one that has
 landed; supersede it with a new decision naming its id. -->
+
+## OD-1 — Results print with at most 12 significant digits, via Python's `.12g` format; float artifacts never reach output
+
+- **Date:** 2026-08-20
+- **Evidence:** ESC-1
+- **Requirements added:** R1000
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V1 — "Correct conversions come before everything else: a wrong number presented confidently is the worst output this tool can produce."
+- **Vision statements against:** V6 — "A conversion that is numerically wrong, however plausible it looks, is rejected outright — as is any run that reports success while a criterion's evidence cell is empty or narrated rather than executed." — it can be read as forbidding any rounding at all, since rounding discards digits. It does not: the digits beyond the twelfth significant place of a two-multiplication double-precision chain are representation noise, not computed signal, so `100.00000000000001` for 0.1 km in metres is itself the confidently wrong number V6 rejects, and printing fewer digits than the noise floor is what removes it.
+- **Alternatives considered:** shortest-round-trip formatting (`repr`) — reproduces ESC-1 verbatim, rejected; a fixed count of decimal places (2 or 6) — truncates small correct results toward zero (0.0000015 m becomes 0.00), which is a wrong number under V1, rejected; `decimal.Decimal` arithmetic throughout — stdlib-legal but a second numeric model for a three-category converter, still needing a print rule at the end, so it adds machinery without removing the decision, rejected under V3; 15–17 significant digits — inside the double-precision artifact zone, would still print ESC-1's tail, rejected.
+- **Rationale:** ESC-1 is logged evidence that the design's undecided output-precision question produces confidently wrong-looking numbers, and §13's S1/S2 expect exact values, which presupposes a defined output format — the criteria are unwritable as scripts until a rule exists. Twelve significant digits keeps every digit the computation can vouch for (conversions here are one or two double-precision multiplications, accurate to well beyond 12 significant digits) while sitting safely below the ~15–17 digit zone where binary representation noise appears. `format(value, ".12g")` is one deterministic standard-library call, satisfying V3 and V5 in passing.
+
+**R1000** — Every numeric result line, single-shot and batch alike, is printed as Python's `format(value, ".12g")`: at most 12 significant digits, no trailing zeros, exponent form only when `g` selects it. In particular 0.1 km converted to metres prints exactly `100`. Error and usage messages are not results and are unaffected.
+
+Measurement, which is part of this decision (docs/VISION.md, durable evidence: "A change nothing can observe is a change nobody can evaluate."): the plan that implements R1000 must (a) include the ESC-1 reproduction in `acceptance/S1.sh`'s fixed table — 0.1 km to metres, expected stdout exactly `100`, compared as an exact string — and (b) carry unit tests asserting the `.12g` formatting on the result path. Once that script has been observed red against the defect and green against the fix, append the ESC-1 correction row in docs/escapes.md and the closure row in docs/escapes.done.md naming `acceptance/S1.sh`; ESC-1's check column already promises exactly this shape.
+
+## OD-2 — BL-3 declined: no `rich`, no table output; results stay plain single-line text
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-3
+- **Requirements added:** (none)
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V5 — "No runtime dependency may be added: the Python standard library is the whole toolbox, and a diff that adds one violates this tenet."
+- **Vision statements against:** V2 — "Clear, honest errors come before feature breadth: refusing loudly beats guessing silently." — the nearest thing to a mandate for better presentation, but it is about error clarity and loud refusal, not decoration of successful output, and nothing in it requires alignment or colour; no other statement values presentation at all.
+- **Alternatives considered:** adopt `rich` as filed — the exact diff V5 names as a violation, and nothing in the logged evidence makes a dependency necessary for correctness, clarity, or simplicity, so this is a decline on the merits rather than a tenet halt; hand-rolled ANSI tables in the standard library — V5-legal, but BL-3 itself calls hand-rolling wasted effort, single-shot output is one value with no table to align, and V3 ranks a small obviously-right tool above presentation machinery, rejected; decorated output in batch mode only — batch exists for script authors piping lines (R6, §4), where colour and alignment are actively hostile, rejected.
+- **Rationale:** BL-3's ask is a runtime dependency, which V5 — the vision's only core tenet — forbids outright, and the fallback of stdlib table-rendering fails V3 and V4 on its own: presentation breadth is precisely the kind of feature the owner has declared always tradable for simplicity. Output stays the plain single-line form R1000 defines, which the S1/S2/S5 acceptance scripts already observe, so no behaviour changes and no new measurement is needed. This is not a halt: a halt records a ruling the oracle would otherwise have made but a tenet forbids, and no reading of this evidence makes `rich` the right call. If the owner wants rich output, the steering move is editing V5, after which a re-filed item can be ruled on differently.
+
+## OD-3 — BL-4 declined: no currency and no live data; the tool stays offline and deterministic
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-4
+- **Requirements added:** (none)
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V1 — "Correct conversions come before everything else: a wrong number presented confidently is the worst output this tool can produce." and V3 — "Simplicity comes before completeness: a small tool that is obviously right beats a large one that must be trusted."
+- **Vision statements against:** (none — no numbered statement tells against this); the nearest is the purpose statement's "a small unit-conversion CLI that answers instantly and offline", whose "unit-conversion" could be stretched to include money, but the same sentence's "answers instantly and offline" is exactly what live rates break, so it tells for declining, not against.
+- **Alternatives considered:** live rates via stdlib `urllib` (no new package, so V5 untouched) — still network at runtime, contradicting R8 ("fully offline and deterministic") and §3's explicit non-goal ("Currency, time zones, or any unit that needs live data"), and unverifiable by an offline acceptance script, rejected; baked-in fixed rates — offline, but a rate is time-varying by nature, so within days the tool prints a confidently wrong number, the exact output V1 and V6 reject, rejected; a user-supplied rate argument — no longer currency conversion, just multiplication, surface without a §4 use case, rejected under V3.
+- **Rationale:** BL-4 asks the oracle to reverse a decision the owner already recorded in an owner-owned document — §3 names "any unit that needs live data" a non-goal and R8 requires fully offline, deterministic operation — on the strength of "feels half-finished", which is a completeness argument, and V3 ranks simplicity above completeness while V4 prices dropping whole categories as always acceptable. Every implementable variant is either not offline or not correct over time. Declined; the design stands unchanged, no behaviour changes, so no new measurement is needed. Reversing this belongs to the owner as an edit to docs/DESIGN.md §3 and R8, not to an oracle decision.
