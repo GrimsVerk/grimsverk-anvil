@@ -46,6 +46,14 @@ ledger branch under `test-kit/reports/`; if something cannot be kept that
 way, that is a finding, not a new branch (Part 2, rule 14). Clean up your
 own lane's spent branches at the end of every round, and only your own.
 
+Your ledger is APPEND-ONLY. One file, `test-kit/reports/web.md`, added to —
+never a new file per round, never a new branch. Nothing already pushed is
+deleted, renumbered or reworded; a correction is a NEW entry. The single
+exception is taking out a register value (rule 13), and that removal goes in
+a `## Redaction log` section saying what and why. Run
+`test-kit/check-ledger.sh web` before EVERY push — it refuses a lost finding,
+an unexplained shrink, and any register value in `test-kit/` (Part 2, rule 4a).
+
 Do this, in order:
 
 1. State your lane out loud. Read `test-kit/TESTPLAN.md` in full. Part 1 is

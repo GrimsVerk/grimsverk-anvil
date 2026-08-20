@@ -392,6 +392,39 @@ is disposable; your findings are the deliverable. These rules bind both lanes.
    Friction counts: a misleading message, a doc that says the wrong path, a
    step that needed a retry. If you are unsure whether something is a
    finding, it is a finding.
+
+4a. **The ledger is APPEND-ONLY, and one file per lane.** One file, added to —
+   never a new file per round and never a new branch. Nothing already pushed
+   may be deleted, renumbered, reworded or quietly dropped. A finding you now
+   think was wrong stays exactly where it is; you add a NEW entry that says so
+   and why. This branch has no pull request and no CI by design, so nothing
+   but you stands between a careless rewrite and evidence nobody can get back.
+
+   **One carve-out, and only one: taking out a register value (rule 13).** A
+   value that should never have been pushed is removed at once — but the
+   removal is itself recorded, in a `## Redaction log` section at the end of
+   the ledger, saying what was taken out, from where, and why the finding is
+   unchanged without it. A redaction that is not logged is indistinguishable
+   from evidence going missing.
+
+   **Run the check before every push:**
+
+   ```bash
+   test-kit/check-ledger.sh local     # or: web
+   ```
+
+   It refuses a push that loses a `### F<n>` heading the remote already has,
+   a file that shrank with no redaction log, and any register value or
+   register-shaped string (`/home/<name>`, `git@github.com-<alias>`) anywhere
+   in `test-kit/`. Both of those have happened here already: a value was
+   quoted as evidence inside a finding, and the frozen kit copies on the
+   ledger branches predated rule 13 and carried the app id in plain text.
+
+   **A redaction at the tip does NOT remove a value from git history.** If you
+   find one that was pushed earlier, redact the tip, log it, and say in the
+   ledger that the history still carries it. Rewriting a ledger branch's
+   history is a force-push, which this branch must never do — that call is the
+   owner's.
 5. **Record phase transitions.** Every time the detector reports a PHASE,
    append one line to the ledger: timestamp, PHASE, and its key fields. This
    is the comparison spine between the two lanes.
