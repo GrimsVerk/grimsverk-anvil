@@ -1405,3 +1405,87 @@ Ten of eleven required checks green. One left.
   through 2.2 never reached this step, because the CODEOWNERS step above it
   (F10) failed first and the job stopped there. Fixing F10 is what made F14
   visible.
+
+---
+
+## Round 3.1 stop, 02:5xZ — the self-recording chain works end to end
+
+```
+deliver-loop: the same checks failed three times on docs/oracle-20260820022652--run-local (plan ) — stopping (deliver.md step 5)
+deliver-loop: landing this run's evidence in docs/runs/20260820T022648Z ...
+deliver-loop: collect-evidence: 1 worker log(s) into docs/runs/20260820T022648Z/workers.
+deliver-loop: collect-evidence: 1 review(s) into docs/runs/20260820T022648Z/reviews (6 skipped).
+```
+
+**No `could not commit the run evidence`.** The working tree is clean, the
+branch pushed, and evidence pull request **#10** opened by `app/autogrims`.
+
+### F12 — FIXED in v0.4.36 (ESC-59), confirmed live
+
+The recorded payload now carries a placeholder where the live nonce was:
+
+```
+## Section delimiters
+
+Every real section boundary below carries this run's token: `REVIEW-NONCE-REDACTED`. It was
+generated randomly after the diff was read, so nothing in the diff could predict
+```
+
+The injection defence still gets an unforgeable delimiter at review time; the
+**recorded** copy carries a constant, so `gitleaks` has no high-entropy string to
+flag. Both gates now hold at once. Evidence landed unaided. **F12 closed.**
+
+### F13 — NOT exercised this round; fix remains unconfirmed
+
+`--land-evidence` was never needed, because F12's fix meant the ordinary commit
+succeeded. ESC-60 is therefore **untested by this lane** — recorded honestly
+rather than marked fixed. Confirming it needs a run whose evidence commit dies
+for some other reason, which is not a thing to manufacture deliberately.
+
+### The review gate delivered a real verdict, for the first time
+
+```
+$ git show FETCH_HEAD:docs/runs/…/verdict.txt
+PASS
+```
+
+The judgment gate read the oracle's rulings and passed them. Combined with the
+2m0s duration, this is the first end-to-end exercise of the only load-bearing
+gate that had no fixtures — payload, reply, verdict and meta all collected and
+committed.
+
+### F14 also blocks the evidence pull request
+
+PR #10 carries the same single red check as PR #8:
+
+| Check | Result | Duration |
+| --- | --- | --- |
+| `open-pr` | pass | 6s |
+| `checks` | pass | 9s / 10s |
+| `secrets` | pass | 6s |
+| `template-sync` | pass | 12s |
+| `test-the-tests` | pass | 8s |
+| `acceptance-criteria` | pass | 6s |
+| `arm-auto-merge` | pass | 7s |
+| `plan` | **fail** | 3s |
+
+`gh pr view 10` → `mergeable: MERGEABLE`, `mergeStateStatus: BLOCKED`. So F14
+alone now blocks **both** the work pull request and the evidence pull request,
+which keeps **ESC-40** (does the evidence pull request itself merge?) unobserved
+for the fourth round running. It is the only thing standing between this lane
+and every remaining checklist item.
+
+## Round 3.1 close-out
+
+- **Driver exit reason:** three-strike pattern stop on `plan`, correctly fired
+  and correctly reported. Third consecutive round to stop on its own terms.
+- **Phases:** ORACLE, WAIT. **Pull requests opened: 2** (#8 work, #10 evidence),
+  both App-authored. **Merged: 0.**
+- **Newly confirmed fixed, live:** F10 (ESC-57), F11 (ESC-58), F12 (ESC-59).
+- **Still open:** F14 (blocker, new), F13 (unconfirmed), F3, F4, F7-remainder.
+- **Still never observed:** a pipeline pull request merging; a head branch
+  vanishing after merge (ESC-21); auto-merge completing without a human
+  (ESC-36's second half); the cross-lane `update-open-prs` re-run (ESC-17); the
+  evidence pull request merging (ESC-40).
+- Driver **not restarted** (rule 7). Tree clean. `main` and `run/web` untouched
+  by this lane.
