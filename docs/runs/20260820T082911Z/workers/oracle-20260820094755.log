@@ -1,0 +1,30 @@
+Preparing worktree (new branch 'worker/oracle-20260820094755')
+HEAD is now at 59f0624 Merge pull request #24 from GrimsVerk/docs/plan-20260820093834--run-web
+=== spawn-worker[oracle-20260820094755] engine=claude branch=worker/oracle-20260820094755 base=run/web (59f06249fbccad289c3c6ce247ce73c78f33f7c1) bypass=0 ===
+=== 2026-08-20T09:47:56Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).
+Push is not permitted in this session, so the work stops here as committed — the delivery driver picks the branch up from the worktree, which matches how the earlier oracle runs landed.
+
+# Oracle report — run 5, scope BL-8
+
+**What I did.** I ruled on BL-8, the batch-mode line format. The decision is **OD-7** in `docs/DESIGN.oracle.md`, adding requirement **R1003**. It works. The commit is `d8cee85` on branch `worker/oracle-20260820094755`. I do not open the pull request; the driver does.
+
+**What was decided.** OD-7 accepts the planner's filed default, whole:
+
+- A request line is `<value> <from-unit> <to-unit>`, split on whitespace. Wrong field count is a bad line, not a usage error.
+- A good line prints its result on standard output, byte-identical to single-shot.
+- A bad line prints `anvil: line <n>: <reason>` on **standard output**, in stream order. The exact malformed-line wording stays with the plan, but it must name the bad input (S5 requires that).
+- Blank lines are skipped and still count toward line numbers.
+- Exit 1 if any line failed, 0 otherwise (empty input is 0). Exit 2 stays the usage-error path.
+
+The one part with real vision weight was the stream. V2 ("refusing loudly beats guessing silently") decided it: with errors diverted to standard error, a script reading only standard output gets fewer lines than requests and silently mis-matches every later result to the wrong request. With errors in the stream, the failure breaks the reader loudly, at the exact line. That reasoning is in the decision, and the handoff tells the owner which sentence to edit (V2) if they want the conventional split instead.
+
+**Not decided, with reasons.** Nothing else was in scope, and nothing else logged is open: BL-5, BL-6, BL-7 were ruled in earlier runs; BL-3 stays halted (OD-2, owner must reconcile it with V5); BL-4 stays rejected (OD-3); BL-1 and BL-2 are owner-filed proposals nobody commissioned; ESC-1 waits only on its correction row after the MVP merges.
+
+**Handoff:** `docs/oracle/handoff-2026-08-20-5.md`. Main point for the orchestrator: the `convert-batch` plan (R6 + R1003) is now unblocked, and it was the last unplanned requirement.
+
+**One denial to know about:** the sandbox refused to run `.github/scripts/oracle-decisions.sh` locally and refused `git push`. I verified the decision against the script's rules by hand instead (all fields present, verbatim whole-sentence V2 quote, BL-8 exists at base, R1003 above the offset, nothing landed was edited). CI will run the real check on the pull request.
+
+**On the vision:** nothing ambiguous this run. One small wish: V2 talks about errors but not about *channels* — both this ruling and OD-4 had to derive stream placement from "refusing loudly". One sentence on what standard output owes a scripted consumer would make future stream questions derivations instead of judgments.

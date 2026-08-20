@@ -1,0 +1,28 @@
+Preparing worktree (new branch 'worker/coder-acb-1')
+HEAD is now at dafd72c Merge pull request #28 from GrimsVerk/docs/oracle-plan-od-8--run-web
+=== spawn-worker[coder-acb-1] engine=claude branch=worker/coder-acb-1 base=feat/anvil-convert-batch--run-web (dafd72ca314db39e82e0a1f6069e8050d38e93fd) bypass=0 ===
+=== 2026-08-20T10:30:32Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+**Done. Slice 1 is built and committed.**
+
+**What I did**
+
+- Wrote `src/grimsverk_anvil/cli.py`. It holds the whole tool: the unit table, the lookup, the converter, the result formatter, the refusal type, `convert_request`, `parse_batch_line`, `run_batch`, `usage` and `main`. The signatures are exactly the ones the plan declares.
+- Updated `docs/architecture.md` with the components, the data flow and the three main paths.
+- Committed on branch `worker/coder-acb-1`, message `Add anvil batch mode over a shared request path`. I did not push.
+
+**Did it work**
+
+Yes. The full gate is green: `ruff check`, `ruff format --check`, `mypy`, `pytest`.
+
+I also ran the contract table by hand. Every row matched, including the three bad-byte cases: `\xff km m` gives `anvil: line 1: not a number: '<U+FFFD>'` and the next line still converts.
+
+**One thing you should know**
+
+The convert MVP was never built, so `units.py` and `convert.py` do not exist. My file list was `cli.py` only, so I put everything in `cli.py`. I wrote this up under "Known rough edges" in the architecture doc. Assembly may want to split it out later — it is a move, not a rewrite.
+
+Also: `pyproject.toml` has no `[project.scripts]` entry, so there is no installed `anvil` command yet. That file was not mine to touch.
+
+**What you do now**
+
+Nothing from me. The driver pushes and opens the pull request.

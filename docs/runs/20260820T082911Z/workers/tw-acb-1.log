@@ -1,0 +1,37 @@
+Preparing worktree (new branch 'worker/tw-acb-1')
+HEAD is now at dafd72c Merge pull request #28 from GrimsVerk/docs/oracle-plan-od-8--run-web
+=== spawn-worker[tw-acb-1] engine=claude branch=worker/tw-acb-1 base=feat/anvil-convert-batch--run-web (dafd72ca314db39e82e0a1f6069e8050d38e93fd) bypass=0 ===
+=== 2026-08-20T10:30:32Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Done. Tests are written and committed.
+
+**What I did**
+
+Wrote `tests/test_batch_stream.py` — 30 tests, from the plan only. I did not look at the code.
+
+- `run_batch`: happy path, all-good batch, blank lines, whitespace lines, empty input, no trailing newline, CRLF, plain list of lines, mixed batch, line numbers that count blanks, and a flush test that proves each answer goes out before the next line is read.
+- `parse_batch_line`: blank → `None`, three fields → tuple, wrong count → the `malformed line: '...'` reason.
+- `convert_request`: all result strings, and every refusal reason in the table.
+- 3 tests through `main(["--batch"])` with a fake `sys.stdin.buffer` of raw bytes. This is the bad-byte rule (R1004).
+
+Commit: `5efae21` on branch `worker/tw-acb-1`, with the trailer `Blind-Tests: anvil-convert-batch-1`. Not pushed. No pull request.
+
+**Did it work**
+
+Lint, format, type check, and secret scan: all pass.
+The tests fail. That is correct and expected — the code is not here yet.
+
+**Two things you must know**
+
+1. `src/grimsverk_anvil/cli.py` and `convert.py` do **not** exist on my base (`run/web`). The convert MVP never landed its code. So this slice sits on a missing floor. Assembly must bring the MVP code too, or nothing runs.
+2. Because of that, mypy called my two imports "untyped" and blocked the commit. I did **not** bypass the hook. I added `# type: ignore[import-untyped, unused-ignore]` on each import. The second code makes the note switch itself off as soon as the real modules exist. Assembly can delete both comments.
+
+**Places my tests may disagree with the code**
+
+- I assert the streaming property by snapshotting the stream at each flush, not by counting `write` calls. The plan said "one write per request", but writing text and newline together or apart is not fixed, so I measured the part that matters.
+- I assert `run_batch` accepts a plain list of strings, because the signature says `Iterable[str]`.
+- I assert internal spacing survives in a malformed reason: `5   km` stays `5   km`.
+
+**What you do now**
+
+Nothing from me. Hand this branch to assembly, and make sure the MVP code lands with it.

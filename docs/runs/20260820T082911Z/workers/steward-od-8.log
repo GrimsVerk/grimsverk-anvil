@@ -1,0 +1,42 @@
+Preparing worktree (new branch 'worker/steward-od-8')
+HEAD is now at 5332d42 Merge pull request #27 from GrimsVerk/docs/oracle-20260820101037--run-web
+=== spawn-worker[steward-od-8] engine=claude branch=worker/steward-od-8 base=run/web (5332d42730e33427fb96e4da02b65de342757603) bypass=0 ===
+=== 2026-08-20T10:19:23Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Permission allow rule (--allowed-tools): Write(docs/plans/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/plans/oracle/**) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/BACKLOG.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/BACKLOG.md) instead (Edit rules cover all file-editing tools).
+Done. Here is the short version.
+
+## What I did
+
+I planned **OD-8** (undecodable batch input → `R1004`).
+
+OD-8 needed **no new plan**. It lands inside a plan that already exists. So I amended it.
+
+- **File:** `docs/plans/oracle/anvil-convert-batch.md`
+- **Slug:** `anvil-convert-batch` (unchanged)
+- **Branch:** `worker/steward-od-8`, commit `8742663`
+
+## The changes
+
+- `covers:` now has `R1004`. Without this, `coverage.sh` says R1004 is unplanned and the loop gets stuck.
+- The summary records the decision and closes the plan's one open question (**BL-9**).
+- The batch contract table gains one row: a bad byte becomes U+FFFD and the line refuses with an error message that already exists. No new message text.
+- Slice 1 gains the tests OD-8 asks for: three tests that drive `main(["--batch"])` with real bad bytes. Tests through `run_batch` cannot see this, because the decoding happens in `main`.
+- Slice 1 estimate moved from ~190 to ~215 lines.
+
+## What I guessed
+
+Nothing. Every choice came from the design layer, and I wrote each one in the plan's "Derived, not guessed" list. So I filed no new `BL-<n>`, and `docs/BACKLOG.md` is untouched.
+
+## Plans this decision makes partly wrong
+
+Only `docs/plans/oracle/anvil-convert-batch.md`, which I just corrected. `anvil-convert-mvp.md` and `anvil-temperature.md` are unaffected. Build order stands: MVP, then temperature, then batch.
+
+## One thing to know
+
+I could not run the gate scripts (`oracle-decisions.sh`, `coverage.sh`) or the test suite here — the sandbox blocked them. The change is documents only, so tests are not affected. CI will check the gates.
+
+## Next
+
+The driver opens the pull request. My job stops here.
