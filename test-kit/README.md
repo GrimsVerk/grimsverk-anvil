@@ -42,4 +42,7 @@ ESC-61 (v0.4.37), the updater's lane blindness and its unapprovable pull
 request — ESC-62/63 (v0.4.38), round 3.2's four — ESC-64..67, the
 livelock stop among them (v0.4.39), and round 3.3's six — ESC-68..73, which
 end with the discovery that a private repository's gates may be configured
-and binding nothing (**v0.4.41**).
+and binding nothing (v0.4.41), and round 3.4's four — the budget ceiling that
+re-zeroed itself on a rounded timestamp, a killed run reported as success,
+readiness blind to the debris the driver refuses on, and two inert tool grants
+that camouflaged real errors — ESC-74..77 (**v0.4.42**).
