@@ -2899,3 +2899,46 @@ the tip removes a value from the current file, not from the commits that
 introduced it. Rewriting that history would mean force-pushing a ledger branch,
 which is the one thing this branch must never do — so it is the owner's call,
 recorded here rather than acted on.
+
+---
+
+### F26 — OPERATOR ERROR (mine): I redacted the artifacts I copied and not the prose I wrote, and my rule-13 scan was scoped too narrowly to notice
+- **Where:** the F21 write-up, pushed 2026-08-20; caught by another agent's sweep (`ef85856`), not by me.
+- **What happened.** Two independent gaps, both mine:
+
+  1. **Wrong scope.** My rule-13 scan ran over `test-kit/reports/` only. The
+     branch also carries frozen copies of `TESTPLAN.md`, `PROMPT-LOCAL.md`,
+     `PROMPT-WEB.md` and `README.md`, cut from `main` **before** rule 13 existed
+     — still carrying the app id, the SSH host alias and the key path in plain
+     text. My scan never looked at them. They have now been refreshed from
+     `main`.
+  2. **Wrong target.** I redact *copied artifacts* faithfully — every log, every
+     rescued evidence tree. But in the F21 investigation I **hand-typed** a raw
+     absolute path into the finding's prose, and that path went to a public
+     repository in the F21 commit and stayed there until someone else caught it.
+     The sweep I ran afterwards reported "NONE — clean" only because that same
+     sweep had just fixed it; the value had already been pushed.
+
+- **And my fix was itself incomplete.** I replaced the path with
+  `<home>/code/GrimsVerk/find_best_mobo`, which passes a literal scan while
+  still disclosing the shape of `repos_root`. The correct form is
+  `<repos_root>/find_best_mobo`, which is what the other agent used. A
+  composite of one key plus a literal remainder is not a redaction; it is a
+  redaction-shaped string that a literal scan cannot see through.
+- **What I have changed:** the scan now runs over `git ls-files` for the whole
+  branch rather than one directory, and it is run **before** each push rather
+  than after. Confirmed clean across the whole branch at the time of writing.
+- **Severity: operator error.** Recorded under rule 13's own terms — "A register
+  value found in anything pushed is itself a finding" — and because F9 already
+  established that the history keeps what the tip no longer shows.
+
+### Note: another agent wrote to this ledger branch
+
+`ef85856` on `chore/test-report-local` is authored `Claude <noreply@anthropic.com>`,
+not by this session. Recorded plainly rather than as a complaint: the change was
+**correct and I had missed it**, it is exactly the rule-13 sweep this branch
+needed, and it added a redaction log the amended kit apparently now asks for
+(rule 4a). Noted only because Part 2 rule 1 makes branch ownership a live
+question, and because a second writer on this branch is why my push was rejected
+and my rebase then kept the wrong side of the conflict — which I have corrected
+by restoring their version wholesale.
