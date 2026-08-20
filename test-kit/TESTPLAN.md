@@ -53,29 +53,25 @@ coder, blind test-writer, reviewer, acceptance, and the driver itself.
 The per-base-branch pipeline isolation this layout depends on landed in the
 template as the fix for ESC-46 (`deliver-loop.sh --base`, lane branch
 suffixes, `setup-github.sh --gate-branch`); everything the lanes need is in
-release **v0.4.31**, and Part 1 step 2 refuses anything older.
+release **v0.4.44**, and Part 1 step 2 refuses anything older.
 
 ---
 
 ## Part 0 — One-time rig (owner, already done, survives every wipe)
 
 Nothing here repeats per round. It is listed so a refusal can be traced, not
-so anyone redoes it: the GitHub App (ID 4635498) with Contents RW, Pull
+so anyone redoes it: the GitHub App (`app_id` in the owner's register —
+see below) with Contents RW, Pull
 requests RW, Checks RO — installed on **grimsverk-anvil and
 grimsverk-template**; the repository secrets `CLAUDE_CODE_OAUTH_TOKEN`,
 `APP_ID`, `APP_PRIVATE_KEY` (secrets survive branch wipes); and the claude.ai
-web **environment** for grimsverk-anvil, which must carry the environment
-variables `GRIMSVERK_APP_ID` (4635498), `GRIMSVERK_APP_PEM_B64` (`base64 -w0 <
-the .pem`), `GRIMSVERK_APP_PRIVATE_KEY` (`/root/.config/grimsverk/app.pem`)
-and this setup script (network policy must allow `github.com` and
+web **environment** used for anvil sessions, which needs NO variables and
+only this setup script (network policy must allow `github.com` and
 `cli.github.com`):
 
 ```sh
 set -e
 date -u +"env-setup ran %Y-%m-%dT%H:%M:%SZ" >> /tmp/anvil-env-setup.log
-mkdir -p /root/.config/grimsverk
-printf '%s' "$GRIMSVERK_APP_PEM_B64" | base64 -d > /root/.config/grimsverk/app.pem
-chmod 600 /root/.config/grimsverk/app.pem
 command -v uv >/dev/null 2>&1 && uv tool install copier >> /tmp/anvil-env-setup.log 2>&1 || true
 if ! command -v gh >/dev/null 2>&1; then
   mkdir -p -m 755 /etc/apt/keyrings
@@ -83,17 +79,89 @@ if ! command -v gh >/dev/null 2>&1; then
     > /etc/apt/keyrings/githubcli-archive-keyring.gpg
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
     > /etc/apt/sources.list.d/github-cli.list
-  apt-get update >> /tmp/anvil-env-setup.log 2>&1 && apt-get install -y gh >> /tmp/anvil-env-setup.log 2>&1
+  rm -f /etc/apt/sources.list.d/*deadsnakes* /etc/apt/sources.list.d/*ondrej* 2>/dev/null || true
+  apt-get update >> /tmp/anvil-env-setup.log 2>&1 || true
+  apt-get install -y gh >> /tmp/anvil-env-setup.log 2>&1
 fi
 ```
 
-The script logs to `/tmp/anvil-env-setup.log` so the web agent can quote a
-real error instead of guessing whether setup ran (a round-1 finding).
+(The two unrelated PPA sources are removed before `apt-get update` because
+the web proxy 403s them and their failure used to abort the `gh` install — a
+round-2 rig finding. The script logs to `/tmp/anvil-env-setup.log` so the
+web agent can quote a real error instead of guessing whether setup ran — a
+round-1 finding.)
+
+**No App credential exists on the web side, by platform design (template
+ESC-50, found in round 2).** The claude.ai egress proxy replaces every
+Authorization header with the owner's own injected credential and blocks the
+App-mint API paths outright, so a web session can never hold App identity —
+no key, variable, or paste changes that. The web driver therefore acts as
+the owner's injected credential for reads and pushes, and every pipeline
+pull request is opened AS THE APP by the scaffold's
+`.github/workflows/open-pr.yml` — push-fired: the driver commits a
+`.pr-request.json` as the branch's last commit and the workflow opens the
+pull request server-side, where minting works (ESC-53: the dispatch API is
+unreachable from this credential and a dispatch-only workflow never
+registers off the default branch). This
+requires template **v0.4.44 or newer**. Template access for copier comes
+from the owner attaching BOTH repositories when creating the web session —
+grimsverk-anvil to work in, grimsverk-template only so copier can read it.
+
+**The owner's identity register.** This repository is public, so no personal
+value — machine paths, hostnames, SSH aliases, app ids — appears in it. They
+live in ONE file on the owner's machine, outside every repository:
+`~/.config/grimsverk/identity.json`, shaped like:
+
+```json
+{
+  "repos_root": "path/to/your/repos",
+  "ssh_host": "your-github-ssh-alias",
+  "app_id": "your-github-app-id",
+  "app_pem_path": "path/to/the/app/private-key.pem"
+}
+```
+
+Wherever this kit writes `<repos_root>`, `<ssh_host>`, `<app_id>` or
+`<app_pem_path>`, the LOCAL agent resolves it from that file. The web agent
+never needs it — the web side holds no private values at all (ESC-50). And
+the resolution goes one way only: values come OUT of the register into
+commands, never into anything committed, pushed, or logged (Part 2, rule 13).
+
+**Stopping a driver: never by pattern.** From template v0.4.44 the driver
+writes `.claude/deliver-loop<lane>/driver.pid` and prints it at start. Stop a
+run with `kill $(cat .claude/deliver-loop/driver.pid)` from that repository,
+never `pkill -f deliver-loop` — two projects' drivers can carry byte-identical
+command lines, and one operator's pattern kill destroyed the other project's
+twelve-hour run along with its evidence (ESC-81). Liveness is `kill -0 <pid>`
+on the pid you captured, never `pgrep -f`.
+
+**Gating is shared, and naming one lane used to ungate the other.** The
+`grimsverk-gates` ruleset covers BOTH lanes and `main`. Before template
+v0.4.43, `setup-github.sh --gate-branch` replaced the whole target list, so
+`--gate-branch run/local` silently removed `run/web` — and the web lane then
+merged a pull request whose required `review` check was still running and
+later failed (ESC-79/80). From v0.4.43 the flag is additive and a removal is
+announced. **Always name every live lane in one call anyway:**
+`scripts/setup-github.sh --app --gate-branch run/local --gate-branch run/web`.
 
 **Wiping between rounds (owner):** delete every branch except `main`. Secrets,
 the ruleset, the App, and the web environment all stay; the stale ruleset
 still names the old lane branches, and the local agent's first setup run
 resets it (step 6a below).
+
+**Order matters, and the obvious order is wrong (anvil local F18).** Two
+things a sweep cannot tell apart:
+
+- *Stale work pull requests* — close them, by branch name or by prefix.
+- *The run's own evidence pull request* (`docs/run-<timestamp>--<lane>`) — this
+  is the artifact the round exists to produce. It may still be under
+  observation. Close it only after its readings are taken, and say in the
+  ledger which reading it was closed on.
+
+Never close "every open pull request on the base". And take every reading
+**before** the rebuild: force-pushing the lane base destroys the base any
+surviving pull request was measured against, so a reading taken afterwards is
+a reading of something else.
 
 ---
 
@@ -106,12 +174,19 @@ Principles, before the steps:
 - **Each lane renders its own scaffold on its own branch** with copier, from
   the template's latest release. Same release, same answers — the two
   scaffolds should come out near-identical, and that is checked afterwards.
-- **The one sanctioned asymmetry:** only the local agent holds admin power
-  (the owner's `gh` login). The web agent's identity is the App, which is
-  deliberately weaker — it cannot edit rulesets or secrets, and must never be
-  able to. So ALL ruleset work belongs to the local agent, **including gating
-  the web lane's branch**, and the web agent waits (bounded) for that. This
-  is repository configuration, not a touch of the other lane's content.
+- **The one sanctioned asymmetry — held by POLICY, not by mechanism (F16,
+  round 2.1).** By design, only the local agent does admin work: ALL ruleset
+  edits belong to it, **including gating the web lane's branch**, and the
+  web agent waits (bounded) for that. But the web session's injected
+  credential turned out to be owner-grade: a round-2.1 probe pushed straight
+  through the active ruleset ("Bypassed rule violations", all seven checks
+  waived), while the API's `current_user_can_bypass` claimed "never". So the
+  asymmetry is an instruction the web agent obeys, not a wall it cannot
+  climb; nothing but its discipline protects `main` from it, and a push
+  rejection can never teach it a gate is missing. Both lanes therefore treat
+  "the ruleset held" as a thing to VERIFY (Part 3, closing action 3), never
+  to assume — and pipeline integrity rests on the merge path (auto-merge on
+  green required checks), which the bypass does not touch.
 
 The steps. `<lane>` is `run/local` or `run/web`; lines marked **L:** are the
 local lane only, **W:** the web lane only.
@@ -119,20 +194,46 @@ local lane only, **W:** the web lane only.
 ### 1. Get the repository
 
 - **L:** clone with the owner's SSH alias, into the standard location:
-  `cd ~/code/GrimsVerk && git clone
-  git@github.com-grimsverk:GrimsVerk/grimsverk-anvil.git && cd
-  grimsverk-anvil` (the plain `git@github.com:` host has no key attached).
-- **W:** the session starts with the repository checked out. Touch no other
-  repository (Part 2, rule 12) — do not attach, add, or clone anything else.
+  `cd <repos_root> && git clone
+  git@<ssh_host>:GrimsVerk/grimsverk-anvil.git && cd grimsverk-anvil`
+  (`<repos_root>` and `<ssh_host>` come from the owner's register; the plain
+  `git@github.com:` host has no key attached).
+- **W:** the session starts with BOTH repositories checked out — the owner
+  attached them at session creation. grimsverk-anvil is your workspace;
+  grimsverk-template is present ONLY so copier can read it (Part 2, rule 12)
+  — never work in it, never push to it, and do not attach, add, or clone
+  anything further.
 
 ### 2. Confirm the template release
 
-The latest release of grimsverk-template must be **v0.4.31 or newer** (it
+The latest release of grimsverk-template must be **v0.4.44 or newer** (it
 carries the per-base lanes, the evidence recovery tools, the App-only
-credentials, and the two fixes from round 1). **L:** `gh release view -R
-GrimsVerk/grimsverk-template --json tagName --jq .tagName`. **W:** query the
-API with `gh` after step 3W's token mint, or read the tag copier resolves in
-`.copier-answers.yml` after rendering and stop if it is older.
+credentials, the round-1 fixes, ESC-49's hook fix, ESC-50's server-side
+pull-request opener, ESC-51's REST-only session reads, and the round-2.1
+fixes — ESC-52's network probe, ESC-53's push-triggered opener, ESC-54's
+lane-scoped evidence, ESC-55's pre-commit dependency, and round 3's five —
+ESC-56 marker carve-out, ESC-57 CI CODEOWNERS ref, ESC-58 engine install
+proof, ESC-59 nonce redaction, ESC-60 died-commit landing, ESC-61 no
+template escape ids in rendered gated documents, and round 3.2's four —
+ESC-64 self-committing setup transcript, ESC-65 budget reset with spaces,
+ESC-66 the empty-diff livelock stop, ESC-67 the budget line every iteration,
+and round 3.3's six — ESC-68 the result line naming the branch that carries
+the work, ESC-69 the written unattended contract, ESC-70 an evidence pull
+request that can actually merge, ESC-71 lane-scoped pull-request updates,
+ESC-72 refusing to start behind an open pull request, ESC-73 saying when a
+private repository's gates may not bind at all, and round 3.4's four —
+ESC-74 the budget ceiling no longer re-zeroing itself on a rounded
+timestamp, ESC-75 a stop nobody chose never reported as success, ESC-76
+readiness refusing on the leftover worktrees the driver refuses on, ESC-77
+the inert tool grants that camouflaged real errors, and round 3.4's three
+late ones — ESC-78 the branch sweep at every stop, ESC-79 gating one lane no
+longer ungating another, ESC-80 refusing to arm auto-merge on an unprotected
+base instead of merging on the spot, and ESC-81 — two drivers on one machine
+that can no longer reach each other — the lanes cannot merge anything
+without ESC-56/57). Both lanes:
+`gh release view -R GrimsVerk/grimsverk-template --json tagName --jq
+.tagName`, or read the tag copier resolves in `.copier-answers.yml` after
+rendering — stop if it is older.
 
 ### 3. Create your lane branch, then render the scaffold ON IT
 
@@ -145,19 +246,15 @@ Render with copier — the scaffold lands on your branch, never on `main`:
 - **L:** copier is a machine tool (`uv tool install copier` if missing); the
   owner's gitconfig routes the template's https URL over SSH. Run
   `copier copy https://github.com/GrimsVerk/grimsverk-template.git .`
-- **W:** the template is private and this session must NOT attach or clone
-  it. The one permitted read is copier's own fetch, authenticated by a token
-  minted from the App:
-
-  ```sh
-  TOKEN="$(test-kit/bootstrap/app-token.sh)"
-  git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
-  copier copy https://github.com/GrimsVerk/grimsverk-template.git .
-  export GH_TOKEN="$TOKEN"   # gh's credential, same mint; re-mint every turn
-  ```
+- **W:** run the same command —
+  `copier copy https://github.com/GrimsVerk/grimsverk-template.git .` —
+  from inside the anvil checkout. The platform injects the owner's
+  credential for the attached template repository, so the fetch just works;
+  there is nothing to mint and nothing to configure (Part 0, ESC-50).
 
   `_src_path` must record the canonical `https://github.com/...` URL — never
-  a token, never a local path.
+  a token, never a local path (not even the session's own checkout of the
+  template).
 
 Answers, both lanes, exactly:
 
@@ -224,12 +321,14 @@ first round after a wipe:
    This resets the `grimsverk-gates` ruleset to the default branch only
    (unblocking lane creation for BOTH lanes), asserts the merge settings, and
    leaves the existing secrets alone. If it prompts for the App ID and `.pem`
-   path, the values are in your prompt. Do NOT pass `--verify`: `main`
+   path, the values are `app_id` and `app_pem_path` in the register. Do NOT
+   pass `--verify`: `main`
    carries no workflows, so its throwaway pull request would wait forever;
    the checks register on the first real lane pull request instead.
 2. Ensure the driver's local identity file exists —
    `cp .claude/app-identity.example .claude/app-identity`, fill in the App ID
-   and `.pem` path from your prompt — then prove it:
+   and `.pem` path from the register (`app_id`, `app_pem_path`) — then prove
+   it:
    `.claude/scripts/app-token.sh >/dev/null && echo "App identity OK"`.
 3. Push your lane (step 6) if not already done.
 4. **Gate BOTH lanes once both exist.** Poll
@@ -350,15 +449,46 @@ is disposable; your findings are the deliverable. These rules bind both lanes.
     job; the failsafe being NEEDED is the template failing at the exact
     failure mode this whole test exists to catch, and it must be reported
     upstream as its own row.
-12. **The web lane sees exactly one repository: grimsverk-anvil.** Never
-    attach, add, clone, fetch, or read any other repository from the web
-    session — including grimsverk-template. (Round 1's web agent attached the
-    template to its session; the owner ruled that out.) The single sanctioned
-    exception is copier's own template fetch in Part 1 step 3W, authenticated
-    by the App token through the git URL rewrite — copier reads the template
-    so it can render; the agent never does. `_src_path` must end up as the
-    canonical https URL. The local lane reads the template only the same way,
-    through copier.
+12. **The web lane WORKS in exactly one repository: grimsverk-anvil.** The
+    owner attaches grimsverk-template to the session too, but only so
+    copier can fetch it (Part 1 step 3W) — the agent never edits it, never
+    pushes to it, never opens its files to read around a problem, and never
+    attaches, adds, or clones anything beyond what the owner attached.
+    (Round 1's web agent granted ITSELF template access mid-run; that stays
+    ruled out — access is the owner's to grant, once, at session creation.)
+    `_src_path` must end up as the canonical https URL. The local lane reads
+    the template only the same way, through copier.
+13. **The public record stays generic.** This repository is public. Values
+    from the owner's identity register (Part 0) — machine paths, home
+    directories, SSH aliases, hostnames, usernames, the app id — must never
+    appear in a ledger, report, commit message, or any pushed file. Refer to
+    them by key (`<app_pem_path>`, `<repos_root>`). Command output you quote
+    as evidence often embeds them (absolute paths in tracebacks, cache
+    paths, remote URLs): replace the value with its `<key>` before
+    committing. A register value found in anything pushed is itself a
+    finding.
+
+14. **Two branches are yours. Every other branch is the pipeline's, and you
+    never invent one.** You push to exactly two branches of your own: your
+    lane base (`run/<lane>`) and your ledger (`chore/test-report-<lane>`).
+    Everything else you push must be a branch the template's own scripts
+    created and named — `docs/run-<timestamp>--<lane>`, `docs/oracle-*`,
+    `docs/plan-*`, `feat/*`, `template/<version>--<lane>`. Those are created
+    by the pipeline, merged by the pipeline, and deleted when they merge.
+
+    **Never invent a branch of your own.** No archive branch, no backup
+    branch, no copy, no parking spot, whatever the prefix. Anything worth
+    keeping goes on your ledger branch, under `test-kit/reports/`. If
+    something cannot be preserved that way, that is a finding — write it
+    down; do not solve it with a new branch. (This happened: a lane pushed
+    `evidence/run-<timestamp>--<lane>` holding a byte-identical copy of what
+    it had already committed to its own ledger.)
+
+    **Clean up your own lane at the end of every round**, as part of rule 6:
+    delete every branch of your lane that has merged or whose pull request
+    you closed, leaving your lane and your ledger standing. Read the wiping
+    drill in Part 0 first — the order matters. Never delete, merge, or push
+    to the other lane's branches, and never to `main`.
 
 ## Part 3 — What the owner compares afterwards
 
@@ -406,8 +536,13 @@ template (or, sometimes, about the bait — say which).
    has ever observed it).
 2. **Run S4** (the owner criterion) on your machine, offline, per lane, and
    record the verdict in each lane's `docs/acceptance.md`.
-3. Check the ruleset held: no pipeline PR merged red, and nothing pushed
-   straight to `main`, `run/local`, or `run/web`.
+3. Check the ruleset held **as policy** — F16 proved it does not hold as
+   mechanism against the web session's owner-grade credential. Verify: no
+   pipeline PR merged red, and `git log --first-parent` on `main`,
+   `run/local` and `run/web` shows only sanctioned commits (kit on `main`,
+   the scaffold commit and merge commits on the lanes) — any direct push
+   beyond the round-2.1 probe (which was reverted) is a top-severity
+   finding.
 
 ## Coverage, honestly
 

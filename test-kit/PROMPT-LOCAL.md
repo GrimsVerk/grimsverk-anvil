@@ -15,8 +15,20 @@ parallel in a web session — it is not yours; never touch its branch or its
 pull requests. Never touch `main`. State your lane out loud before anything
 else.
 
-The App ID 4635498 and the key path
-/home/loke/.config/grimsverk/find-best-mobo.pem are ready for you.
+Your identity register at `~/.config/grimsverk/identity.json` is ready for
+you. It holds the private values this lane needs — `app_id`, `app_pem_path`,
+`repos_root`, `ssh_host`. Read it first. **Never copy its values into the
+ledger, a commit, a log, or anything pushed** — this repository is public;
+refer to them by key, like `<app_pem_path>`, and redact any command output
+that embeds one before committing it (Part 2, rule 13).
+
+Two branches are yours: `run/local` (your lane) and `chore/test-report-local`
+(your ledger). Every other branch you push must be one the template's own
+scripts created and named. **Never invent a branch** — no archive, no
+backup, no copy, no parking spot. Anything worth keeping goes on your
+ledger branch under `test-kit/reports/`; if something cannot be kept that
+way, that is a finding, not a new branch (Part 2, rule 14). Clean up your
+own lane's spent branches at the end of every round, and only your own.
 
 Do this, in order:
 
@@ -24,8 +36,8 @@ Do this, in order:
    it yourself, for the `run/local` lane, on the `run/local` branch: clone,
    branch off `main`, render the scaffold with copier, install the canned
    inputs, toolchain-then-commit, push, and the local-only rig duties (the
-   ruleset reset, the App identity file — use the App ID and key path given
-   above — and gating BOTH lanes once both exist). Part 2 binds you
+   ruleset reset, the App identity file — use `app_id` and `app_pem_path`
+   from the register — and gating BOTH lanes once both exist). Part 2 binds you
    throughout. Work out the exact commands from the plan; if the plan and
    reality disagree, that is a finding, not a licence to improvise.
 2. Start your findings ledger at `test-kit/reports/local.md` on branch
@@ -38,7 +50,7 @@ Do this, in order:
 
        git switch run/local
        nohup .claude/scripts/deliver-loop.sh --base run/local \
-         --budget-points 8 --max-prs 30 --max-hours 12 \
+         --budget-points 20 --max-prs 30 --max-hours 12 \
          > /tmp/anvil-local-driver.log 2>&1 &
 
    The driver must announce `THIS RUN'S BASE BRANCH: run/local`. If it

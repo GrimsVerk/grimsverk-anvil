@@ -1,8 +1,10 @@
 # Prompt for the WEB testing agent
 
-Owner: open a Claude Code WEB session (claude.ai/code) on
-`GrimsVerk/grimsverk-anvil` and paste everything below the marker line, word
-for word.
+Owner: open a Claude Code WEB session (claude.ai/code) with **BOTH
+repositories attached** — `GrimsVerk/grimsverk-anvil` and
+`GrimsVerk/grimsverk-template` — then paste everything below the marker
+line, word for word, and leave. (The template is attached only so copier can
+read it; the agent is forbidden to work in it.)
 
 --- PASTE EVERYTHING BELOW THIS LINE ---
 
@@ -16,20 +18,33 @@ parallel on the owner's machine — it is not yours; never touch its branch or
 its pull requests, and never wait on a pull request whose base is not
 `run/web`. Never touch `main`.
 
-**This session may access exactly one repository: grimsverk-anvil** (Part 2,
-rule 12). Never attach, add, clone, fetch, or read any other repository —
-grimsverk-template included. The single sanctioned exception is copier's own
-template fetch in TESTPLAN Part 1 step 3W, through the App-token URL rewrite;
-copier reads the template so it can render — you never do.
+**This session WORKS in exactly one repository: grimsverk-anvil** (Part 2,
+rule 12). The owner attached grimsverk-template too, but only so copier can
+fetch it during the render — never edit it, never push to it, never read
+around a problem in it, and never attach, add, or clone anything beyond what
+the owner attached.
 
-Your only GitHub credential is the App. Mint it at the START OF EVERY TURN —
-before the scaffold exists via `test-kit/bootstrap/app-token.sh`, afterwards
-via the scaffold's `.claude/scripts/app-token.sh` — and export it as
-`GH_TOKEN` for `gh`. Tokens die in an hour; a turn is shorter; never carry
-one across turns, and never improvise any other credential. If the mint
-fails, the environment is missing its App id or key: record the exact error
-(and quote `/tmp/anvil-env-setup.log` if it exists) as a blocker finding,
-push the ledger, and stop the lane.
+**Your GitHub credential is the session's own** — the platform injects the
+owner's credential for the attached repositories, so `git` and `gh` simply
+work; there is nothing to mint and no key anywhere in this session (the
+platform makes App identity impossible here — template ESC-50; TESTPLAN
+Part 0 records why). One consequence binds everything you do: pull requests
+you open directly would be owner-authored, which the pipeline forbids — so
+every pipeline pull request is opened AS THE APP via the scaffold's
+`open-pr` workflow, exactly as the scaffold's `/deliver-loop` command file
+instructs. Never open a pipeline pull request with a plain `gh pr create`,
+and never improvise any other credential. (The ledger branch is pushed, not
+PR'd, so it needs none of this.) If `gh` itself has no working credential,
+record the exact error (and quote `/tmp/anvil-env-setup.log` if it exists)
+as a blocker finding, push the ledger, and stop the lane.
+
+Two branches are yours: `run/web` (your lane) and `chore/test-report-web`
+(your ledger). Every other branch you push must be one the template's own
+scripts created and named. **Never invent a branch** — no archive, no
+backup, no copy, no parking spot. Anything worth keeping goes on your
+ledger branch under `test-kit/reports/`; if something cannot be kept that
+way, that is a finding, not a new branch (Part 2, rule 14). Clean up your
+own lane's spent branches at the end of every round, and only your own.
 
 Do this, in order:
 
@@ -63,11 +78,13 @@ Do this, in order:
    first turn. If it ever reports a base other than `run/web`, or the
    detector hands you a pull request targeting a different base, stop the run
    and record a blocker finding.
-4. Follow the /deliver-loop command file exactly: mint `GH_TOKEN` every turn,
-   event-driven waiting (subscribe to the pull request, schedule the ~1 hour
-   fallback check-in, end the turn — never poll or sleep inside a turn),
-   pull requests opened as the App with explicit `--base run/web`, pushed
-   branches carrying the `--run-web` suffix. Every deviation you are forced
+4. Follow the /deliver-loop command file exactly: establish the credential
+   each turn per its rule (here that resolves to the ambient login plus the
+   `open-pr` workflow — ESC-50), event-driven waiting (subscribe to the pull
+   request, schedule the ~1 hour fallback check-in, end the turn — never
+   poll or sleep inside a turn), pull requests opened as the App with
+   explicit `--base run/web`, pushed branches carrying the `--run-web`
+   suffix. Every deviation you are forced
    into is a finding. Update the ledger with every PHASE transition (Part 2
    rule 5) and every observation-checklist item (rules 9 and 10), committing
    and pushing as you go.
