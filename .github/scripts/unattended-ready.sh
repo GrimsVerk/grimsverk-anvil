@@ -20,9 +20,9 @@
 # reach its goal: nothing would merge (auto-merge off, required checks absent
 # or misnamed, review credential missing) or a gate would misfire (CODEOWNERS
 # unresolvable). A condition only notes when a designed fallback covers it —
-# no merge identity configured means cleanup waits for the nightly sweep, which
-# is degraded, not broken. The notes still print; they are just not this
-# check's call to make.
+# no merge identity configured means cleanup falls to the driver's own branch
+# sweep at the stop, which is degraded, not broken. The notes still print; they
+# are just not this check's call to make.
 #
 # Exit codes: 0 ready, 1 refused (missing items listed), 2 cannot even ask
 # (no gh, no auth, not a repository).
@@ -132,7 +132,19 @@ else
   if grep -q '"delete_branch_on_merge"[[:space:]]*:[[:space:]]*true' <<<"$SETTINGS"; then
     ok "repository deletes head branches on merge"
   else
-    note "'Automatically delete head branches' is off — the workflow and sweep still clean up; scripts/setup-github.sh sets it"
+    note "'Automatically delete head branches' is off — merged heads then stay until something removes them. The driver sweeps merged branches at every stop, and scripts/setup-github.sh sets this; but a hosted session is refused ref deletion by its proxy (403), so in web mode this setting is the ONLY cleanup there is (ESC-78)"
+  fi
+  # DO THE GATES ACTUALLY BIND? (ESC-73.) Rulesets are enforced on public
+  # repositories and on private ones under a paid plan; on a private repository
+  # without one they can be CREATED and read back exactly as configured while
+  # enforcing nothing. Every check above reads configuration, so all of them
+  # pass — and pull requests merge with no review, no required check, and no
+  # sign anything is wrong. Observed: a real project's template updates
+  # auto-merged for weeks with zero approvals against a ruleset demanding code
+  # owner review, and the first merge ever refused was the day the repository
+  # went public and the gates began to bind.
+  if grep -q '"private"[[:space:]]*:[[:space:]]*true' <<<"$SETTINGS"; then
+    note "this repository is PRIVATE — rulesets enforce only under a paid plan there. If yours is not paid, every gate above is configured and NOT binding: pull requests merge unreviewed and unchecked. Make it public, or confirm the plan covers rulesets"
   fi
 fi
 
@@ -197,6 +209,9 @@ DEFAULT_BRANCH="$(grep -oE '"default_branch"[[:space:]]*:[[:space:]]*"[^"]+"' <<
 if [[ "$RUNTIME" -eq 1 && -z "${RUN_BASE:-}" ]]; then
   RUN_BASE="$DEFAULT_BRANCH"
 fi
+# The base this run will actually use, for the checks below that need a name
+# whether or not the caller supplied one.
+RUN_BASE_EFF="${RUN_BASE:-$DEFAULT_BRANCH}"
 if [[ -n "${RUN_BASE:-}" ]]; then
   if [[ "$RUNTIME" -eq 1 ]] \
      || [[ -n "$DEFAULT_BRANCH" && "$RUN_BASE" != "$DEFAULT_BRANCH" ]]; then
@@ -348,6 +363,49 @@ else
   else
     refuse "$VISION has unfilled section(s): $(tr '\n' ',' <<<"$EMPTY_SECTIONS" | sed 's/,$//; s/,/, /g') — the oracle quotes this file on every ruling; fill them or delete them"
   fi
+fi
+
+# ---------------------------------------------- an open pull request on the base
+# A run cannot start into a base that already has a pull request open: the
+# one-PR-per-base rule means the driver's first act is to WAIT on somebody
+# else's change, and if that change needs the owner's review — a template
+# update does, always, because it edits the gates themselves — the run stalls
+# on a condition no unattended actor can clear, then stops at exit 4 having
+# built nothing. Observed live on a real project: an update pull request left
+# open at setup derailed the run that followed it.
+#
+# Caught HERE rather than mid-flight, because that is this check's whole job:
+# a refusal costs a click, a mid-run stall costs the run. Merge it (a template
+# update is yours to approve — template-sync proves the diff is exactly copier
+# output, so the reading is quick) or close it, then start the run.
+OPEN_ON_BASE="$("$GH" api "repos/$REPO/pulls?state=open&base=$RUN_BASE_EFF&per_page=10" \
+  --jq '.[] | "#\(.number) \(.head.ref)"' 2>/dev/null || true)"
+if [[ -n "$OPEN_ON_BASE" ]]; then
+  refuse "a pull request is already open against '$RUN_BASE_EFF' ($(printf '%s' "$OPEN_ON_BASE" | tr '\n' ' ')) — the run's first act would be to wait on it, and a template update waits for YOUR review, which no unattended actor can give. Merge or close it first"
+else
+  ok "no pull request is open against '$RUN_BASE_EFF' — the run starts on a clear base"
+fi
+
+# ------------------------------------------------- debris from a dead run
+# THE CHECK THAT SAYS "READY" MUST COVER WHAT THE DRIVER REFUSES ON (ESC-76).
+# This script runs in the step immediately before "start your driver", so
+# anything the driver rejects at startup and this script cannot see is a
+# refusal that arrives minutes later, after the owner has walked away. Leftover
+# worktrees are exactly that: a previous run that died mid-dispatch leaves them
+# behind, the driver refuses to start on them, and readiness said ready.
+#
+# It is worth saying WHAT to do, because the obvious answer is wrong: a
+# leftover worktree can hold a worker's finished, unpushed commits — a real
+# plan was salvaged from one as a 562-line patch — so read it before removing
+# it.
+WORKTREES=""
+if [[ -d .worktrees ]]; then
+  WORKTREES="$(ls -A .worktrees 2>/dev/null | tr '\n' ' ' | sed 's/ $//')"
+fi
+if [[ -n "$WORKTREES" ]]; then
+  refuse "leftover worktrees under .worktrees/ ($WORKTREES) — a previous run died mid-dispatch and the driver refuses to start on them. READ THEM FIRST (git -C .worktrees/<name> log --oneline; git -C .worktrees/<name> status): one can hold a worker's finished but unpushed work. Then 'git worktree remove' each, or 'git worktree prune' if the directories are already gone"
+else
+  ok "no leftover worktrees — no dead run's debris in the way"
 fi
 
 # ------------------------------------------------------------------- verdict
