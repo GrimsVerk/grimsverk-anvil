@@ -2995,3 +2995,55 @@ documented exit-2 stop (#37).
 | 12:2xZ | 3. Ruleset to main-only | `include` → `["~DEFAULT_BRANCH"]`. |
 | 12:2xZ | 3. Rebuild `run/local` at v0.4.45 | Force-pushed off `main`, rendered, canned inputs installed. `_commit: v0.4.45`. All four hooks Passed; **74 files, 14 322 insertions** (one file more than v0.4.42 — the scaffold has grown a file since). Rule-13 scan over the whole tree: **NONE — clean**. `git push -f` → `+ 5297fd7...d2097b9`. |
 | 12:2xZ | 3. Wait for the web lane | `run/web` reads `_commit: v0.4.43`; polling for v0.4.45 every 3 min, 45-min bound. **Both lanes will be named in one `--gate-branch` call**, per the instruction and ESC-79. |
+
+| 12:5xZ | 3. Gate BOTH lanes in ONE call | `scripts/setup-github.sh --app --gate-branch run/local --gate-branch run/web`. The output now announces the transition explicitly — **ESC-79 visible**: `gated branches were: the default branch` / `gated branches now: the default branch, run/local run/web`. Ruleset `include` → `["~DEFAULT_BRANCH","refs/heads/run/local","refs/heads/run/web"]`. |
+| 13:03Z | 4. Readiness | **GREEN**, both guard lines `ready` (`no pull request is open against 'run/local'`, `no leftover worktrees`). Tree clean. |
+| 13:03Z | 4. Start the driver | pid **540424**, `--budget-points 20 --max-prs 30 --max-hours 12`. |
+
+### ESC-81 — CONFIRMED live. This is F21 answered, in the driver's own words.
+
+The start banner now carries a whole section that did not exist:
+
+```
+  THIS RUN'S PROCESS:     pid 540424  (tag <repos_root>/grimsverk-anvil@run/local)
+  To stop exactly this run, and nothing in any other repository:
+      kill $(cat .claude/deliver-loop--run-local/driver.pid)
+  Never 'pkill -f deliver-loop': another project's driver can carry an
+  identical command line, and killing it takes its evidence with it.
+```
+
+That last sentence is F21's failure mode, stated by the tool that suffered it.
+
+**And the distinguishability is real, demonstrated side by side.** Both drivers
+were running at once — this lane at v0.4.45, the other test bed still on an
+older template:
+
+```
+$ ps -eo pid,args | grep "[d]eliver-loop.sh"
+ 483772 bash .claude/scripts/deliver-loop.sh --base run/local --budget-points 20 --max-prs 30 --max-hours 12
+ 540424 bash .claude/scripts/deliver-loop.sh --base run/local --budget-points 20 --max-prs 30 --max-hours 12 --run-tag <repos_root>/grimsverk-anvil@run/local
+```
+
+Line 483772 is exactly the ambiguity that killed round 3.4. Line 540424 cannot
+be confused with it by any pattern. `--run-tag` carries repository **and** base,
+and the pidfile is lane-suffixed, so two lanes of the same repository stay
+separable too. **F21 closed.**
+
+### F28 — friction: the pidfile path in the instructions is not the path the driver uses
+- **Where:** the owner's round-3.6 step 5 says `kill $(cat .claude/deliver-loop/driver.pid)`; Part 0's stopping note writes it as `.claude/deliver-loop<lane>/driver.pid`.
+- **What happened:** the real path is lane-suffixed —
+  `.claude/deliver-loop--run-local/driver.pid`. `ls .claude/deliver-loop/driver.pid`
+  does not exist, so the documented stop command fails with
+  `cat: ... No such file or directory` and `kill` then gets no argument.
+- **What saves it:** the **banner prints the correct command**, and the banner is
+  authoritative. An operator who reads it is fine; one who follows the written
+  instruction is not.
+- **Severity: friction.** Worth aligning, because this is the one command whose
+  failure mode is that an operator falls back to `pkill` — the exact thing
+  ESC-81 exists to prevent.
+
+## Phase transitions — round 3.6 (Part 2 rule 5)
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 13:03:42Z | ORACLE | iteration 1. Worker `oracle-20260820130342`, base `run/local`, template v0.4.45. Budget at start: weekly 16% (model 13%), `spent 0 of 20 points`. |
