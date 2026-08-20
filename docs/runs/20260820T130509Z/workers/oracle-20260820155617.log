@@ -1,0 +1,23 @@
+Preparing worktree (new branch 'worker/oracle-20260820155617')
+HEAD is now at 7907eec Merge pull request #51 from GrimsVerk/docs/oracle-plan-od-5--run-web
+=== spawn-worker[oracle-20260820155617] engine=claude branch=worker/oracle-20260820155617 base=run/web (7907eecc54e778479da6b8b3118b7784f5c8f1f3) bypass=0 ===
+=== 2026-08-20T15:56:18Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+The push needs approval the sandbox will not give, so the commit stays local on the branch — the delivery driver can push it. My work as oracle is done. Here is the report.
+
+---
+
+## Report — oracle run, scope BL-9
+
+**What I did.** I ruled on BL-9 and granted the steward's filed default. The decision is **OD-8** in `docs/DESIGN.oracle.md`, adding requirement **R1003**. It says: a value whose parse is not a finite number — `nan`, `inf`, `-inf` in any spelling, and overflow literals such as `1e400` — is "a value that is not a number" under R4. The tool refuses it with the same named error it gives for `five`. A `nan` result is a number-shaped answer that means nothing, and V2 says refusing loudly beats guessing silently.
+
+**Did it work.** Yes. Both files are committed on branch `worker/oracle-20260820155617` (commit `29f4176`). I checked the entry by hand against the gate's rules: verbatim vision quotes, all eight fields, evidence at base, correct id sequence. The sandbox blocked two things: running `.github/scripts/oracle-decisions.sh` locally, and `git push`. The commit is local only.
+
+**What you (the orchestrator) do now:**
+
+1. Push the branch and open the pull request — that is not mine to do.
+2. Read the handoff: `docs/oracle/handoff-2026-08-20-4.md`. Short version: **no code work is commissioned.** The `convert` plan already contains the guard in its slice 1 contract. Do not amend that plan. R1003 needs one small future plan under `docs/plans/oracle/` that adds two rows to `acceptance/S3.sh` (`nan` and `1e400` cases) — buildable only after the `convert` milestone builds S3. Until then `coverage.sh` will say R1003 is NOT PLANNED, and that report is correct.
+
+**Contradictions found and not decided:** none in scope. BL-1 and BL-2 stay unruled, BL-3 stays halted with the owner, BL-4 stays rejected — all unchanged from run 3.
+
+**For the vision file:** nothing ambiguous this run. One neighbouring gap, noted in the handoff for the owner: a *finite* input can still overflow *during* conversion (about `1e305` km to mm gives infinity), and R1002 would print it as a result. No logged evidence covers it, so I had no mandate. One backlog line from the owner makes it decidable next run.

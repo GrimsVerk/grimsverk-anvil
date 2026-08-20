@@ -1,0 +1,24 @@
+Preparing worktree (new branch 'worker/oracle-20260820152400')
+HEAD is now at 6c6e769 Merge pull request #49 from GrimsVerk/docs/plan-20260820134009--run-web
+=== spawn-worker[oracle-20260820152400] engine=claude branch=worker/oracle-20260820152400 base=run/web (6c6e769e990b6d7f2b01f2671d08aa925d04c525) bypass=0 ===
+=== 2026-08-20T15:24:02Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Done. I wrote three rulings and one handoff, and I committed them. All checks in `.github/scripts/oracle-decisions.sh` are satisfied — I verified each rule by hand against the new entries (the script itself needs an approval I do not have in this sandbox).
+
+**What I decided**
+
+- **OD-5** (resolves **BL-6**, HIGH): The command is `anvil <value> <from-unit> <to-unit>`, for example `anvil 5 km mi`. No subcommand. Batch mode is `anvil --batch` and reads standard input. A bare `anvil` prints usage and exits non-zero. Unit symbols must match §5 exactly. This adds requirement **R1001**.
+- **OD-6** (resolves **BL-7**, HIGH): A good result prints one line on standard output: the formatted value only. No unit name, no echo of the input. Errors and usage go to standard error, and standard output stays empty on failure. This adds requirement **R1002**.
+- **OD-7** (resolves **BL-8**, LOW): Granted as filed. The `convert` plan may claim R7 and R8. It changes only coverage bookkeeping, the same shape as the earlier BL-5 ruling.
+
+**What I did not decide, and why**
+
+- The **batch line format**: still open in `docs/DESIGN.md` §11, and no evidence has been logged on it. The batch planner must file it.
+- **BL-1** (aliases) and **BL-2** (below absolute zero): outside this run's scope, and no evidence commissioned them.
+- **BL-3**: still halted (OD-2), waiting on the owner. **BL-4**: already rejected (OD-3).
+
+**Handoff:** `docs/oracle/handoff-2026-08-20-3.md`. It tells the orchestrator the `convert` milestone plan is now unblocked and should claim `covers: [R1, R2, R4, R5, R7, R8, R1001, R1002]`.
+
+**Vision gap worth noting:** the vision never says who the output is *for*. I had to lean on the design's §4 script-author use case to pick bare-value output. One sentence like "output is for pipes first, eyes second" would have decided BL-7 directly, and would help with BL-3 when the owner unhalts it.
+
+**Commit:** `7caaa3b` on branch `worker/oracle-20260820152400`. Two files, 249 lines added, both inside my two permitted paths. I opened no pull request and spawned nothing; the driver takes it from here.

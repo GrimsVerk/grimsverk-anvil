@@ -1,0 +1,6 @@
+Preparing worktree (new branch 'worker/oracle-20260820134915')
+HEAD is now at 6c6e769 Merge pull request #49 from GrimsVerk/docs/plan-20260820134009--run-web
+=== spawn-worker[oracle-20260820134915] engine=claude branch=worker/oracle-20260820134915 base=run/web (6c6e769e990b6d7f2b01f2671d08aa925d04c525) bypass=0 ===
+=== 2026-08-20T13:49:16Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+You've hit your session limit · resets 3:20pm (UTC)

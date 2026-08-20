@@ -1,0 +1,41 @@
+Preparing worktree (new branch 'worker/steward-od-1')
+HEAD is now at 43b3427 Merge pull request #43 from GrimsVerk/docs/oracle-20260820130522--run-web
+=== spawn-worker[steward-od-1] engine=claude branch=worker/steward-od-1 base=run/web (43b34275e55b7517adb388701d1823fd88893117) bypass=0 ===
+=== 2026-08-20T13:18:27Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Done. Here is what happened.
+
+## What I did
+
+I wrote one plan from decision **OD-1**.
+
+- **Plan:** `docs/plans/oracle/od1-output-precision.md`
+- **Slug:** `od1-output-precision`
+- **Covers:** `R1000` — results print with `format(value, ".12g")` (12 digits, no trailing zeros). This fixes `ESC-1`, the `100.00000000000001` bug.
+- **Branch:** `docs/od1-output-precision` — committed, **not pushed** (the push needed an approval I do not have here).
+
+The plan has 3 slices: (1) the format function plus the CLI call site, (2) the `acceptance/S1.sh` row that watches it, (3) closing `ESC-1` in the escapes ledger.
+
+## What I had to guess
+
+One thing, small. `R1000` says the rule covers batch output too. Batch mode is not built yet, and I may not widen the plan to build it. So the plan says `covers: [R1000]` but delivers only the single-shot half; the batch plan later calls the same function.
+
+I filed this as **BL-5** in `docs/BACKLOG.md`, marked LOW risk, and carried on. The oracle checks it next cycle.
+
+## Two things you should know
+
+1. **Order matters.** This plan must be built **after** the `convert` milestone. Its measurement is a row in `acceptance/S1.sh`, and that script cannot exist before `anvil` converts anything — if it lands early, it turns a required check red on every pull request and the run jams. OD-1 talks about `S1.sh` as if it already exists. It does not.
+2. **No existing plan is made wrong.** `docs/plans/` holds only the template, so nothing landed is affected.
+
+## Checks
+
+- `plan-lint.sh` — passed, the plan parses.
+- `oracle-decisions.sh`, `backlog-append-only.sh`, `escape-refs.sh` — **not run**. They need a `BASE_SHA` env var, and the sandbox refused those commands. CI will run them.
+
+## What you do now
+
+Push the branch and open the pull request:
+
+```
+git -C /home/user/grimsverk-anvil/.worktrees/steward-od-1 push -u origin docs/od1-output-precision
+```
