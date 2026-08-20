@@ -236,3 +236,39 @@ decision not to decide, recorded.
 
 <!-- Append decisions below, newest at the bottom. Never edit one that has
 landed; supersede it with a new decision naming its id. -->
+
+## OD-1 — Results print with at most 12 significant digits, via Python's `.12g` format
+
+- **Date:** 2026-08-20
+- **Evidence:** ESC-1
+- **Requirements added:** R1000
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V1 — "Correct conversions come before everything else: a wrong number presented confidently is the worst output this tool can produce."
+- **Vision statements against:** V6 — "A conversion that is numerically wrong, however plausible it looks, is rejected outright" (first clause) — rounding discards digits, which could be read as printing a number different from the computed one. It does not forbid this: the discarded digits are binary floating-point representation noise (a double is reliable to roughly 15–17 significant decimal digits, and the ESC-1 artifact lives exactly there), so printing them is the numerically-wrong output and removing them is what the statement demands.
+- **Alternatives considered:** (1) shortest-round-trip `repr` — that is precisely what produced `100.00000000000001`, the artifact ESC-1 logs; (2) a fixed count of decimal places — magnitude-dependent, so it truncates small results (mm to km) toward zero and pads large ones with useless zeros; (3) `.15g` or `.17g` — still admits representation artifacts, which begin around the 16th significant digit; (4) fewer digits such as `.6g` — discards real precision a scripted consumer of batch mode (R6) may rely on, trading correctness for looks.
+- **Rationale:** The escape is exactly V1's case: the mathematics said 100 and the binary representation leaked into the output as a wrong number presented confidently. The design left precision deliberately open (§8, §11) and routed it here. A significant-digit rule behaves identically at every magnitude, `format(value, ".12g")` is standard library only, and 12 digits exceeds any precision a length, mass, or temperature conversion can honestly claim while sitting safely below where double artifacts appear. Confidence: high on the shape of the rule, medium on the exact digit count — a different count later is one superseding entry.
+
+**R1000** — Every conversion result the tool prints — single-shot output and each successful batch result line (R6) — is formatted as `format(value, ".12g")`: at most 12 significant digits, trailing zeros stripped by the `g` conversion, so `0.1 km` to metres prints `100` and never `100.00000000000001`. The rule applies to results only; error messages echo the offending input as given (R4). It reproduces §13 S2's expected strings exactly (`212`, `373.15`).
+
+Measurement, per the durable-evidence section of `docs/VISION.md` (a change nothing can observe is a change nobody can evaluate): no new mechanism is needed — the existing acceptance-script mechanism observes this once expected values are exact-match strings. The plan implementing R1000 must (a) pin the rule in unit tests, (b) write the S1 fixed-table acceptance script's expected outputs under this rule and include the ESC-1 case — `0.1 km` to `m` prints exactly `100` — as one of its rows, and (c) once merged, append the completing correction row for ESC-1 citing that script, which is the "expressed as an acceptance script" its pending check column asks for. Downstream: no plans exist yet; the plan covering the MVP `convert` milestone must list R1000 in its `covers`.
+
+## OD-2 — HALTED: prettier output via the `rich` library
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-3
+- **Tenet relied on:** V5 — "No runtime dependency may be added: the Python standard library is the whole toolbox, and a diff that adds one violates this tenet."
+- **What a decision would have said:** grant BL-3 — aligned, colored table output built on `rich`, as the owner filed it ("the `rich` library specifically"). Every route to that ruling adds `rich` as a runtime dependency, which is the diff V5 names as a violation; the evidence explicitly rules out the stdlib route by calling hand-rolled ANSI wasted effort, so no tenet-clean reading of BL-3 exists to grant.
+- **What it needs from the owner:** the smallest change to `docs/VISION.md`: append an exception to V5 naming `rich` as a permitted presentation dependency (with the `docs/DECISIONS.md` approval entry the dependency rule in `AGENTS.md` requires); or rule directly — withdraw BL-3, or re-file it as stdlib-only aligned output, which would be decidable without touching V5.
+
+BL-3 is owner-filed and V5 is owner-authored, so this is a conflict between two owner statements that only the owner can reconcile. Until then BL-3 stays in Proposed, nothing plans it, and the orchestrator must not act on it in any form — including a stdlib approximation, which the item as filed rejects.
+
+## OD-3 — Currency conversion rejected; the design's non-goal stands
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-4
+- **Requirements added:** (none)
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V3 — "Simplicity comes before completeness: a small tool that is obviously right beats a large one that must be trusted."
+- **Vision statements against:** (none — no statement in docs/VISION.md tells against this; the nearest in subject, V4, argues the same way, naming breadth of units as the thing to trade away.)
+- **Alternatives considered:** (1) grant as filed, live rates fetched at run time — contradicts §3's explicit non-goal ("Currency, time zones, or any unit that needs live data") and R8's "fully offline and deterministic", and a fetched rate is a number the tool cannot verify: quietly wrong whenever the source is stale or unreachable, which is V1's worst output; (2) baked-in static rates — stays offline but drifts wrong from the day it ships, a confidently wrong number by design; (3) reject and leave the design unchanged — chosen.
+- **Rationale:** The design already decided this: currency is a named non-goal (§3) and R8 requires offline determinism, both owner-landed. The owner's route to changing that exists — editing `docs/DESIGN.md`, which is theirs — but the oracle amending the design against its own non-goal on the strength of "feels half-finished" would trade correctness and simplicity for breadth, the exact trade V3 and V4 refuse. No behaviour changes under this ruling, so no new measurement is required — there is nothing downstream of it to observe.
