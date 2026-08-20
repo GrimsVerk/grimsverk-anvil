@@ -2232,3 +2232,80 @@ which is precisely the camouflage problem F7 described.
 **Driver not restarted** (rule 7). Raw log:
 `test-kit/reports/local-driver-round3.3.log`. Evidence pull request #29 open;
 left alone this time, per the F18 amendment — its readings have not been taken.
+
+---
+
+## ESC-40 — CONFIRMED POSITIVE. The run-evidence pull request merged itself.
+
+**The last never-observed item on the checklist, and the reading is good.**
+Taken at 11:07Z, before anything touched the base, per the owner's step 1.
+
+```
+$ gh pr view 29 --json state,mergedAt,mergedBy,mergeCommit
+state   = MERGED
+merged  = 2026-08-20T10:29:52Z
+by      = app/autogrims
+commit  = 16532006
+```
+
+**It closed itself on its own reading — there was nothing left for me to close.**
+The owner's instruction was to record which reading I closed #29 on, then close
+it and delete its branch. Neither was needed: it merged unaided **88 seconds
+after the driver opened it**, and `delete-merged-branch` had already removed the
+branch (`git ls-remote … | wc -l` → `0`). No open pull requests remain on this
+base. Said plainly rather than reported as done, because "I closed it" and "it
+merged itself" are very different facts about the template.
+
+Verified in the base branch's own history:
+
+```
+$ git log --oneline --first-parent -2 origin/run/local
+1653200 Merge pull request #29 from GrimsVerk/docs/run-20260820T102313Z--run-local
+b9cdcd3 Scaffold and canned test design (run/local)
+```
+
+All eleven checks green, `review` at 1m13s, `open-pr` 4s, `delete-merged-branch`
+4s, `update-open-prs` 5s.
+
+### F17 — FIXED in v0.4.41 (ESC-70), confirmed by this merge
+
+F17 was: the evidence branch is cut from a local checkout several merges old, so
+strict-up-to-date makes it **born `BEHIND`**, and `update-open-prs` can only fire
+on a merge that never comes for a run's last pull request — deadlock. Under
+ESC-70 the branch is cut from the freshly fetched remote tip:
+
+```
+base ahead of evidence branch by: 0 commits
+```
+
+Zero, not two. Never `BEHIND`, so auto-merge completed it in 88 seconds with no
+human, no branch update, and no rescue from the cross-lane churn of F15.
+**F17 closed.**
+
+### A methodology note that cost me a stale reading
+
+My first attempt at these readings ran
+`git fetch -q origin run/local docs/run-20260820T102313Z--run-local`. The second
+ref no longer existed — already deleted by `delete-merged-branch` — so the fetch
+aborted with `fatal: couldn't find remote ref` **and did not update `run/local`
+either**. I then read a stale `origin/run/local` that still pointed at `b9cdcd3`
+and briefly concluded the merge had not landed. Corrected with
+`git fetch --prune origin` before recording anything. Noted because the same
+trap will catch anyone verifying ESC-21 and ESC-40 together: the very success of
+ESC-21 (the branch vanishing) is what breaks the fetch you were going to use to
+check ESC-40.
+
+### F18's lesson is now in the kit
+
+`main` at `84bf572` carries the amended wiping drill, in the plan's own words
+and credited `(anvil local F18)`:
+
+> **Order matters, and the obvious order is wrong (anvil local F18).** …
+> Never close "every open pull request on the base". And take every reading
+> **before** the rebuild: force-pushing the lane base destroys the base any
+> surviving pull request was measured against, so a reading taken afterwards is
+> a reading of something else.
+
+Following it here is what produced the ESC-40 reading above: had I swept first,
+as in round 3.3, the merge would still have happened but the evidence for it
+would have been destroyed with the base.
