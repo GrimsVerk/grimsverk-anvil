@@ -355,3 +355,62 @@ are deliberately not ruled on here.
   observable surface, and it is already gated on every pull request.
   Confidence is high — this is the vision agreeing with the design against a
   single-sentence proposal.
+
+## OD-4 — BL-5 is granted: `od1-output-precision` covers R1000 while delivering the single-shot half
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-5
+- **Requirements added:** (none)
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** (no vision statement decided this)
+- **Vision statements against:** V6 — "A conversion that is numerically wrong,
+  however plausible it looks, is rejected outright — as is any run that reports
+  success while a criterion's evidence cell is empty or narrated rather than
+  executed." This is the nearest statement, because letting a plan claim
+  `covers: [R1000]` while batch mode is unbuilt looks like reporting a whole
+  where only a half exists. It does not forbid the ruling: `covers:` feeds
+  `coverage.sh`, which answers "is every requirement *planned*" and nothing
+  more — `docs/acceptance.md` says in its own words that even a full coverage
+  pass "only means the work was scheduled, not that it works". Doneness is
+  claimed by acceptance evidence, not by coverage, and no acceptance row is
+  touched by this ruling. Nothing here lets a run report success on an empty
+  evidence cell.
+- **Alternatives considered:** (a) rule no and split the requirement —
+  supersede R1000 with a single-shot requirement and a separate batch
+  requirement, so `coverage.sh` mechanically forces the future `convert-batch`
+  plan to claim the batch half. Rejected: it spends two new requirement ids
+  and a frontmatter change to an already-merged plan to buy enforcement the
+  acceptance layer already provides more directly — a printed-output rule is
+  observed by acceptance scripts run on every pull request, not by coverage
+  bookkeeping, and the batch half gets exactly that observation via the
+  obligation recorded below. (b) rule no and hold the plan until batch exists,
+  so one plan delivers both halves at once. Rejected: it inverts the build
+  order the plan correctly derived (conversions first, precision at the print
+  point second), and it leaves ESC-1 open for an entire unbuilt milestone for
+  no behavioural gain — every candidate answer produces the same code and the
+  same printed output, so waiting buys nothing observable. (c) the filed
+  default: yes, the plan covers R1000 and delivers the single-shot half —
+  accepted.
+- **Rationale:** The steward's risk classification was correct: every candidate
+  answer leaves the same code, the same slice boundaries, the same signature
+  and the same printed output, so this is coverage bookkeeping, not design.
+  The plan makes `format_result` the only point where a result value becomes
+  text, which is precisely the shape OD-1 chose ("one format specification
+  applied at the single point where a result is printed"), and it is what
+  makes the coverage claim honest rather than optimistic: the batch milestone
+  cannot print a result except through the function that already carries the
+  rule, unless it deliberately routes around it. That residual risk is handled
+  by obligation, recorded here so the batch planner derives it instead of
+  guessing: the `convert-batch` plan (R6) must (1) print its result lines
+  through `format_result`, and (2) carry a precision-sensitive row in
+  `acceptance/S5.sh`'s batch fixture — the ESC-1 case as a batch line, whose
+  result field prints exactly `100` — so the batch half of R1000 is observed
+  by the same mechanism OD-1 named for the single-shot half. This ruling
+  itself changes no behaviour, so there is nothing new to measure now; the
+  batch-half measurement lands with the batch plan, and it is an existing §13
+  script pointed at a new row, not new machinery. Confidence is high.
+
+Downstream: `docs/plans/oracle/od1-output-precision.md` proceeds exactly as
+landed — no frontmatter change, no new requirement, nothing re-planned. BL-5
+leaves the uncertainty queue by this citation. The two obligations above bind
+the future `convert-batch` plan and are restated in this run's handoff.
