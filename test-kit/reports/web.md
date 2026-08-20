@@ -2595,3 +2595,54 @@ branch instructing the coder to create `units.py` and `convert.py` as the plans
 declare, keeping every message text unchanged, and forbidding any edit under
 `tests/` — weakening a blind test to fit the implementation is a blocking
 finding under `AGENTS.md`. The tests were not touched.
+
+### F33 — TOP SEVERITY: PR #30 merged into `run/web` while the required `review` check was still running, and that check then FAILED
+- Where: the merge path — `arm-auto-merge` / `auto-merge.yml` and the
+  `grimsverk-gates` ruleset — on the run's first `feat/` pull request.
+  TESTPLAN Part 3 closing check 3: "no pipeline PR merged red".
+- What happened, on one timeline, all from the API:
+
+  | Time (UTC) | Event |
+  | --- | --- |
+  | 10:46:34 | `Review` workflow run created |
+  | 10:46:37 | `review` check-run starts |
+  | **10:46:44** | **PR #30 MERGED** by `autogrims[bot]`, merge commit `9ae8471bf3af` |
+  | 10:46:47 | `arm-auto-merge` completes (`success`) — **after the merge** |
+  | **10:49:15** | **`review` completes: `failure`** |
+
+  `review` is a required check on this base branch — the readiness check
+  confirms it, and the ruleset lists it:
+
+  ```
+  required checks on run/web: checks, secrets, plan, template-sync,
+                              test-the-tests, acceptance-criteria, review
+  ```
+
+  So the pull request merged **10 seconds after a required check began and 2
+  minutes 31 seconds before it reported**, and the check it did not wait for
+  went red. Code that the review gate rejected is now on `run/web`.
+- Why this is worse than F16, and why it overturns something this ledger
+  previously recorded: F16 established that the *push* path can be bypassed,
+  and the TESTPLAN accepted that on the reasoning that "pipeline integrity
+  rests on the merge path (auto-merge on green required checks), which the
+  bypass does not touch". **That assumption is now false.** The merge path did
+  not hold either. Nothing in this arrangement is now known to stop unreviewed
+  code reaching a protected branch.
+- Two candidate mechanisms, and I cannot separate them from a web session
+  (F25 — the job log is on a host the proxy refuses):
+  1. the merging identity is the App, which — like the owner's injected
+     credential — bypasses the ruleset, so required checks were waived; or
+  2. GitHub's auto-merge acted on the check set as it stood before the
+     `review` context existed, and merged into the gap.
+  The distinction matters for the fix; the failure is identical either way.
+- Contrast with the same run's earlier merges, which is what makes this sharp:
+  on PR #11 `review` completed `success` at 08:19:02 and the merge followed at
+  08:19:05 — it **waited**. Ten pull requests merged correctly before this one
+  did not, so the defect is intermittent, not systematic, and would be very
+  easy to miss.
+- **Consequence for this run: it stops here.** Continuing would knowingly merge
+  further unreviewed code into `run/web`, and the run's own base branch now
+  carries a change the review gate rejected. Recorded rather than repaired: no
+  gate was touched, and the merge is not something this session may undo.
+- Severity: **top severity / blocker**, and it is the finding this whole test
+  was built to catch.
