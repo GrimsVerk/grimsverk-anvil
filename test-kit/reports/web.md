@@ -2257,3 +2257,36 @@ sections cited (§8 and §11), and planning **stopped** rather than self-ruled.
 The one surprise is *who* filed it — the steward, not the planner — which is
 the same route arriving one phase earlier than the map expected, because the
 steward hit the gap first. Worth noting for the comparison, not a defect.
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 2026-08-20T08:27:02Z | merge 2 | **PR #13 merged**; head branch 404 immediately after. ESC-21 confirmed a second time. |
+| 2026-08-20T08:29:09Z | **ORACLE** | `REASON=evidence UNCITED=BL-5`. Iteration 3 — the steward's uncertainty routed back to the oracle by the detector, unprompted. The authority chain (steward files → oracle rules → steward plans) works end to end. |
+| 2026-08-20T08:32:44Z | push + open | PR #14, App-authored. **OD-4** adds **R1001**: `anvil <value> <from> <to>`, batch via explicit `--batch`, any other shape a usage error. It rules on BL-5 only and says so — "the batch line format (§11's third open question) is NOT decided here and must be filed as its own uncertainty by the plan covering the `convert-batch` milestone". |
+| 2026-08-20T08:35:5xZ | merge 3 | **PR #14 merged.** |
+| 2026-08-20T08:35:55Z | **STEWARD** | `ODS=OD-1 OD-4`. Iteration 4. |
+| 2026-08-20T08:36:09Z | dispatch | Steward worker. **The dispatch call was killed by the web harness at its 10-minute ceiling** — see F28 — but the worker had already committed, so no work was lost. |
+| 2026-08-20T08:46:44Z | push + open | **PR #16**, App-authored: `docs/plans/oracle/anvil-convert-mvp.md`, **313 lines**, slug `anvil-convert-mvp`, `covers: [R1, R2, R4, R5, R1000, R1001]`. Also files **BL-6** (non-finite values) at **LOW** risk, proceeding on its recorded default exactly as `AGENTS.md` prescribes for LOW. |
+| 2026-08-20T08:51:2xZ | merge 4 | **PR #16 merged.** The first plan has landed. |
+| 2026-08-20T08:51:27Z | **ORACLE** | `REASON=evidence UNCITED=BL-6`. Iteration 5 — the LOW uncertainty comes back for review next cycle, as `AGENTS.md` says it should. |
+
+### F28 — a worker dispatch longer than 10 minutes is killed by the web harness, and its result line is lost
+- Where: `/deliver-loop` web mode, `spawn-worker.sh` dispatch.
+- What happened: the steward dispatch at 08:36:09Z ran past the web session's
+  10-minute per-command ceiling and was terminated (`Exit code 143`,
+  "Command timed out after 10m 0s"), even though `timeout 3000` inside allowed
+  50 minutes. The `WORKER_RESULT` line never reached the driver.
+- Why it did no damage here: the worker had already committed. `git log
+  run/web..worker/steward-od-1b` showed `b37cfd4 Plan the anvil convert MVP
+  from OD-1, and file BL-6`, and the 327-line result was intact. The driver
+  recovered by reading the branch instead of the result line.
+- Why it matters anyway: the driver is told to read `WORKER_RESULT` for the
+  branch name, exit status and commit count. A dispatch that outlives the
+  ceiling silently loses all three, and a worker killed *before* committing
+  would lose its work with no signal at all. The local lane has no such
+  ceiling, so this is a web-lane-only hazard.
+- Workaround adopted for the rest of this run, recorded as a deviation:
+  dispatch workers as background commands and read the branch when they
+  finish, rather than blocking a foreground call on them.
+- Severity: friction, with a blocker-shaped tail — harmless when the worker is
+  fast, silent data loss when it is not.
