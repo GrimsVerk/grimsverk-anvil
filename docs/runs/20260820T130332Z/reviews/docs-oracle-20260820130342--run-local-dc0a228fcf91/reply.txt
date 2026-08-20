@@ -1,0 +1,22 @@
+Reviewed the diff, AGENTS.md, both design documents, VISION.md, and the mechanical facts.
+
+**Scope of the change:** three new/modified files, all inside paths AGENTS.md explicitly exempts from the plan check *at any size*: `docs/DESIGN.oracle.md` (append), `docs/oracle/handoff-2026-08-20-1.md` (new), `docs/runs/setup/setup-github-20260820T130307Z.log` (new). None of `AGENTS.md`, `docs/DESIGN.md`, `docs/VISION.md`, `docs/plans/`, `.github/`, or `.claude/` are touched.
+
+**Criterion 1 (no plan resolved).** This is not a broken gate — the branch is `docs/oracle-20260820130342--run-local`, and its entire diff sits inside the exact exemption list AGENTS.md names (`docs/DESIGN.oracle.md`, `docs/oracle/`, `docs/runs/`). This is the designed shape of an oracle handoff, not an under-scrutinized escape hatch.
+
+**Criterion 2 (blind-test authorship).** No trailer, no test/impl files touched, `test-the-tests` correctly reports DID NOT RUN. Expected and correct for a docs-only oracle run.
+
+**Criterion 5 (agent-opened diff touching owner docs).** Opened by `autogrims[bot]`, but the diff never touches `docs/DESIGN.md` or `docs/VISION.md` — only `docs/DESIGN.oracle.md`, which AGENTS.md explicitly carves out as "written AND opened by agents" and deliberately not owned. No violation.
+
+**Content check on the three decisions:**
+- **OD-1** (12-sig-digit output rule, R1000, cites ESC-1): schema complete, both vision fields quote `docs/VISION.md` verbatim (V1 relied-on, V6 against with a real argument for why it doesn't forbid this), R1000 correctly starts the oracle namespace at R1000, and it correctly identifies the measurement it requires (an `acceptance/S1.sh` row + unit tests) as future planned work rather than trying to smuggle implementation into this PR — consistent with `test-the-tests` reporting no `src/` changes.
+- **OD-2** (declines BL-4/currency): correctly reasoned against V3/V4, explicit `(none)` for statements-against with justification for why none applies.
+- **OD-3** (HALT on BL-3/`rich`): uses the halt schema, not the decision schema; correctly refuses to invent a stdlib substitute that would silently overrule the backlog item's actual ask; correctly routes the owner-vs-owner conflict (BL-3 vs V5) back to the owner rather than picking a winner.
+
+No dependency additions, no gate-path or intent-document edits, no forged delimiters or embedded instructions in the diff.
+
+Minor, non-blocking observation: the setup-github transcript is a different unit of work from the oracle decisions and is bundled into the same PR. AGENTS.md's own exemption text anticipates this exact bundling ("commit it... on a docs/ branch after"), so it's not a violation, just worth a note.
+
+No blocking findings.
+
+REVIEW_VERDICT: PASS

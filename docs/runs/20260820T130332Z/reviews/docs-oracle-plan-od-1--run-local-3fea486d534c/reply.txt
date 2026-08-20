@@ -1,0 +1,23 @@
+## Review
+
+**Branch/context.** `docs/oracle-plan-od-1--run-local`, opened by `autogrims[bot]`, touches only `docs/BACKLOG.md`, appending a new `BL-5` entry (22 lines added, no other files, no new dependencies, no code).
+
+**1. Plan conformance / exemption.** The branch is `docs/`-prefixed, which the `plan` check exempts. Normally exempt branches are capped at ~50 lines, but the entire diff sits inside `docs/BACKLOG.md`, one of the paths `AGENTS.md` explicitly excludes from that cap ("The documents this process itself demands are exempt from that cap ... `docs/BACKLOG.md`"). So this passes the exemption cleanly regardless of size, and no plan is required or expected for this change. Scrutinizing harder as instructed: the diff does nothing but append one backlog item — there's no implementation riding along, no scope creep.
+
+**Content check.** `BL-5` follows the required backlog format (question, proposed default, risk class with justification, `filed by: steward`) and matches the process AGENTS.md describes: "a HIGH uncertainty is filed as a `BL-<n>` ... with the proposed default, and planning stops until a decision cites it." The entry correctly identifies that OD-1 requires an `acceptance/S1.sh` row exercising the installed `anvil` command, but the CLI invocation syntax is deliberately left open by `docs/DESIGN.md` §11, so a steward plan for R1000 alone can't write that row without inventing a format decision it isn't authorized to make. Filing it as HIGH risk (it fixes slice boundaries/signatures for whichever plan implements R1000) rather than guessing is the correct behavior per the planning rules, not scope creep or a shortcut.
+
+**2. Blind-test authorship.** No test/implementation files touched, no trailer present — expected and consistent for a `docs/` branch (not a `feat/` orchestrated build).
+
+**3. Author's open queue.** None reported — no ordering concern.
+
+**4. Rule conformance.** No new dependencies, no manifest/lockfile changes, nothing to approve.
+
+**5. Gate tampering / owner-owned docs.** The diff does not touch `AGENTS.md`, `docs/DESIGN.md`, `docs/VISION.md`, `docs/DESIGN.oracle.md`, or anything under `docs/plans/` or `.claude/`/`.github/`. `docs/BACKLOG.md` is explicitly noted as constrained by its own append-only check rather than `CODEOWNERS`, so a bot-opened PR touching it is fine (unlike `docs/DESIGN.md`/`docs/VISION.md`, which this PR does not touch). The change is a pure append after the existing "(nothing yet ...)" placeholder text — no existing lines are modified, consistent with append-only discipline.
+
+**6. Ratchet.** No `docs/escapes.md` row added, none expected here.
+
+**7/8/9.** No security, maintainability, or legibility concerns — this is a one-item backlog filing, self-explanatory and citing its own antecedents (OD-1, the design's §11 gap) correctly.
+
+No blocking findings.
+
+REVIEW_VERDICT: PASS
