@@ -2598,3 +2598,41 @@ explanation for round 3.3's shorter death, though that one had a worker
 - **Severity: operator error.** Logged because F21's fix and this one are
   complementary: the template should make runs distinguishable, and the operator
   should stop using patterns that cannot distinguish them.
+
+---
+
+## ESC-40 — confirmed a second time, on the post-mortem path
+
+PR **#33**, the pull request `--land-evidence` opened for the dead round 3.4,
+also merged unaided:
+
+```
+state=MERGED  merged=2026-08-20T11:14:36Z  by=app/autogrims
+```
+
+So both the ordinary evidence pull request (#29) and the **post-mortem**
+evidence pull request (#33) reach the base branch on their own. ESC-70's fix
+covers the recovery path as well as the normal one.
+
+## Round 3.5 — relaunched 11:37Z, with the F22 correction applied
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 11:36Z | Reading on PR #33 **before** cleanup | Merged (above). Amended drill followed. |
+| 11:36Z | Clear the debris | `git worktree remove --force .worktrees/oracle-20260820111019` after reading it (empty — no work lost), `git worktree prune`, stale worker branch deleted. |
+| 11:36Z | Readiness | **GREEN**, both guard lines back to `ready`: `no pull request is open against 'run/local'` and `no leftover worktrees`. |
+| 11:37Z | Start the driver | **pid 492001**, recorded to `/tmp/anvil-local-driver.pid`, and its `/proc/<pid>/cwd` verified as this repository before use. |
+
+```
+  THIS RUN'S BASE BRANCH: run/local
+deliver-loop: budget: weekly at 11% (model 9%), spent 0 of 20 points on the per-model weekly limit
+deliver-loop: iteration 1: phase ORACLE
+deliver-loop: dispatch oracle worker (oracle-20260820113705)
+```
+
+**F22 correction now in force.** The monitor no longer uses `pgrep -f`. It reads
+the captured pid, **verifies `/proc/<pid>/cwd` ends in `grimsverk-anvil` and
+refuses to watch anything else**, and reports liveness with `kill -0` on that pid
+alone. Nothing I run can now reach `find_best_mobo`'s driver, and no reading of
+mine can be about its process. F21 stands unchanged as a template finding — the
+template should make runs distinguishable; this only fixes my half.
