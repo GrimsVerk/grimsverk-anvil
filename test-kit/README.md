@@ -45,4 +45,7 @@ end with the discovery that a private repository's gates may be configured
 and binding nothing (v0.4.41), and round 3.4's four — the budget ceiling that
 re-zeroed itself on a rounded timestamp, a killed run reported as success,
 readiness blind to the debris the driver refuses on, and two inert tool grants
-that camouflaged real errors — ESC-74..77 (**v0.4.42**).
+that camouflaged real errors — ESC-74..77 (v0.4.42) — and the three the web
+lane's top-severity finding produced: a stop-time branch sweep, gating one lane
+no longer ungating the other, and a refusal to arm auto-merge on an unprotected
+base rather than merging on the spot — ESC-78..80 (**v0.4.43**).
