@@ -1,0 +1,7 @@
+Preparing worktree (new branch 'worker/oracle-20260820102317')
+HEAD is now at b16c5cb Record the setup-github transcript
+=== spawn-worker[oracle-20260820102317] engine=claude branch=worker/oracle-20260820102317 base=run/local (b16c5cbb3dbf71368e7ecb6be824ba2a932112ae) bypass=0 ===
+=== 2026-08-20T10:23:17Z ===
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).
+Execution error
