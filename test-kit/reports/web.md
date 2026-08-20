@@ -2937,3 +2937,43 @@ un-owned paths and merged mechanically.
   branch is not in the plan; the plan assigns the ledger to the lane. It worked
   out here because the second writer appended rather than rewrote, and because
   the race surfaced as a clean rejection rather than a silent overwrite.
+
+---
+
+## Summary block — web lane, round 3.4 (Part 2 rule 6)
+
+No delivery run was started this round, by the owner's instruction. The work was
+diagnosis, salvage, and the version bump.
+
+- **F33 is corrected, not retracted (C13).** Its conclusion — a pull request
+  merged that the review gate rejected — stands. Its two proposed mechanisms
+  were both wrong: the merge path did not fail, the gates were simply gone.
+  `setup-github.sh --gate-branch run/local` rebuilt the shared ruleset's target
+  list at 10:22:55 and dropped `refs/heads/run/web` mid-run. **ESC-79.**
+- **`run/web` carries `9ae8471bf3af687e78058d01d8f51dacb8937e13`** — the merge
+  of PR #30 — whose required `review` check completed `failure` at 10:49:15.
+  The lane's base branch holds a change the review gate rejected, merged while
+  ungated. The owner decides what happens to it.
+- **Readings taken from all six leftover branches**, and everything that
+  existed nowhere else is now on this ledger branch under
+  `test-kit/reports/salvage/`. No branch was invented (rule 14).
+- **F34 — deletion is refused, creation is not.** `git push --delete` → bare
+  403; `DELETE /git/refs/heads/…` → *"Write access to this GitHub API path is
+  not permitted through this proxy."* Six branches are stranded and listed in
+  F34 for the owner. ESC-78's sweep cannot work from a hosted session, and must
+  not be read as having swept.
+- **Lane updated to v0.4.43.** `copier update` clean — no conflict markers, no
+  `.rej`. **PR #38** is open, App-authored, **every check green including
+  `template-sync` and `review`**, and **blocked pending the owner's CODEOWNERS
+  review** because the diff touches `.github/` and `.claude/`. I did not
+  approve it: this session could, and that is exactly why it must not.
+- **New findings:** **F34** (no ref deletion), **F35** (the update script
+  cannot run on a lane), **F36** (a second agent wrote this ledger branch), and
+  correction rows **C13** (F33's cause) and **C14** (the update, and CODEOWNERS
+  observed binding for the first time).
+
+**Lane closed 2026-08-20T12:07Z.** No run started, no limit raised. `main`
+untouched by this session. `run/web` is not being run against until the owner
+restores its gates and rules on the rejected merge it carries — though the
+ruleset read at 11:58Z already lists `refs/heads/run/web`, so the restoration
+may already have happened.
