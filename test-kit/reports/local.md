@@ -1289,3 +1289,25 @@ items still marked NOT OBSERVED in the summary above become reachable for the
 first time: auto-merge completing without a human (ESC-36), the head branch
 disappearing after a merge (ESC-21), and the cross-lane `update-open-prs`
 re-run (ESC-17). Those are the readings this round exists to take.
+| 02:23Z–02:26Z | 5. Bounded wait for `run/web` | 2 polls, 3 minutes. Attempt 1: `v0.4.35`. Attempt 2: **`v0.4.36`**. Same fast handshake as round 2.2 — both agents moving together keeps this well inside the 45-minute bound. |
+| 02:26Z | 5. Gate both lanes | OK. `include` → `["~DEFAULT_BRANCH","refs/heads/run/local","refs/heads/run/web"]`. |
+| 02:26Z | 6. Full readiness | **GREEN.** `unattended-ready: this repository can run unattended.` Tree clean at launch. |
+| 02:26Z | 6. Start the driver | pid 263505, `--budget-points 20 --max-prs 30 --max-hours 12`. |
+
+**Start conditions verified, fourth time:**
+
+```
+  THIS RUN'S BASE BRANCH: run/local
+deliver-loop: budget: weekly at 69% (model 73%), allowance 20 points, window resets Aug
+deliver-loop: iteration 1: phase ORACLE
+deliver-loop: dispatch oracle worker (oracle-20260820022652)
+```
+
+Weekly meter across four starts: **61% → 62% → 67% → 69%** (model 62% → 64% →
+70% → 73%). Still live, still moving, still well under the allowance.
+
+## Phase transitions — round 3.1 (Part 2 rule 5)
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 02:26:52Z | ORACLE | iteration 1. Worker `oracle-20260820022652`, base `run/local`. |
