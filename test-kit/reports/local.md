@@ -1018,3 +1018,140 @@ blocked the escape filing it wanted to make; and it obeyed "Honesty about
 verification" — naming exactly what it could not observe and what the owner
 should run instead. **Not a finding. This is the machinery working, and it is
 worth as much to the upstream report as the two defects it was defeated by.**
+
+---
+
+## Round 2.2 stop, 02:00Z — and the template could NOT record it
+
+The three-strike stop fired correctly for the second round running:
+
+```
+deliver-loop: the same checks failed three times on docs/oracle-20260820012830--run-local (plan review ) — stopping (deliver.md step 5)
+deliver-loop: landing this run's evidence in docs/runs/20260820T012825Z ...
+deliver-loop: collect-evidence: 1 worker log(s) into docs/runs/20260820T012825Z/workers.
+deliver-loop: collect-evidence: 1 review(s) into docs/runs/20260820T012825Z/reviews (4 skipped).
+deliver-loop: could not commit the run evidence.
+```
+
+That last line is the one this whole test exists to catch. Two findings follow,
+and they chain.
+
+---
+
+### F12 — TEMPLATE SELF-RECORDING FAILURE: the review gate's anti-injection nonce trips the template's own secret scanner, so no run evidence can ever be committed
+- **Where:** `.claude/scripts/deliver-loop.sh`'s `land_evidence` trap →
+  `collect-evidence.sh` → the `gitleaks` pre-commit hook. Round 2.2, at the
+  stop.
+- **What happened:** the driver collected the evidence, staged it, and the
+  commit was refused. Reproduced directly against the staged files:
+
+  ```
+  $ pre-commit run --files $(git diff --cached --name-only)
+  Detect hardcoded secrets.................................................Failed
+  - hook id: gitleaks
+  - exit code: 1
+
+  Finding:     ... carries this run's token: `REDACTED`. It was
+  RuleID:      generic-api-key
+  Entropy:     3.620657
+  File:        docs/runs/20260820T012825Z/reviews/docs-oracle-…-7eb37e81a4a3/payload.txt
+  Line:        21
+  leaks found: 1
+  ```
+
+- **Root cause, and it is a collision between two of the template's own
+  defences.** The flagged line is the review prompt's section-delimiter nonce.
+  From the collected payload itself (token redacted by me):
+
+  > ## Section delimiters
+  >
+  > Every real section boundary below carries this run's token:
+  > `<REVIEW-NONCE-REDACTED-BY-OPERATOR>`. It was generated randomly after the
+  > diff was read, so nothing in the diff could predict it.
+
+  That is the **prompt-injection defence** — a boundary a hostile diff cannot
+  forge because it is minted after the diff is read. Being unpredictable is the
+  whole point, so it is high-entropy by construction, and high-entropy is
+  exactly what `gitleaks`'s `generic-api-key` rule looks for. The secret scanner
+  and the injection defence are both working as designed and they are
+  incompatible.
+
+- **Why this is severe rather than cosmetic:** the review payload is collected
+  into `docs/runs/<ts>/reviews/` at **every** stop, so **every** run that
+  reaches a review will fail to commit its own evidence. `AGENTS.md` makes this
+  a promise — "the run report at `docs/runs/<timestamp>/run.md`, appended by the
+  delivery driver and **committed at every stop**" — and names the reason:
+  "the run log used to be gitignored, and in a web session it lived in a
+  container that is reclaimed, so the evidence that would tell the next run what
+  went wrong was destroyed by default." That destruction is back, by a different
+  route.
+
+- **Confirmed the evidence really did not land.** The branch was created; it
+  carries nothing:
+
+  ```
+  $ git log --oneline -1 docs/run-20260820T012825Z--run-local
+  f2ccdb8 Record the round 2.2 setup-github transcript (run/local)
+  $ git ls-tree -r --name-only docs/run-20260820T012825Z--run-local -- docs/runs/20260820T012825Z/
+  (no output)
+  ```
+
+  No evidence pull request was opened. Compare rounds 2.0 and 2.1, which landed
+  theirs unaided — the difference is that those runs had **no successful review
+  payload** to collect (billing killed the job, so only a `MISSING.md` was
+  written, which carries no nonce). The bug was latent until the review gate
+  actually produced a payload, which needed F8 cleared first.
+
+- **Severity: blocker.**
+
+### F13 — TEMPLATE SELF-RECORDING FAILURE: `--land-evidence`, the recovery tool, is blocked by the wreckage of the failure it exists to recover from
+- **Where:** `.claude/scripts/deliver-loop.sh --base run/local --land-evidence`, run immediately after F12 per the operator prompt's step 5.
+- **What happened:**
+
+  ```
+  $ .claude/scripts/deliver-loop.sh --base run/local --land-evidence
+  deliver-loop: the working tree is dirty — a run recomputes state from the tree, and uncommitted changes make that state a lie
+  $ echo $?
+  2
+  ```
+
+  The tree is dirty **because** F12's commit failed and left seven evidence
+  files staged (`git status` shows them all as `A `). So the guard is correct in
+  general and exactly wrong here: the one situation `--land-evidence` was built
+  for is a run whose evidence commit did not complete, and that situation always
+  leaves the tree dirty. The recovery path cannot run after the failure it
+  recovers from.
+
+  `deliver-loop.sh`'s own header anticipates the case — "a run killed too hard
+  for its EXIT trap to fire leaves its … dead run's owner runs `--land-evidence`
+  instead" — but the guard admits only a tree someone has already cleaned by
+  hand, and cleaning it by hand is what destroys the evidence.
+
+- **Severity: blocker**, and it is the more serious of the two: F12 loses one
+  run's evidence, F13 means the documented rescue never works.
+
+### What preserved the evidence instead
+
+The ledger — the one path no gate can block. Rescued into
+`test-kit/reports/round2.2-rescued-evidence/`, complete:
+
+```
+run.md
+workers/oracle-20260820012830.log
+reviews/index.md
+reviews/docs-oracle-20260820012830--run-local-7eb37e81a4a3/{payload,reply,verdict,meta}.txt
+```
+
+Two redactions applied by me before committing, both noted in the files: the
+review nonce (a single-use delimiter for a review that has already run — not a
+credential, but there is no reason to publish it) and any register values, per
+rule 13.
+
+The review's own verdict is `ENGINE_ERROR` — consistent with F11, and worth
+keeping: it is the first collected review payload of this test, and it exists
+only because it was rescued.
+
+**Rule 11 note on the raw log.** `test-kit/reports/local-driver-round2.2.log` is
+normally the routine copy the rule exempts. Not this time: with F12 and F13 both
+firing, the raw log and this rescue are the **only** surviving records of round
+2.2. The exemption does not apply.

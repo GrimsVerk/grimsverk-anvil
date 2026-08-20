@@ -1,0 +1,29 @@
+Preparing worktree (new branch 'worker/oracle-20260820012830')
+HEAD is now at f2ccdb8 Record the round 2.2 setup-github transcript (run/local)
+=== spawn-worker[oracle-20260820012830] engine=claude branch=worker/oracle-20260820012830 base=run/local (f2ccdb88cf430b1d9a6b783d84f67771106f50e4) bypass=0 ===
+=== 2026-08-20T01:28:30Z ===
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).
+All done and committed. Here is the oracle report for this run.
+
+## What was decided
+
+All three scoped evidence items are resolved by three new decisions in `docs/DESIGN.oracle.md`, committed as `7eb37e8` — available on branch **`docs/oracle-2026-08-20-1`** (the same commit also sits on the driver's `worker/oracle-20260820012830`; use the `docs/` branch for the pull request, since the worker branch name would fail the plan check). No pull request was opened, per my mandate.
+
+- **OD-1 (resolves ESC-1)** — the floating-point artifact (`100.00000000000001` for 0.1 km in metres) is ruled a defect, and the design now says what output should be: new requirement **R1000**, results print at most 12 significant digits with trailing zeros stripped. Twelve keeps every digit the arithmetic can actually vouch for and drops the ones it can't. Per the durable-evidence ruling, the measurement is part of the decision: the ESC-1 case goes into the table `acceptance/S1.sh` checks, plus a unit test shown red against the old output — no new collection mechanism needed.
+- **OD-2 (resolves BL-3)** — **rejected.** Adding the `rich` library is exactly what core tenet V5 forbids, and simplicity (V3) rules out table output even without V5. This is a rejection, not a halt: a tenet-compliant ruling existed, so I was never about to write a decision that violates a tenet. If the owner wants this, the designed path is editing V5.
+- **OD-3 (resolves BL-4)** — **rejected.** Live currency rates are already a named non-goal in `docs/DESIGN.md` §3 and contradict R8 (offline, deterministic); a fetched or stale rate is precisely the "wrong number presented confidently" V1 calls the worst output. The entry exists so BL-4 stops resurfacing as unprocessed evidence.
+
+## Not decided, and why
+
+**BL-1** (unit aliases) and **BL-2** (below absolute zero) were outside the commissioned scope, so they remain unruled in Proposed. They are the natural evidence for the next oracle run.
+
+## Handoff
+
+`docs/oracle/handoff-2026-08-20-1.md`. Key points for the orchestrator: only OD-1 needs planning — R1000 should ride the MVP `convert` milestone plan rather than get its own; OD-2/OD-3 authorize nothing; no waiver was issued.
+
+## Where the vision could serve better
+
+1. **The offline property has no citable id.** Half of OD-3's reasoning — the tool is offline and deterministic — lives only in an unnumbered vision paragraph and in R8. A numbered statement would have been the natural citation.
+2. **Tenet collisions: halt or reject?** Nothing says whether an owner-filed proposal that collides with a core tenet should produce a halt (escalation) or a rejection. I rejected, because a tenet-compliant ruling was available and the mandate says to decide when possible; if the owner wants every V5 collision surfaced as a halt instead, one sentence in the vision would settle it.
+3. **Who is the output for?** The figure 12 in OD-1 is a judgment call the vision doesn't inform — nothing says whether output serves humans reading a terminal (fewer digits) or scripts piping results onward (more). A sentence on that would have decided the number rather than me.
