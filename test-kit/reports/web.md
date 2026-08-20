@@ -1938,3 +1938,65 @@ limit was raised (Part 2 rule 7). `main` was never touched by this session.
 Both open pull requests are left as they are, for the owner: they carry the
 oracle's rulings and this run's evidence, and both merge the moment F24 is
 fixed.
+
+---
+
+# Round 3.1 — owner-directed restart at template v0.4.36 (2026-08-20T02:24Z)
+
+- Lane: **web**. Base branch: `run/web`, unchanged.
+- Both of round 3's blockers were fixed upstream from this ledger. Verified in
+  the rendered scaffold before doing anything else.
+
+## Correction rows
+
+### C8 — F23 / ESC-56 FIXED: `.pr-request.json` is now the plan carve-out's eighth member
+`.github/scripts/plan-resolve.sh` line 183:
+
+```sh
+        ".pr-request.json") ;;
+```
+
+and the accompanying message now reads "… the planning documents themselves,
+the run evidence and the `.pr-request.json` marker". The oracle pull-request
+shape that failed round 3 — 97 exempt lines plus the one root marker — is
+exempt as written, so the marker no longer has to be removed after the pull
+request opens. **F23: closed.** The forced deviation round 3 recorded (deleting
+the marker in a follow-up commit) is no longer needed and will not be repeated.
+
+### C9 — F24 / ESC-57 FIXED: the CI CODEOWNERS step queries a ref and guards the count
+`.github/workflows/ci.yml`, both defects corrected in three lines:
+
+```sh
+errs="$(gh api "repos/${GITHUB_REPOSITORY}/codeowners/errors?ref=${CO_REF}" \
+          --jq '.errors | length' 2>/dev/null || true)"
+case "$errs" in *[!0-9]*|"") errs="";; esac
+if [ -z "$errs" ]; then
+  echo "codeowners: cannot read the validation API here — not treating that as a failure."
+```
+
+The `?ref=` stops it validating a default branch that carries no `.github/`,
+and the `case` guard forces a non-numeric value — a `gh` error body on stdout,
+which is what round 3's 404 became — back to empty, so the designed
+"cannot read = note, not a block" branch can finally fire. These are exactly
+the two corrections ESC-48 had already made in `unattended-ready.sh`, now
+propagated to the required check. **F24: closed**, and the ratchet gap it named
+is closed with it.
+
+### C10 — F22 / licensing wording FIXED
+`AGENTS.md` now opens the Licensing rule with "This project is intentionally
+unlicensed **unless the OWNER has placed a `LICENSE` file at the repository
+root themselves — never remove or second-guess one that exists**". The
+collision between a public repository's MIT file and the template's
+unlicensed-by-default stance is resolved in the template's favour without
+asking an agent to delete the owner's file. **F22: closed.**
+
+## Setup log — round 3.1
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 2026-08-20T02:24:35Z | 2 — release | **OK**, `v0.4.36`. |
+| 2026-08-20T02:24:4xZ | superseded pull requests | **PR #5 and PR #6 closed**, each with a one-line comment naming the round 3.1 restart and the two escapes. Closed over REST (`PATCH .../pulls/<n>`), since `gh pr close` is GraphQL porcelain the proxy refuses (F11/ESC-51 still governs how this lane talks to GitHub). |
+| 2026-08-20T02:25:00Z | 3W — rebuild and re-render | **OK**, exit 0. `_commit: v0.4.36`, `_src_path` canonical https. |
+| 2026-08-20T02:25:1xZ | 4, 5 — canned inputs, `uv sync`, `pre-commit` | **OK.** Hooks did real work on the commit: `ruff check Passed`, `ruff format Passed`, `mypy Passed`, `Detect hardcoded secrets Passed`. |
+| 2026-08-20T02:25:38Z | 6 — `git push -f origin run/web` | **OK**, first attempt. No "Bypassed rule violations" banner — the ruleset was already reset to `~DEFAULT_BRANCH` only, so there was nothing to bypass (consistent with F16). |
+| 2026-08-20T02:25:4xZ | 7W — gating | Not yet gated; ruleset reads `["~DEFAULT_BRANCH"]`. Bounded wait started, 3-minute poll to a 45-minute limit. |
