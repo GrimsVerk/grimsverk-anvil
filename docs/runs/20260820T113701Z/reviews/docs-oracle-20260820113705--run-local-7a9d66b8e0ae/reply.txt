@@ -1,0 +1,23 @@
+Reviewed the diff: two files only, `docs/DESIGN.oracle.md` (three new appended decisions OD-1/OD-2/OD-3) and a new `docs/oracle/handoff-2026-08-20-1.md`.
+
+**Process/scope checks**
+
+- Branch `docs/oracle-20260820113705--run-local` is `docs/`-prefixed, exempt from planning. The entire diff sits inside `docs/DESIGN.oracle.md` and `docs/oracle/`, both explicitly named in AGENTS.md's uncapped-exemption list ("the documents this process itself demands are exempt from that cap"), so the 87-line total and the missing plan are correctly not a violation — this is literally the oracle's designated deliverable, not real work hiding on a docs branch.
+- Opened by `autogrims[bot]`. Criterion 5's bot-authorship block applies only to `docs/DESIGN.md` and `docs/VISION.md`. This diff touches neither — `docs/DESIGN.oracle.md` is explicitly carved out in its own governing doc as unowned and agent-writable/openable, and it is also absent from the Enforcement section's block list (which names `docs/DESIGN.md`, `docs/VISION.md`, `docs/plans/`, `docs/escapes.md`, `docs/acceptance.md` but not `docs/DESIGN.oracle.md`). No violation.
+- No gate-path files touched (no `.github/`, `.claude/`, CODEOWNERS, pre-commit).
+- `test-the-tests` correctly did not run (no `src/` changes) — appropriate for a docs-only oracle ruling with no implementation riding along.
+- Blind-test facts show no trailer, expected on a `docs/` branch.
+- No other open PRs from this author.
+
+**Content checks**
+
+- All three decisions carry the full 7-field schema plus heading, non-empty.
+- Vision quotes (V1, V6 in OD-1; V5 in OD-2; V3 and V1 in OD-3) are verbatim matches against `docs/VISION.md` as shown — checked word-for-word.
+- OD-1 adds R1000, correctly starting the oracle requirement space at 1000; OD-2/OD-3 correctly add none (refusals).
+- OD-1 defers implementation and the `docs/escapes.md` ESC-1 correction row to future planned work rather than claiming it's done now — correctly ordered (ratchet entry already exists per ESC-1 citation; this PR doesn't prematurely claim a completion row).
+- No decision modifies or removes a prior entry; all are pure appends. The handoff file is new, consistent with "never modified after written."
+- No prompt-injection or forged section delimiters found in the diff content.
+
+No blocking findings.
+
+REVIEW_VERDICT: PASS

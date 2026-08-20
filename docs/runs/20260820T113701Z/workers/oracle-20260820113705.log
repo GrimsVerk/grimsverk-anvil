@@ -1,0 +1,23 @@
+Preparing worktree (new branch 'worker/oracle-20260820113705')
+HEAD is now at 520340f Merge pull request #33 from GrimsVerk/docs/run-20260820T111014Z--run-local
+=== spawn-worker[oracle-20260820113705] engine=claude branch=worker/oracle-20260820113705 base=run/local (520340f05b550e79fb7642c2a42ba57c6ac657df) bypass=0 ===
+=== 2026-08-20T11:37:06Z ===
+Committed. The run is complete; report follows.
+
+**Decisions written** (all three scope items ruled; no halt was needed):
+
+- **OD-1 ← ESC-1.** The design deliberately left output precision undecided, and ESC-1 (`100.00000000000001` for 0.1 km in metres) is that gap made visible. Decided: results print with at most 12 significant digits (`format(result, ".12g")` semantics), added as **R1000**. Twelve keeps every digit a double can vouch for and drops the noise digits that produced the artifact. The measurement is part of the decision, using the existing mechanism rather than a new one: S1's acceptance fixture must gain the exact-string row `0.1 km → m` = `100`, S1/S2/S5 must assert exact strings, and ESC-1's ledger correction row follows once that check is seen red-then-green.
+- **OD-2 ← BL-3.** Refused. `rich` is a runtime dependency and V5 flatly forbids the diff that adds one; the refusal also covers a hand-rolled stdlib substitute, which the item itself calls wasted effort and which would fight the script-author use cases. This was the judgment call of the run: it sits nearest the halt line (owner-filed item vs. owner-written tenet), and I ruled it a refusal rather than a halt because refusing violates no tenet — the tenet itself decides, and the halt shape exists for when no compliant ruling is available. Steering path recorded: the owner edits V5, then a superseding decision cites BL-3.
+- **OD-3 ← BL-4.** Refused. Live-rate currency is not a gap in the design — §3 names it a non-goal and R8 requires offline, deterministic operation — and every vision priority (V1, V3, V4) tells the same way. Static bundled rates were weighed and rejected as worse than refusing (a stale rate is a confidently wrong number, V2).
+
+**Found but not decided:** BL-1 (aliases) and BL-2 (below absolute zero) — outside this run's scope, still Proposed, untouched. §11's other open questions (CLI syntax, batch line format) have no filed `BL` id yet; filing them is the planner's job when the first plan is written.
+
+**Handoff:** `docs/oracle/handoff-2026-08-20-1.md` — OD-1/R1000 needs planning (fold into the MVP `convert` milestone plan, or a steward plan citing OD-1); OD-2/OD-3 produce nothing to act on and the orchestrator must not build either feature in any form.
+
+**Verification honesty:** I could not execute `.github/scripts/oracle-decisions.sh` locally — the sandbox demanded an approval nobody is present to give — so I verified the entries by hand against the script's own logic (field presence and one-line values, verbatim whole-sentence vision quotes ≥25 chars, evidence resolvable at base, R-id offset, id monotonicity). CI remains the authoritative run.
+
+**Vision feedback, the useful part:** (1) The purpose sentence "answers instantly and offline" carries no V-id, so it cannot be cited in the relied-on field even when it is doing real work — OD-3 had to lean on V3/V1 instead; giving the purpose statements ids would make them citable. (2) The vision says nothing about output presentation or stability, which forced OD-2's "against" field to `(none)` and made OD-1 stretch V1 to a formatting question; one sentence ranking plain, scriptable output would anchor both. (3) V5 says "runtime dependency" — a clause on whether dev/test dependencies share the tenet would pre-empt a future ruling.
+
+Committed as `7a9d66b` on the branch below; not pushed, per contract.
+
+WORK_ON_BRANCH docs/oracle-decisions-2026-08-20-1
