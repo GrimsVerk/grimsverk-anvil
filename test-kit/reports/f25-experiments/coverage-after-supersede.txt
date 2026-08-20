@@ -1,0 +1,10 @@
+coverage: malformed requirement id(s):
+  R1000 — Output precision. (in docs/DESIGN.oracle.md)
+
+An id is R or S followed by digits — R1, R12, S3. Anything else cannot be
+matched against a plan's `covers:` field, and the failure is silent in the worst
+direction: the id is neither counted as covered nor reported as missing, so it
+reads like a tracked requirement while being tracked by nothing.
+
+Renumber it (R2a and R2b become R2 and R3), or if it is deliberately not a
+requirement id, write it without the bold id form.

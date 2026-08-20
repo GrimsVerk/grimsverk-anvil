@@ -2780,3 +2780,107 @@ spurious re-baseline in round 3.3.
 
 Evidence pull request **#37** is open and untouched, per the amended drill — its
 readings have not been taken. Raw log: `test-kit/reports/local-driver-round3.5.log`.
+
+---
+
+## F25 — CONFIRMED by experiment. The two remedies are mutually exclusive.
+
+Both experiments run in a throwaway detached worktree cut from `run/local`.
+**Nothing was pushed, no landed decision was altered on any real branch, and the
+worktree was removed afterwards** — `origin/run/local` still points at `807530b`
+and the lane's working tree was never touched. Raw outputs:
+`test-kit/reports/f25-experiments/`.
+
+### Experiment A — reformat the id in place, as `coverage.sh` asks
+
+Changed exactly one bold span in the **landed** OD-1:
+
+```
+**R1000 — Output precision.**   ->   **R1000** — Output precision.
+```
+
+| Gate | Result |
+| --- | --- |
+| `coverage.sh` | **malformed error GONE** — 0 malformed lines; it proceeds to the coverage table (exit 1, the ordinary "requirements NOT PLANNED" state of an unbuilt project) |
+| `oracle-decisions.sh` | **REJECTED, exit 1** |
+
+```
+oracle-decisions: 1 problem(s):
+  OD-1 was modified — decisions are append-only; supersede it with a new decision citing OD-1
+…
+Relaxing this check to get a decision through is gate tampering.
+```
+
+So the edit that satisfies the coverage gate is refused by the append-only gate,
+in terms that explicitly forbid working around it.
+
+### Experiment B — supersede instead, as `oracle-decisions.sh` asks
+
+Reverted A, then appended a well-formed `OD-4` superseding `R1000` with a
+correctly formatted `R1001`, every schema field present:
+
+| Gate | Result |
+| --- | --- |
+| `oracle-decisions.sh` | **ACCEPTED, exit 0** — `4 decision(s), 1 new in this pull request, all resolve at 807530b9a967.` |
+| `coverage.sh` | **STILL FAILS, exit 2** |
+
+```
+coverage: malformed requirement id(s):
+  R1000 — Output precision. (in docs/DESIGN.oracle.md)
+```
+
+Superseding does exactly what the ledger says it should — and changes nothing
+about the malformed line, because appending cannot remove text.
+
+### Why, from the code rather than from inference
+
+`.github/scripts/coverage.sh:153-156` is explicit that this scan is
+whole-document, and its own comment says so:
+
+```awk
+# Malformed ids anywhere in a design document — not just section 5. An id-shaped
+# token in section 12's milestones or section 13's criteria is read as an id by
+# every human who passes it, so it has to be one.
+while (match(line, /\*\*[RS][0-9][^*]*\*\*/)) {
+  id = substr(line, RSTART + 2, RLENGTH - 4)
+  if (id !~ /^[RS][0-9]+$/ …) { … print id … }
+```
+
+It has **no notion of a superseded id**. Note the contrast one screen up: the
+*id-collection* pass deliberately reads only `**Requirements added:**` list lines
+in the oracle ledger, precisely because "its rationales legitimately mention ids
+they did NOT define — a superseded one, for instance". The malformed pass was
+never given that same care, so it reads the whole file — including the prose of
+decisions that have been superseded, and including a superseding decision's own
+quotation of the bad form if one ever quoted it.
+
+### The verdict
+
+**F25 is real, and this repository is now permanently blocked at SETUP.** There
+is no sequence of legal actions that satisfies both gates:
+
+- fix `coverage.sh` → violates append-only, and `oracle-decisions.sh` is a
+  required check;
+- satisfy `oracle-decisions.sh` → `coverage.sh` keeps failing, and the driver
+  stops at SETUP every run (round 3.5, exit code 2).
+
+**Severity: blocker — confirmed, not inferred.** It needs a template fix, and
+there are three obvious shapes: exempt superseded ids from the malformed scan;
+scope the malformed scan the way the id-collection pass is already scoped
+(declaration lines, not prose); or let `oracle-decisions.sh` permit an edit whose
+diff changes only id *formatting* and no substantive text.
+
+**The trap generalises beyond this bug.** Any append-only document checked by a
+whole-file format rule has this shape: one malformed line, landed once, can
+never be repaired by any permitted operation. The oracle ledger is not the only
+append-only file in the template — `docs/escapes.md`, `docs/BACKLOG.md` and
+their done-logs are all append-only and all machine-parsed.
+
+### Operator note
+
+The only way out for this lane is an owner action outside the pipeline's rules —
+rewriting the landed line by admin push, or resetting the lane. Not doing either
+unasked. The lane is otherwise clean: `origin/run/local` at `807530b`, working
+tree clean, evidence PR **#37** still open and unread, and one leftover worktree
+(`.worktrees/oracle-20260820113705`) from round 3.5 whose work already merged in
+PR #35 — ESC-76 will refuse the next start until it is cleared.

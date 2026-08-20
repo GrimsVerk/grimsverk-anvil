@@ -1,0 +1,19 @@
+===== REQUIREMENT COVERAGE =====
+
+  R1    NOT PLANNED
+  R2    NOT PLANNED
+  R3    NOT PLANNED
+  R4    NOT PLANNED
+  R5    NOT PLANNED
+  R6    NOT PLANNED
+  R7    NOT PLANNED
+  R8    NOT PLANNED
+  R1000 NOT PLANNED
+
+Covered: 0/9
+
+----- plan adequacy (a NOTE, never a failure) -----
+  Every claimed requirement is mentioned by a slice of the plan claiming it.
+
+9 requirement(s) with no plan: R1 R2 R3 R4 R5 R6 R7 R8 R1000
+Mid-project this is normal — it is the list of what to plan next.
