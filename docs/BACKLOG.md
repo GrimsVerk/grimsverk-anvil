@@ -83,6 +83,31 @@ _append-only, so a landed item never changes position.)_
 
 ## Uncertainties awaiting oracle ruling
 
-_(nothing yet — filed by `/plan` when a design leaves a question open; format:_
-_`BL-<n>` — the question, the proposed default, HIGH or LOW risk, one line on_
-_why that class, and `— filed by: plan`.)_
+_(filed by `/plan` or `/steward` when the design layer leaves a question open;_
+_format:_ _`BL-<n>` — the question, the proposed default, HIGH or LOW risk, one_
+_line on why that class, and `— filed by: plan`.)_
+
+- **BL-5** — OD-1's measurement clause says "the plan that covers R1000 must
+  make the rule observable twice", the second half being the S1 and S2
+  acceptance scripts comparing the installed command's exact stdout, with the
+  0.1 km → m row in S1's fixed table. A steward plan covering R1000 alone
+  cannot deliver that half: no `anvil` command, no converter and no plan for
+  either exists yet; S1 measures R1/R2 and S2 measures R3, none of which R1000
+  delivers; and OD-1 explicitly leaves the exact CLI syntax open for a later
+  planner, so writing `acceptance/S1.sh` now means deciding that syntax. A
+  landed S1 script that invokes a command nobody has built also exits non-zero,
+  which fails the required `acceptance-criteria` check on its own pull request
+  and on every one after it until the CLI merges. So: which plan discharges
+  the acceptance-script half of R1000's measurement? **Proposed default:** the
+  R1000 steward plan delivers only the formatting rule and its blind unit tests
+  asserting exact printed strings, including the ESC-1 reproduction (0.1 km → m
+  prints exactly `100`), red against the artifact and green against the fix;
+  the S1 and S2 scripts are delivered by the milestone plans that build the
+  command they invoke — S1 by `convert`, S2 by `temperature` — each carrying
+  OD-1's exact-stdout-string constraint verbatim and S1 carrying the 0.1 km → m
+  row, and no acceptance script lands before the command it runs exists.
+  **Risk: HIGH** — the answer decides whether the R1000 plan builds a
+  command-line path at all, so it moves every slice boundary and Signatures
+  block in it, it forces or defers a ruling on an external format OD-1 left
+  open, and the wrong answer lands a red required check that blocks every later
+  pull request — filed by: steward
