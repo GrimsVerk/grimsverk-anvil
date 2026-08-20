@@ -1255,3 +1255,37 @@ around an off-limits gate.
   whenever the owner is ready — that is left to them, not done here.
 - PR #4 open against `run/local`, red on `plan` and `review`.
 - `main` never touched by this lane. `run/web` never touched by this lane.
+
+---
+
+# ROUND 3.1 — owner-directed restart at template v0.4.36
+
+All four of this lane's open blockers are reported fixed upstream. Mapping, as
+the owner gave it:
+
+| Ledger finding | Upstream escape | Fix as described |
+| --- | --- | --- |
+| **F10** CODEOWNERS check fails closed on a 404 | **ESC-57** | the CI step queries the **head SHA** with a numeric guard |
+| **F11** review engine not installed | **ESC-58** | the install re-runs `install.cjs` and proves the engine with `--version` before any review |
+| **F12** review nonce trips gitleaks, evidence never commits | **ESC-59** | recorded payloads and replies **redact the spent nonce**, so the scanner and the injection defence no longer deadlock |
+| **F13** `--land-evidence` blocked by the dirty tree F12 creates | **ESC-60** | landing tolerates evidence-path dirt and treats only **committed** run dirs as collisions — "your exact scenario is now a test fixture" |
+
+Also in v0.4.36, from the web lane's findings: ESC-56 (`.pr-request.json` joins
+the plan carve-out) and the licensing wording. All earlier findings stand; F10
+through F13 move to *fixed upstream, pending live confirmation in this round*.
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 02:0xZ | 1. Clean the tree | `git reset && git clean -fdx` on `run/local`. Safe to do because round 2.2's evidence was already rescued into this ledger — F12's staged files were the only on-disk copy, and they are preserved under `test-kit/reports/round2.2-rescued-evidence/`. |
+| 02:0xZ | 2. Reset ruleset to main-only | `include` → `["~DEFAULT_BRANCH"]`. The bypass line from the F5 fix printed again, as expected. |
+| 02:0xZ | 3. Clear leftovers | PR **#4** closed with a comment naming ESC-57/ESC-58 as the reason it can now be superseded. Deleted locally: `docs/oracle-2026-08-20-1`, `docs/oracle-20260820012830--run-local`, `docs/run-20260820T012825Z--run-local`, `worker/oracle-20260820012830`; and `docs/oracle-20260820012830--run-local` on the remote. **PRs #5 and #6 deliberately untouched** — they are the web lane's, and Part 2 rule 1 forbids touching the other lane's pull requests even when they are stale. |
+| 02:0xZ | 4. Rebuild at v0.4.36 | `git checkout -B run/local origin/main`, unstage + clean, re-render. `_commit: v0.4.36`, `_src_path` canonical https. App identity rebuilt from the register by key; `App identity OK`. All four hooks **Passed**; 73 files, 13 486 insertions. Rule-13 scan of every tracked file: **NONE — clean**. `git push -f` → `+ f2ccdb8...7c8fbca`. |
+| 02:0xZ | 5. Bounded wait for `run/web` at v0.4.36 | Started; `run/web` still reads `_commit: v0.4.35`. Polling every 3 min, 45-min bound. |
+
+**The milestone to watch this round:** no pipeline pull request has ever merged
+in either lane. Every round so far died at the first pull request — 2.0 by owner
+restart, 2.1 on the billing outage, 2.2 on F10/F11. With those cleared, the
+items still marked NOT OBSERVED in the summary above become reachable for the
+first time: auto-merge completing without a human (ESC-36), the head branch
+disappearing after a merge (ESC-21), and the cross-lane `update-open-prs`
+re-run (ESC-17). Those are the readings this round exists to take.
