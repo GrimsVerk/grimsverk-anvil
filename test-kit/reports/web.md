@@ -3153,3 +3153,56 @@ makes it meaningful when it does.
 2–3 seconds. `arm-auto-merge` armed each time and never refused, which is
 correct — the base has been gated throughout. No pull request has merged with a
 check still running.
+
+### F37 — a worker killed by the account's usage limit reports only `engine exited 1`; the reason is in a log the driver is not told to read
+- Where: `.claude/scripts/spawn-worker.sh`, ORACLE dispatch at 13:49:15Z,
+  iteration 5.
+- What happened: the dispatch returned
+
+  ```
+  spawn-worker[oracle-20260820134915]: engine exited 1
+    (see .claude/orchestration-logs/oracle-20260820134915.log)
+  ```
+
+  and the log is six lines, the last of which is the whole story:
+
+  ```
+  You've hit your session limit · resets 3:20pm (UTC)
+  ```
+
+  The account's usage limit was reached mid-run. The worker never started work;
+  nothing was committed and nothing was lost.
+- Why it is worth a finding rather than a shrug: **this is the one stop the web
+  lane is structurally blind to.** Part 2 rule 8 records that the web lane has
+  no usage gauge by design (ESC-50), so the driver cannot see a limit coming,
+  cannot report "budget: weekly at N%", and cannot distinguish this from any
+  other engine failure without opening the worker's log by hand. The exit code
+  is 1 for a crash, a refusal and an exhausted subscription alike.
+- What the local lane gets instead: `budget-probe.sh` and the
+  `--budget-points` ceiling, so it stops *itself* on the allowance with a
+  message naming it. The web lane discovers the same condition only by a worker
+  dying.
+- Suggested upstream fix: have `spawn-worker.sh` recognise the limit line and
+  surface it as its own exit code and message — a limit is not a crash, and a
+  driver told "you are out of budget until 15:20Z" can schedule rather than
+  retry. **ESC-75** already established that a stop with no reason deserves a
+  distinct exit code; this is the same argument one layer down.
+- Severity: friction on this lane, and the clearest evidence yet for why the
+  gauge asymmetry matters.
+
+### Recovery, and ESC-76 observed doing its job
+The failed dispatch left a worktree and branch behind. Cleaned up, and the
+readiness check confirms the state before resuming:
+
+```
+  ready    no pull request is open against 'run/web' — the run starts on a clear base
+  ready    no leftover worktrees — no dead run's debris in the way
+
+unattended-ready: this repository can run unattended.
+```
+
+That second line is **ESC-76**, and this is the first time it has had real
+debris to be right about: a dead run's worktree was in the way, the check would
+have refused, and clearing it is what let the run resume. The run continues
+from iteration 5 with nothing lost — the four merged pull requests, five oracle
+decisions and one plan all stand.
