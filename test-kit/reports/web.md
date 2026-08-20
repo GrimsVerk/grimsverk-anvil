@@ -2145,3 +2145,37 @@ the oracle's diff.
 rule 7). `main` untouched by this session. PR #7 and PR #9 are left open for
 the owner: they carry the oracle's rulings and this run's evidence, and both
 merge the moment F27 is fixed.
+
+---
+
+# Round 3.2 — owner-directed restart at template v0.4.37 (2026-08-20T08:05Z)
+
+- Lane: **web**. Base branch: `run/web`, unchanged. Limits unchanged: 30 pull
+  requests, 12 wall-clock hours, 60 iterations.
+
+### C12 — F27 / ESC-61 FIXED: the escape-id namespace leak is gone
+Verified the way F27 was proven, by rendering a clean scaffold and reading what
+ships:
+
+```
+ESC ids cited by the shipped AGENTS.md:  (none)
+```
+
+Round 3.1's `AGENTS.md` cited `ESC-53` in the sentence explaining the
+`.pr-request.json` carve-out, and `escape-refs.sh` resolved it against a
+project ledger that could never contain it. v0.4.37 removes the id from the
+shipped prose, so a generated project's gated documents cite only ids from
+their own ledger. **F27: closed.** The owner reports it is render-tested
+upstream, and the local lane found the same defect independently as its F14 —
+two lanes, one finding, which is the twin-run design paying off.
+
+## Setup log — round 3.2
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 2026-08-20T08:05:36Z | 2 — release | **OK**, `v0.4.37`. |
+| 2026-08-20T08:05:4xZ | superseded pull requests | **PR #7 and PR #9 closed**, each with a one-line comment naming the round 3.2 restart and ESC-61. Closed over REST, `gh pr close` still being GraphQL porcelain (ESC-51). |
+| 2026-08-20T08:06:08Z | 3W — rebuild and re-render | **OK**, exit 0. `_commit: v0.4.37`, `_src_path` canonical https. |
+| 2026-08-20T08:06:2xZ | 4, 5 — canned inputs, `uv sync`, `pre-commit` | **OK.** Hooks ran real work on the commit: ruff check, ruff format, mypy, secrets — all Passed. |
+| 2026-08-20T08:06:34Z | 6 — `git push -f origin run/web` | **OK**, first attempt, no bypass banner (ruleset was main-only). |
+| 2026-08-20T08:06:4xZ | 7W — gating | Not yet gated (`["~DEFAULT_BRANCH"]`). Bounded wait started, 3-minute poll to a 45-minute limit. |
