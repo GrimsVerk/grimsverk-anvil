@@ -236,3 +236,53 @@ decision not to decide, recorded.
 
 <!-- Append decisions below, newest at the bottom. Never edit one that has
 landed; supersede it with a new decision naming its id. -->
+
+## OD-1 — Printed results carry at most 12 significant digits
+
+- **Date:** 2026-08-20
+- **Evidence:** ESC-1
+- **Requirements added:** R1000
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V1 — "Correct conversions come before everything else: a wrong number presented confidently is the worst output this tool can produce."
+- **Vision statements against:** V6 — "A conversion that is numerically wrong, however plausible it looks, is rejected outright — as is any run that reports success while a criterion's evidence cell is empty or narrated rather than executed." Read strictly it could forbid printing anything other than the exact computed value. It does not: the exact value of 0.1 km in metres IS 100, and `100.00000000000001` is the binary representation's noise presented as if it were a result. Formatting to 12 significant digits moves output toward the mathematically exact answer in every case a factor chain perturbs, so V6 argues for this rule once the whole sentence is read.
+- **Alternatives considered:** (a) Print the full `repr` of the float — rejected: it is the defect ESC-1 records, verbatim. (b) 15–17 significant digits — rejected: chained factor conversions (value × to-base × from-base) perturb the last one or two digits of a double, so artifacts would still surface; 12 leaves a safety margin while exceeding the precision of any input a terminal user or script plausibly supplies. (c) A fixed number of decimal places — rejected: no single count serves both `mg→kg` and `km→mm`; small results collapse to `0.00` and large ones carry noise digits. (d) Exact `decimal.Decimal` arithmetic — rejected: heavier machinery across the whole converter for a problem the output boundary solves in one line; V3's simplicity-first ("a small tool that is obviously right") tells against it.
+- **Rationale:** ESC-1 logged a floating-point artifact shown as a result, and `docs/DESIGN.md` §11 deliberately left precision undecided, so nothing defined it as a defect. This decision defines it: an artifact digit is a wrong number presented confidently — V1's worst output — and the fix is a single deterministic formatting rule at the output boundary, not a change to the conversion math.
+
+**R1000** — A printed result carries at most 12 significant digits: output is
+the shortest form produced by Python's `format(value, '.12g')` — trailing zeros
+trimmed, scientific notation for extreme magnitudes — applied identically
+everywhere a converted value is printed (one-shot and batch mode). Internal
+arithmetic stays binary floating point; only presentation is defined here.
+*Evidenced by:* S1.
+
+**The measurement is part of this decision** (`docs/VISION.md`, durable
+evidence: "When a decision alters behaviour that no existing check, test, run
+report or review artifact would notice, adding the thing that notices is part
+of the decision — not a follow-up, and not optional."). No new mechanism is
+needed — S1's fixed conversion table is the existing mechanism, and the plan
+that implements R1000 must carry two things: the ESC-1 reproducer as a table
+row in `acceptance/S1.sh` (0.1 km to m prints exactly `100` — red against the
+artifact, green against this rule), and unit tests asserting the formatting
+rule at representative magnitudes. Once both have merged, ESC-1's completing
+correction row in `docs/escapes.md` names them, closing its pending check
+column exactly as it asked ("whatever precision rule the design layer settles,
+expressed as an acceptance script").
+
+## OD-2 — Currency conversion stays out; BL-4 is declined and the design's non-goal stands
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-4
+- **Requirements added:** (none)
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V3 — "Simplicity comes before completeness: a small tool that is obviously right beats a large one that must be trusted."
+- **Vision statements against:** (none — no statement in docs/VISION.md tells against declining this: every priority statement trades breadth away, V4 makes dropping whole categories an acceptable price outright, and the purpose section calls the tool "offline" in so many words)
+- **Alternatives considered:** (a) Add EUR/USD/SEK with live rates as BL-4 asks — rejected: it contradicts R8 ("fully offline and deterministic") and §3's explicit non-goal ("Currency, time zones, or any unit that needs live data"), makes results non-reproducible between runs, and a stale or mis-fetched rate is precisely the confidently wrong number V1 names as the worst output this tool can produce. (b) Currency from a fixed offline rate table — rejected: a hardcoded exchange rate is wrong the day after it lands, converting the tool from "obviously right" to "must be trusted", the exact trade V3 forbids; V4's willingness to drop whole categories covers a category that cannot be correct offline a fortiori. (c) Supersede R8 and the non-goal to admit the feature — rejected: both are owner-authored decisions in `docs/DESIGN.md`, and reversing an explicit owner decision is not metabolising evidence of a defect; the path for that reversal is the owner editing their own document, which stays theirs.
+- **Rationale:** BL-4 is owner-filed evidence that the tool "feels half-finished" without money, but every constraint that would have to break to admit it — offline, deterministic, dependency-free-of-live-data — is one the owner wrote more deliberately than the backlog line: as a requirement, a non-goal, and the purpose sentence. The design stands; no requirements change; the backlog item is resolved by this decision rather than by work. If the owner wants currency, the move is theirs: edit `docs/DESIGN.md` §3 and §5, and the vision's offline framing with it.
+
+## OD-3 — HALTED: BL-3 asks for `rich`-rendered output, and no ruling can grant it without breaking the no-dependency tenet
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-3
+- **Tenet relied on:** V5 — "No runtime dependency may be added: the Python standard library is the whole toolbox, and a diff that adds one violates this tenet."
+- **What a decision would have said:** The only ruling BL-3 leaves open is "adopt `rich` and add a requirement for aligned, colored table output" — the item names the library specifically and rules out hand-rolled ANSI as wasted effort. That ruling adds a runtime dependency, which V5 forbids in exactly those words. A stdlib-only compromise (plain aligned columns via `str.format`, no color) was available and would not violate V5, but it decides something the evidence explicitly declined to ask for, and would read as resolving BL-3 while leaving its actual ask — `rich` specifically — silently overruled by an agent.
+- **What it needs from the owner:** This is an owner-vs-owner conflict — the owner filed BL-3 and the owner wrote V5 — which is why no agent should pick the winner. The smallest change to `docs/VISION.md` that unblocks a decision: append an exception clause to V5 naming the display-only dependencies the owner permits (and land the `docs/DECISIONS.md` dependency approval `AGENTS.md` requires alongside it). Alternatively, rule the other way at no cost to the vision: append a new backlog item superseding BL-3 that asks for prettier output within the standard library, and a future decision here can grant it.
