@@ -236,3 +236,50 @@ decision not to decide, recorded.
 
 <!-- Append decisions below, newest at the bottom. Never edit one that has
 landed; supersede it with a new decision naming its id. -->
+
+## OD-1 — Results print with at most 12 significant digits, via `format(value, '.12g')`
+
+- **Date:** 2026-08-20
+- **Evidence:** ESC-1
+- **Requirements added:** R1000
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V1 — "Correct conversions come before everything else: a wrong number presented confidently is the worst output this tool can produce."
+- **Vision statements against:** V6 — "A conversion that is numerically wrong, however plausible it looks, is rejected outright — as is any run that reports success while a criterion's evidence cell is empty or narrated rather than executed." Rounding discards digits, but the digits ESC-1 records are float noise, not information: 12 significant digits exceeds the meaningful precision of every factor in the design's unit table, so no numerically true digit is lost — printing the noise is what V6 actually forbids.
+- **Alternatives considered:** printing the raw float repr (rejected — it is precisely the defect ESC-1 logs); a fixed count of decimal places (rejected — pads small results with noise zeros and misrepresents very large and very small magnitudes); exact arithmetic via the stdlib `decimal` module (rejected — real complexity across the whole conversion path, against V3, to remove artifacts that output formatting already removes).
+- **Rationale:** ESC-1 shows the converter printing `100.00000000000001` for 0.1 km in metres — binary floating point exposed as a result. The design (§11, deliberately) never says how output is rounded, so nothing defined this as a defect. It is one: V1 makes a wrong-looking number the worst output the tool can produce. `'.12g'` is one line of stdlib formatting, keeps far more precision than any §4 use case needs, and collapses every double-rounding artifact of the base-unit-hub design (§8) back to the value it means.
+
+**R1000** — Every numeric conversion result, single-shot and batch, is printed
+as Python `format(value, '.12g')`: at most 12 significant digits, no trailing
+float artifacts (so 0.1 km in metres prints exactly `100`, and 100 C prints as
+`212` F and `373.15` K). Magnitudes at or beyond 1e12 therefore print in
+exponent form; that is accepted, not a defect — the design's §6 already ignores
+scientific notation on the input side.
+
+**Measurement, per the vision's durable-evidence section** ("A change nothing
+can observe is a change nobody can evaluate."): the plan that implements R1000
+must (a) add CI tests asserting the exact printed strings, including the ESC-1
+reproduction — `0.1 km → m` prints `100`, observed red against unformatted
+output and green against the fix; and (b) express the expected values in the
+`acceptance/S1.sh` and `acceptance/S2.sh` scripts as exact formatted strings,
+so the rule is re-verified on every pull request. Once that check has been
+observed, the plan's work includes appending ESC-1's correction row in
+`docs/escapes.md` naming it — the row is currently a stub marked pending.
+
+## OD-2 — Currency conversion is declined; the design's offline non-goal stands
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-4
+- **Requirements added:** (none)
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V3 — "Simplicity comes before completeness: a small tool that is obviously right beats a large one that must be trusted."
+- **Vision statements against:** (none — no statement in docs/VISION.md tells against this; the nearest candidates run the other way: V2 ranks honest errors above feature breadth, and V4 names breadth of units as the thing the owner would trade away first.)
+- **Alternatives considered:** adding EUR/USD/SEK with live rates as BL-4 asks (rejected — it contradicts §3's non-goals, "Currency, time zones, or any unit that needs live data", and R8's "fully offline and deterministic"; a fetched rate also cannot be verified by an offline deterministic test suite, so V6 could never be checked for it); bundling fixed rates so the tool stays offline (rejected — exchange rates go stale by construction, so every answer decays into exactly the confidently wrong number V1 calls the worst output).
+- **Rationale:** BL-4 asks to overturn a decision the owner already made in the design they landed: currency is a named non-goal and R8 requires offline determinism. The vision gives no counterweight — every priority statement favours the small, verifiable, offline tool over the broader one. So the design stands and no requirement is added. Nothing is built or changed by this ruling, so there is no new behaviour to measure. If the owner wants currency after all, the lever is theirs directly: edit `docs/DESIGN.md` §3 and §5 — that document is owner-landed, and this decision would then be superseded on the next run's evidence.
+
+## OD-3 — HALTED: prettier output via the `rich` library (BL-3)
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-3
+- **Tenet relied on:** V5 — "No runtime dependency may be added: the Python standard library is the whole toolbox, and a diff that adds one violates this tenet."
+- **What a decision would have said:** either add `rich` as a runtime dependency and a requirement for aligned, colored table output — which a diff cannot do without violating V5 — or rule that output is prettified with the standard library only, which BL-3 explicitly forecloses ("hand-rolling ANSI codes is wasted effort"). Both BL-3 and V5 are owner-authored; ranking one owner statement over the other is not the oracle's call, so neither ruling is made.
+- **What it needs from the owner:** the smallest change is one edit to `docs/VISION.md`: amend V5 with an explicit exception for `rich` (the next run can then rule for BL-3 and record the dependency approval in `docs/DECISIONS.md`), or leave V5 as it is and file a new backlog item superseding BL-3 that asks for improved output within the standard library (the next run can then rule on that).
