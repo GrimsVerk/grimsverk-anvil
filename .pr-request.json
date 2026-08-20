@@ -1,1 +1,1 @@
-{"base": "run/web", "title": "Plan: temperature conversions", "body": "Milestone plan covering R3, temperature conversion.\n\nOpened by the delivery driver on base run/web."}
+{"base": "run/web", "title": "File BL-10: the batch request line format", "body": "The convert-batch milestone plan cannot be written until the batch request line format is fixed, so this files BL-10 instead. docs/DESIGN.md section 11 leaves it deliberately undecided.\n\nOpened by the delivery driver on base run/web."}

@@ -149,3 +149,45 @@ _why that class, and `— filed by: plan`.)_
   boundary, external format or S1/S3 case changes on either answer, and
   reversing it is two lines and one test. Proceeded on the default — filed by:
   steward
+- **BL-10** — The batch **request** line format, the first half of the format
+  `docs/DESIGN.md` §11 records as deliberately not decided there. R6 says
+  "read conversion requests from standard input, one per line" and nothing
+  more, so the `convert-batch` milestone cannot declare a Signatures block for
+  the reader, and cannot write `acceptance/S5.sh`'s five-line fixture, until a
+  request line is defined. Question: what does a request line look like, and
+  what happens to a blank line? Proposed default: exactly three
+  whitespace-separated tokens in the same order R1001 (`OD-5`) fixes for the
+  positionals — `<value> <from-unit> <to-unit>`, so `5 km mi` — with leading
+  and trailing whitespace ignored, unit symbols matched exactly as R1001
+  requires, no comment syntax, no header and no other separator (a comma is not
+  one); an empty or whitespace-only line is skipped silently, producing no
+  output line and leaving the exit code alone; any other line whose token count
+  is not three is a failed line under R6, producing an error line and a
+  non-zero exit. Risk: HIGH — it is an external format that a thousand-row
+  generated file would be written in, it fixes the reader's signature and every
+  row of the S5 fixture, and reversing it after scripts emit files in it is
+  expensive — filed by: plan
+- **BL-11** — The batch **output** contract, the second half of that §11 gap:
+  what a result line and an error line contain, and which stream carries each.
+  R1002 (`OD-6`) rules the single-shot contract and says in its own text that
+  it "governs single-shot output only"; R6 requires one result line per request
+  and an error line for a bad line, but names no stream and no wording. The two
+  candidate answers pull against each other, which is why this is filed rather
+  than settled: putting error lines on standard error keeps `OD-6`'s
+  "standard output carries results only" property, but then standard output has
+  fewer lines than the input and a script loses the row-to-row correspondence
+  that makes batch worth using; putting them on standard output keeps
+  line N of the output answering line N of the input, at the price of prose
+  sharing the results stream. Proposed default: the second — standard output
+  carries exactly one line per non-skipped request line, in input order; a
+  successful line is `format_result(value)` alone, identical to the single-shot
+  line R1002 fixes (which also discharges `OD-4`'s obligation that batch
+  results print through `format_result`); a failed line is `error: <message>` at
+  that same position, where `<message>` is the `str(err)` text single-shot
+  writes to standard error, so it still names the offending input (R4, R1003);
+  standard error stays empty in batch mode; the exit code is 1 if any line
+  failed and 0 otherwise, per R6. Risk: HIGH — it is an external format,
+  `acceptance/S5.sh` asserts exact lines against it including `OD-4`'s
+  precision-sensitive `ESC-1` row, it decides the writer's signature and the
+  slice boundary between reader and writer, and a positional correspondence
+  scripts depend on cannot be withdrawn later — filed by: plan
