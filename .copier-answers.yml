@@ -1,0 +1,8 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v0.4.45
+_src_path: https://github.com/GrimsVerk/grimsverk-template.git
+auto_merge: true
+code_owner: '@GrimsVerk'
+description: A tiny unit-conversion CLI that stress-tests the grimsverk-template pipeline
+language: python
+project_name: grimsverk-anvil
