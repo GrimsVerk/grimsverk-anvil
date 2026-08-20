@@ -1,0 +1,38 @@
+Preparing worktree (new branch 'worker/oracle-20260819234457')
+HEAD is now at 8ea3a52 Record the round 2.1 setup-github transcripts (run/local)
+=== spawn-worker[oracle-20260819234457] engine=claude branch=worker/oracle-20260819234457 base=run/local (8ea3a5240e3bf6940f42a29fed48c7d0cac1ab7a) bypass=0 ===
+=== 2026-08-19T23:44:58Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/loke/code/GrimsVerk/grimsverk-anvil"].hasTrustDialogAccepted: true in /home/loke/.claude.json.
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).
+The two-step version would still need an ungranted script invocation, so I verified the schema by hand against the check's logic instead — every field present and non-empty, both quoted vision spans verbatim and over the length floor, evidence ids resolvable at the base commit, R1000 above the offset, halt shape carrying its five fields. Work is committed; here is the report.
+
+---
+
+## Oracle run report — 2026-08-20
+
+**All three scoped items are resolved. Three entries landed in `docs/DESIGN.oracle.md` (commit `737aaf5` on `worker/oracle-20260819234457`). The handoff file could not be written — a permission bug in the delivery machinery, detailed below — so its content is carried in this report.**
+
+### Decisions written
+
+- **OD-1 (resolves ESC-1)** — Output precision is decided: every converted value prints with Python's `.12g` format — at most 12 significant digits — so 0.1 km in metres prints exactly `100`, never `100.00000000000001`. This adds requirement **R1000**. The decision names its measurement, as the durable-evidence rule requires: the plan implementing it must put the ESC-1 case into `acceptance/S1.sh`'s fixed conversion table (that script does not exist yet; the first milestone plan creates it), plus unit tests on a value that would otherwise show floating-point noise. After that merges, ESC-1's stub in `docs/escapes.md` gets its completing correction row.
+- **OD-2 (resolves BL-4)** — Currency conversion is **declined**. It is the one feature `docs/DESIGN.md` §3 explicitly lists as a non-goal, and the vision's purpose sentence ends "answers instantly and offline". No requirements added, no behaviour changes, so no new measurement is owed. If the owner wants currency, that is their edit to `docs/DESIGN.md`.
+- **OD-3 (BL-3) — HALT**, the one stop. BL-3 demands the `rich` library by name, and core tenet V5 forbids adding any runtime dependency; it also explicitly rejects hand-rolled ANSI, so no ruling was available that neither violates the tenet nor countermands the owner's instruction. The halt entry records what a decision would have said (stdlib alignment, no colour) and the smallest owner action that unblocks it: a V5 carve-out, a dependency approval per `AGENTS.md`, or a refiled request not naming `rich`. Per the ledger's rules, a halt does not stop the run.
+
+### The handoff, and why it is here instead of in `docs/oracle/`
+
+**The oracle role cannot actually write its own handoff directory.** `ORACLE_TOOLS` in `.claude/scripts/spawn-worker.sh:213` grants `Write(docs/oracle/**)` — but as this project's own `settings.json` comment documents, Claude Code file-permission rules bind on `Edit(...)` spellings only; a `Write(...)` rule matches nothing. Every write attempt to `docs/oracle/handoff-2026-08-20-1.md` (Write tool twice, shell redirects twice) was refused; the ledger edit succeeded only because line 212 also carries `Edit(docs/DESIGN.oracle.md)`. The fix is one word — `Edit(docs/oracle/**)` — but `spawn-worker.sh` is a gate path I may not touch, and `docs/escapes.md` is outside my two writable paths, so: **this is an escape, and someone who may write that ledger should file it** (gate: none existed — the spawn preflight doesn't validate grant spellings; the inert-`Write` failure mode was already known and documented in `settings.json`). The next oracle run should write `handoff-2026-08-20-1.md` fresh once the grant binds — nothing numbered exists yet, so no sequence is disturbed.
+
+**Handoff content for the orchestrator:**
+
+- **Needs planning:** OD-1/R1000 only. No plans exist yet, so fold R1000 into the first milestone plan (`convert`, covering R1, R2, R4, R5) rather than commissioning a separate steward plan — it is one formatting call plus tests, and its acceptance evidence rides in `acceptance/S1.sh`.
+- **Do NOT act on:** BL-3 (halted — no output-formatting work of any shape until the owner rules on V5) and BL-4 (declined — no work follows; the item stays in Proposed). Neither was ever in `BACKLOG.approved.md`, so no queued dispatch changes.
+- **Not ruled, and why:** BL-1 (aliases) and BL-2 (below-absolute-zero) were outside this run's scope. §11's other open questions (CLI syntax, batch line format) have no logged evidence yet — the planner should file them as `BL-<n>` uncertainties when writing the `convert` plan.
+
+### Vision feedback — where the tiebreaker could be sharper
+
+1. **"Offline" is purpose prose, not a tenet.** BL-4 was decided on V3 plus the purpose sentence; had it been slightly less clear-cut, nothing halt-protects offline the way V5 protects the dependency rule. If the owner considers offline inviolable, promote it to a numbered core tenet.
+2. **V5's scope is ambiguous at the network boundary.** I read "no runtime dependency" as packages — stdlib `urllib` fetching live data would not violate it as written. If the owner means "no network at runtime" too, V5 should say so.
+3. Nothing in the vision speaks to output presentation at all; OD-3's halt rested entirely on V5. A sentence about what output should look like (or that plainness is preferred) would let a refiled BL-3 be decided rather than halted again.
+
+My job ends here: branch committed, no pull request opened, nothing spawned.
