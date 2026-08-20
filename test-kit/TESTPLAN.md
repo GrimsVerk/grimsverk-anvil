@@ -53,7 +53,7 @@ coder, blind test-writer, reviewer, acceptance, and the driver itself.
 The per-base-branch pipeline isolation this layout depends on landed in the
 template as the fix for ESC-46 (`deliver-loop.sh --base`, lane branch
 suffixes, `setup-github.sh --gate-branch`); everything the lanes need is in
-release **v0.4.34**, and Part 1 step 2 refuses anything older.
+release **v0.4.35**, and Part 1 step 2 refuses anything older.
 
 ---
 
@@ -95,10 +95,14 @@ ESC-50, found in round 2).** The claude.ai egress proxy replaces every
 Authorization header with the owner's own injected credential and blocks the
 App-mint API paths outright, so a web session can never hold App identity —
 no key, variable, or paste changes that. The web driver therefore acts as
-the owner's injected credential for reads, pushes, and dispatches, and every
-pipeline pull request is opened AS THE APP by the scaffold's
-`.github/workflows/open-pr.yml` (server-side, where minting works). This
-requires template **v0.4.33 or newer**. Template access for copier comes
+the owner's injected credential for reads and pushes, and every pipeline
+pull request is opened AS THE APP by the scaffold's
+`.github/workflows/open-pr.yml` — push-fired: the driver commits a
+`.pr-request.json` as the branch's last commit and the workflow opens the
+pull request server-side, where minting works (ESC-53: the dispatch API is
+unreachable from this credential and a dispatch-only workflow never
+registers off the default branch). This
+requires template **v0.4.35 or newer**. Template access for copier comes
 from the owner attaching BOTH repositories when creating the web session —
 grimsverk-anvil to work in, grimsverk-template only so copier can read it.
 
@@ -118,12 +122,19 @@ Principles, before the steps:
 - **Each lane renders its own scaffold on its own branch** with copier, from
   the template's latest release. Same release, same answers — the two
   scaffolds should come out near-identical, and that is checked afterwards.
-- **The one sanctioned asymmetry:** only the local agent holds admin power
-  (the owner's `gh` login). The web agent's identity is the App, which is
-  deliberately weaker — it cannot edit rulesets or secrets, and must never be
-  able to. So ALL ruleset work belongs to the local agent, **including gating
-  the web lane's branch**, and the web agent waits (bounded) for that. This
-  is repository configuration, not a touch of the other lane's content.
+- **The one sanctioned asymmetry — held by POLICY, not by mechanism (F16,
+  round 2.1).** By design, only the local agent does admin work: ALL ruleset
+  edits belong to it, **including gating the web lane's branch**, and the
+  web agent waits (bounded) for that. But the web session's injected
+  credential turned out to be owner-grade: a round-2.1 probe pushed straight
+  through the active ruleset ("Bypassed rule violations", all seven checks
+  waived), while the API's `current_user_can_bypass` claimed "never". So the
+  asymmetry is an instruction the web agent obeys, not a wall it cannot
+  climb; nothing but its discipline protects `main` from it, and a push
+  rejection can never teach it a gate is missing. Both lanes therefore treat
+  "the ruleset held" as a thing to VERIFY (Part 3, closing action 3), never
+  to assume — and pipeline integrity rests on the merge path (auto-merge on
+  green required checks), which the bypass does not touch.
 
 The steps. `<lane>` is `run/local` or `run/web`; lines marked **L:** are the
 local lane only, **W:** the web lane only.
@@ -142,11 +153,13 @@ local lane only, **W:** the web lane only.
 
 ### 2. Confirm the template release
 
-The latest release of grimsverk-template must be **v0.4.34 or newer** (it
+The latest release of grimsverk-template must be **v0.4.35 or newer** (it
 carries the per-base lanes, the evidence recovery tools, the App-only
 credentials, the round-1 fixes, ESC-49's hook fix, ESC-50's server-side
-pull-request opener and ESC-51's REST-only session reads — the web lane
-cannot run without the last two). Both lanes:
+pull-request opener, ESC-51's REST-only session reads, and the round-2.1
+fixes — ESC-52's network probe, ESC-53's push-triggered opener, ESC-54's
+lane-scoped evidence, ESC-55's pre-commit dependency — the web lane cannot
+run without any of ESC-50..53). Both lanes:
 `gh release view -R GrimsVerk/grimsverk-template --json tagName --jq
 .tagName`, or read the tag copier resolves in `.copier-answers.yml` after
 rendering — stop if it is older.
@@ -419,8 +432,13 @@ template (or, sometimes, about the bait — say which).
    has ever observed it).
 2. **Run S4** (the owner criterion) on your machine, offline, per lane, and
    record the verdict in each lane's `docs/acceptance.md`.
-3. Check the ruleset held: no pipeline PR merged red, and nothing pushed
-   straight to `main`, `run/local`, or `run/web`.
+3. Check the ruleset held **as policy** — F16 proved it does not hold as
+   mechanism against the web session's owner-grade credential. Verify: no
+   pipeline PR merged red, and `git log --first-parent` on `main`,
+   `run/local` and `run/web` shows only sanctioned commits (kit on `main`,
+   the scaffold commit and merge commits on the lanes) — any direct push
+   beyond the round-2.1 probe (which was reverted) is a top-severity
+   finding.
 
 ## Coverage, honestly
 
