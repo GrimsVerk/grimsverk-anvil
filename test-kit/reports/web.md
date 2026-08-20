@@ -2897,3 +2897,43 @@ and the driver's own scripts is precisely the diff a human is supposed to read.
 This is also the first time in the whole test that CODEOWNERS has been
 positively observed doing its job — every earlier pull request touched only
 un-owned paths and merged mechanically.
+
+### F36 — another agent pushed to this lane's ledger branch mid-session, and did the same salvage independently
+- Where: `chore/test-report-web`, the branch Part 2 rule 4 assigns to this lane
+  and this lane alone.
+- What happened: at **12:01:08Z**, while this session was writing its own
+  salvage, a commit landed on this ledger branch from another agent —
+  `10edb72 "Salvage six orphaned web-lane branches onto this ledger"`, author
+  `Claude`. My next push was rejected non-fast-forward:
+
+  ```
+  ! [rejected]  chore/test-report-web -> chore/test-report-web (fetch first)
+  ```
+
+- **Nothing was lost and nothing was overwritten.** The rejection was an
+  ordinary race, and the first diff reading looked alarming — 71 lines of
+  `web.md` appearing as deletions — but that was only my own newest commit
+  being absent from the remote, not anyone removing my ledger. Reading the
+  direction of the diff before reacting is the whole lesson there; a hasty
+  `--force` would have destroyed their work.
+- The other agent salvaged the same six branches into
+  `test-kit/reports/salvage/`, at the same minute I salvaged them into
+  `test-kit/reports/web-unlanded/`. Its copy is a **superset** — it carries the
+  two `docs/oracle-*` branches' `DESIGN.oracle.md` and handoffs, the review
+  index files and both worker logs, where mine took only the two unlanded run
+  reports and one log. It also cites this lane's F34 and ESC-78 by name in its
+  README, so it had read this ledger.
+- **Resolved by keeping one copy.** I deleted my `web-unlanded/` directory and
+  kept `salvage/`. The two overlapping run reports were byte-identical, so
+  nothing was lost in the trade.
+- **And their copy was more correct than mine in one respect worth recording:**
+  the two worker logs differed by exactly one line — mine preserved the literal
+  container path `/home/user/grimsverk-anvil` from the log, theirs had redacted
+  it to `<home>/grimsverk-anvil`. That is **Part 2 rule 13**, and my copy
+  violated it while theirs did not. Removing mine fixes it; noting it here
+  because a rule-13 breach found in my own pushed file is itself a finding by
+  the rule's own terms.
+- Severity: friction, with a real hazard behind it. Two agents writing one
+  branch is not in the plan; the plan assigns the ledger to the lane. It worked
+  out here because the second writer appended rather than rewrote, and because
+  the race surfaced as a clean rejection rather than a silent overwrite.
