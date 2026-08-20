@@ -1517,11 +1517,11 @@ cause removed at the source rather than papered over.
 
 | Time (UTC) | Step | Outcome |
 | --- | --- | --- |
-| 03:0xZ | Clean the tree | `git reset && git clean -fdx`. Round 3.1's evidence needed no rescue this round — it committed normally (F12 fixed) and lives on the closed PR #10's branch history plus `test-kit/reports/local-driver-round3.1.log`. |
-| 03:0xZ | Reset ruleset to main-only | `include` → `["~DEFAULT_BRANCH"]`. |
-| 03:0xZ | Close leftovers | PRs **#8** (work) and **#10** (evidence) closed, citing ESC-61 as the reason they can be superseded. Remote branches `docs/oracle-20260820022652--run-local` and `docs/run-20260820T022648Z--run-local` deleted. Web-lane PRs **#7** and **#9** left untouched (rule 1). |
-| 03:0xZ | Rebuild at v0.4.37 | `_commit: v0.4.37`, `_src_path` canonical https. Identity from the register by key; `App identity OK`. All four hooks **Passed**; 73 files, 13 488 insertions. Rule-13 scan: **NONE — clean**. `git push -f` → `+ 96ece73...1bd477f`. |
-| 03:0xZ | Bounded wait for `run/web` at v0.4.37 | Started; `run/web` reads `_commit: v0.4.36`. Polling every 3 min, 45-min bound. |
+| 08:04Z | Clean the tree | `git reset && git clean -fdx`. Round 3.1's evidence needed no rescue this round — it committed normally (F12 fixed) and lives on the closed PR #10's branch history plus `test-kit/reports/local-driver-round3.1.log`. |
+| 08:04Z | Reset ruleset to main-only | `include` → `["~DEFAULT_BRANCH"]`. |
+| 08:05Z | Close leftovers | PRs **#8** (work) and **#10** (evidence) closed, citing ESC-61 as the reason they can be superseded. Remote branches `docs/oracle-20260820022652--run-local` and `docs/run-20260820T022648Z--run-local` deleted. Web-lane PRs **#7** and **#9** left untouched (rule 1). |
+| 08:05Z | Rebuild at v0.4.37 | `_commit: v0.4.37`, `_src_path` canonical https. Identity from the register by key; `App identity OK`. All four hooks **Passed**; 73 files, 13 488 insertions. Rule-13 scan: **NONE — clean**. `git push -f` → `+ 96ece73...1bd477f`. |
+| 08:05Z | Bounded wait for `run/web` at v0.4.37 | Started; `run/web` reads `_commit: v0.4.36`. Polling every 3 min, 45-min bound. |
 
 **Fifth start of this lane.** The prize is unchanged and now has a single
 credible path to it: with F10, F11, F12 and F14 all fixed, PR #8's check list
@@ -1530,3 +1530,40 @@ this round should produce the first merge either lane has ever managed — and
 with it the four readings that have never been taken: ESC-21 (branch vanishes),
 ESC-36's second half (auto-merge completes unaided), ESC-40 (the evidence pull
 request merges), and eventually ESC-17 (cross-lane `update-open-prs`).
+
+**Timestamp correction.** The five rows above were first written with
+placeholder times of the form `03:0xZ`, estimated rather than read from the
+clock. They are corrected here from the commit record — the scaffold commit is
+`1bd477f` at **2026-08-20T08:05:31Z** and the transcript commit `02e1506` at
+**08:09:03Z**. Noted rather than silently amended, because these timestamps are
+the spine the two lanes are compared along and an invented one is worse than no
+entry. Every other time in this ledger was read from `date -u` or from command
+output at the moment it was written.
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 08:05:49Z–08:08:50Z | Bounded wait resolved | 2 polls. Attempt 1: `v0.4.36`. Attempt 2: **`v0.4.37`**. |
+| 08:08Z | Gate both lanes | OK. `include` → `["~DEFAULT_BRANCH","refs/heads/run/local","refs/heads/run/web"]`. |
+| 08:09Z | Full readiness | **GREEN.** `unattended-ready: this repository can run unattended.` Tree clean at launch. |
+| 08:09Z | Start the driver | pid 343691, `--budget-points 20 --max-prs 30 --max-hours 12`. |
+
+**Start conditions verified, fifth time:**
+
+```
+  THIS RUN'S BASE BRANCH: run/local
+deliver-loop: budget: weekly at 74% (model 82%), allowance 20 points, window resets Aug
+deliver-loop: iteration 1: phase ORACLE
+deliver-loop: dispatch oracle worker (oracle-20260820080937)
+```
+
+Weekly meter across five starts: **61% → 62% → 67% → 69% → 74%** (model 62% →
+64% → 70% → 73% → **82%**). The model figure is climbing faster than the
+weekly one and is now the tighter of the two. Worth watching: the owner noted
+the window resets partway through a 12-hour run, so the probe's rollover
+handling may still be exercised this round.
+
+## Phase transitions — round 3.2 (Part 2 rule 5)
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 08:09:37Z | ORACLE | iteration 1. Worker `oracle-20260820080937`, base `run/local`. |
