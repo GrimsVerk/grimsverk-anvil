@@ -1,0 +1,25 @@
+Preparing worktree (new branch 'worker/oracle-20260820085521')
+HEAD is now at 7a3430e Merge pull request #15 from GrimsVerk/docs/oracle-plan-od-1--run-local
+=== spawn-worker[oracle-20260820085521] engine=claude branch=worker/oracle-20260820085521 base=run/local (7a3430e751f4c44b9c8d83bb43fb94fef429a724) bypass=0 ===
+=== 2026-08-20T08:55:21Z ===
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).
+The push was denied by the session's permission mode (twice — I won't keep retrying). The commit is in place locally on the branch; the driver can push it. My work as oracle is otherwise complete — final report:
+
+---
+
+## Oracle run report — 2026-08-20, run 2 (scope: BL-5)
+
+**Decision written: OD-4, resolving BL-5 by accepting the steward's proposed default as filed.** The S1 and S2 acceptance scripts are delivered by the milestone plans that build the command they invoke — `acceptance/S1.sh` by `convert`, `acceptance/S2.sh` by `temperature` — each carrying OD-1's exact-stdout-string constraint verbatim, with the 0.1 km → m row in S1's table. The R1000 steward plan builds no command-line path: it delivers the formatting rule as library code plus blind unit tests asserting exact printed strings (the ESC-1 reproduction needs no converter — `0.1 * 1000` is the artifact). No acceptance script lands before the command it runs exists. ESC-1's correction row waits for S1's script, appended by the `convert` milestone's implementing pull request.
+
+The deciding fact was mechanical: `.github/scripts/acceptance-criteria.sh` reports an unscripted criterion without failing, but fails any landed script that exits non-zero — so a premature S1.sh is a red required check blocking every pull request until the CLI merges, exactly the deadlock the check's own no-script reporting was written to avoid. No requirement was added, no criterion waived, no halt written.
+
+**Contradictions found and not decided:** none in scope. BL-1 and BL-2 (unruled Proposed items from run 1) remain for a later run through normal evidence detection; the handoff deliberately avoids naming them by id so the driver doesn't mark them processed.
+
+**Handoff:** `docs/oracle/handoff-2026-08-20-2.md` — unblocks the steward's R1000 plan (scoped library-only), instructs the `convert`/`temperature` planners on the scripts they own, and warns the orchestrator never to land an acceptance script ahead of its command.
+
+**Branch:** `docs/oracle-20260820085521--run-local`, one commit (`38a0e94`), pre-commit hooks passed. **The push to origin was denied by this session's permission mode**, so the branch exists locally only — the driver needs to push it (and open the PR into `run/local`, which was never mine to do).
+
+**Verification honesty:** the sandbox also blocked executing `.github/scripts/oracle-decisions.sh` locally, so I verified its rules by hand instead: the quoted vision sentence appears verbatim in `docs/VISION.md` at the base commit and exceeds the minimum quote length, BL-5 exists at base (`run/local` tip 7a3430e), all eight schema fields are present and non-empty, OD-4's id increases, and the OD-1..OD-3 blocks and the run-1 handoff are byte-identical to base. CI will run the real check on the PR.
+
+**On the vision:** nothing ambiguous blocked this ruling, but one observation worth the owner's eye: the durable-evidence sentence "adding the thing that notices is part of the decision — not a follow-up, and not optional" has no grain — it doesn't say *which* unit of work the obligation attaches to when one decision's measurement spans several plans. OD-4 read it as "each plan carries the observer of the behaviour that plan adds," which I believe is its intent, but a clause saying the measurement travels with the change it observes (rather than with the decision that demanded it) would have made BL-5 answerable without an oracle round-trip.

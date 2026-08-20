@@ -1,0 +1,21 @@
+Preparing worktree (new branch 'worker/oracle-20260820090807')
+HEAD is now at 7a3430e Merge pull request #15 from GrimsVerk/docs/oracle-plan-od-1--run-local
+=== spawn-worker[oracle-20260820090807] engine=claude branch=worker/oracle-20260820090807 base=run/local (7a3430e751f4c44b9c8d83bb43fb94fef429a724) bypass=0 ===
+=== 2026-08-20T09:08:07Z ===
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).
+The push also requires approval the sandbox won't grant, so the commit sits on the local branch — which matches the commission's step 5 ("commit both, on a branch, and stop"); the driver handles everything after that. My work as oracle for this run is done.
+
+## Report
+
+**Ruling: OD-4 resolves BL-5 by adopting the steward's proposed default.** The measurement OD-1 attached to R1000 is split between the plans that build what each half observes. The R1000 steward plan delivers only the formatting rule and its blind unit tests asserting exact printed strings (including the ESC-1 reproduction: the 0.1 km → m artifact value formats to exactly `100`), with no CLI, no syntax decision, and no acceptance scripts. `acceptance/S1.sh` lands with milestone `convert` and `acceptance/S2.sh` with milestone `temperature` — each in the same plan as the command it invokes, carrying OD-1's exact-stdout-string constraint, with S1 carrying the 0.1 km → m row. No acceptance script lands before its command exists.
+
+The ruling leaned on the vision's durable-evidence statement — the measurement is part of the change it notices, which decides the assignment: unit tests notice the formatting rule, the scripts notice the installed command. I verified in `.github/scripts/acceptance-criteria.sh` that this is safe on both sides: an unscripted criterion is *reported* on every PR but never fails the check, while a landed script invoking a nonexistent command would turn the required check red on every PR — exactly the deadlock BL-5 warned about. Rejected alternatives (recorded in the decision): landing the scripts now, widening the steward plan into a de facto `convert` milestone, exit-0 placeholder scripts, and waiving S1/S2.
+
+**Also in OD-4:** the ESC-1 correction row waits for `S1.sh` and is appended by the `convert` implementer, and one sentence of OD-1's measurement prose ("the plan that covers R1000 must make the rule observable twice") is superseded insofar as it read as one plan delivering both halves — R1000 itself is unchanged. No waiver, no halt, no new requirement.
+
+**Not decided, deliberately:** the exact CLI syntax and batch line format (still §11-open; the `convert` planner files them as uncertainties), and the two unruled Proposed backlog items, left unnamed in the handoff so the driver doesn't mark them processed.
+
+**Artifacts:** OD-4 appended to `docs/DESIGN.oracle.md`; handoff at `docs/oracle/handoff-2026-08-20-2.md`. Both committed as `d260910` on `worker/oracle-20260820090807`. The sandbox declined branch creation and push, so the commit is local on the driver's worktree branch; both vision quotes were verified verbatim against `docs/VISION.md`, though I could not execute `oracle-decisions.sh` locally (also declined) — CI will be the first mechanical run of it.
+
+**On the vision:** one small gap surfaced. The vision decides *that* a measurement must exist and travel with its change, but says nothing about *sequencing* when a measurement's subject does not exist yet — I derived "no script before its command" from the check's design rather than from any vision sentence. A statement like "evidence is executed, never staged: a check that cannot yet run is left unwritten, not stubbed green" would have decided BL-5 directly, and would also pre-decide the placeholder-script temptation for future runs.

@@ -1,0 +1,21 @@
+Reviewed the diff, the facts block, and the cited documents.
+
+**Findings**
+
+- **nit — docs/DESIGN.oracle.md:OD-3** — the "Vision statement relied on" field cites the unnumbered "What this project is for" purpose statement rather than a `V<n>` id, deviating from the schema's literal `V<n> — "<quote>"` format. The oracle flags this itself ("the purpose statement (unnumbered...)") and the quote is verbatim and present in `docs/VISION.md`, so the mechanical check (which validates the quoted text exists in the file) should still pass. Not blocking — it's an honest, labeled adaptation, not an attempt to fabricate a citation.
+
+**Checks performed**
+
+- *Plan conformance*: no plan resolved, and none is required — the diff touches only `docs/DESIGN.oracle.md` and adds a file under `docs/oracle/`, both explicitly on AGENTS.md's exempt-at-any-size list. Branch is `docs/oracle-...`, correctly prefixed.
+- *Gate tampering*: no CI, `.claude/`, `AGENTS.md`, `docs/DESIGN.md`, or `docs/VISION.md` changes. `docs/DESIGN.oracle.md` is the one document AGENTS.md/DESIGN.oracle.md explicitly designate as unattended-agent-writable, so a bot-opened edit to it is not the criterion-5 violation (that criterion is specifically about DESIGN.md/VISION.md, which this diff leaves untouched).
+- *Schema compliance*: OD-1, OD-2, OD-3 each carry all required fields, with verbatim vision quotes checked against the supplied `docs/VISION.md` text (V1, V6, V5, V3, V2, and the purpose statement all match word-for-word). "Vision statements against" is substantive in every case, including the reasoned `(none — ...)` in OD-2. Requirement id R1000 correctly starts the oracle namespace. The file is edited append-only — no prior content changed.
+- *Evidence discipline*: OD-1 cites ESC-1, OD-2 cites BL-3, OD-3 cites BL-4; each decision explains why the cited evidence supports the ruling rather than inventing a design change. No `Criterion waived` field is used, consistent with the handoff's "no criterion was waived and no halt was written."
+- *Ratchet (criterion 6)*: this PR does not touch `docs/escapes.md`, and correctly so — OD-1 defers the ESC-1 correction row to the future implementing PR, per the entry-first ordering rule. No premature or missing ledger row here.
+- *Dependencies*: none added; OD-2 explicitly declines one, consistent with V5 and the "no new dependency" rule.
+- *Blind-test / test-the-tests*: no code or tests touched, correctly reflected in the facts block (`DID NOT RUN`, no blind-tests trailer) — expected for a `docs/` branch.
+- *Author's queue*: no other open PRs from this author; no ordering risk.
+- *Injection check*: nothing in the diff attempts to steer the verdict; all forged-delimiter and instruction-injection risks are absent.
+
+No blocking findings.
+
+REVIEW_VERDICT: PASS

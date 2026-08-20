@@ -1,0 +1,21 @@
+Preparing worktree (new branch 'worker/oracle-20260820090110')
+HEAD is now at 7a3430e Merge pull request #15 from GrimsVerk/docs/oracle-plan-od-1--run-local
+=== spawn-worker[oracle-20260820090110] engine=claude branch=worker/oracle-20260820090110 base=run/local (7a3430e751f4c44b9c8d83bb43fb94fef429a724) bypass=0 ===
+=== 2026-08-20T09:01:10Z ===
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).
+Both attempts to push were denied by the permission layer, and nobody is awake to approve one — so the branch stays local, which still satisfies this role's stopping rule ("commit both, on a branch, and stop"); the driver can push or harvest the worktree. My work as oracle is complete.
+
+---
+
+## Oracle run report — 2026-08-20, run 2 (scope: BL-5)
+
+**One decision landed: OD-4, resolving BL-5 by adopting the steward's proposed default as filed.** The R1000 steward plan delivers only the `.12g` formatting rule and its blind unit tests (including the ESC-1 reproduction, red-then-green); the S1 and S2 acceptance scripts are delivered by the milestone plans that build the command they invoke — S1 by `convert`, S2 by `temperature` — each carrying OD-1's exact-stdout constraint verbatim, and no acceptance script lands before its command exists. OD-1's "observable twice" clause is refined, not superseded; R1000 is unchanged, no criterion was waived, no halt was written.
+
+**Why I was confident.** The gate itself settled it: `acceptance-criteria.sh` deliberately reports an unscripted criterion without failing ("failing the pipeline for it would stop the build that would make it pass"), while a landed failing script goes hard red on every subsequent PR — and a landed script can never be deleted while its criterion stands, so landing S1 early is a one-way door into a red pipeline. The only sequencing consistent with both the gate's design and OD-1's measurement obligation is the one BL-5 proposed. A consequence worth noting: the ESC-1 correction row in `docs/escapes.md` waits for the PR that lands `acceptance/S1.sh` (the `convert` milestone), so the stub stays visibly pending until then — accurately.
+
+**Contradictions found but not decided:** none in scope. Two Proposed backlog items (unit aliases; sub-absolute-zero temperatures) remain unruled and were deliberately left out of the handoff's id-space so the driver doesn't mark them processed.
+
+**Artifacts.** Decision appended to `docs/DESIGN.oracle.md`; handoff at `docs/oracle/handoff-2026-08-20-2.md`. Both committed as `e0f3174` on branch **`docs/oracle-20260820090110--run-local`** — pre-commit passed; the full `uv` gate and the push were sandbox-blocked, so the branch is local-only and CI has not run (not claiming otherwise). I verified the check's two load-bearing rules by hand: both vision quotes match `docs/VISION.md` verbatim after whitespace collapse, and the diff is a pure append.
+
+**On the vision.** Nothing ambiguous this run, but the same gap recurs: this was the third decision (after OD-1's measurement clause and OD-4) that leaned on the unnumbered purpose statement or the durable-evidence prose because the numbered V1–V6 say nothing about *the pipeline itself staying alive* — e.g. "a required check that can only go red must not land before the work that turns it green." If the owner numbered a sentence to that effect, sequencing rulings like this one would cite it directly instead of deriving it from the purpose statement.
