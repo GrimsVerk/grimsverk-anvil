@@ -2928,7 +2928,7 @@ un-owned paths and merged mechanically.
   nothing was lost in the trade.
 - **And their copy was more correct than mine in one respect worth recording:**
   the two worker logs differed by exactly one line — mine preserved the literal
-  container path `/home/user/grimsverk-anvil` from the log, theirs had redacted
+  container path `<home>/grimsverk-anvil` from the log, theirs had redacted
   it to `<home>/grimsverk-anvil`. That is **Part 2 rule 13**, and my copy
   violated it while theirs did not. Removing mine fixes it; noting it here
   because a rule-13 breach found in my own pushed file is itself a finding by
@@ -2992,3 +2992,66 @@ the tip removes a value from the current file, not from the commits that
 introduced it. Rewriting that history would mean force-pushing a ledger branch,
 which is the one thing this branch must never do — so it is the owner's call,
 recorded here rather than acted on.
+
+---
+
+# Round 3.6 — fresh lane at template v0.4.45
+
+## C15 — the salvage is settled; nothing further is owed
+The owner salvaged the six stranded branches to `test-kit/reports/salvage/` on
+this ledger branch, and round 3.4 merged that with this lane's own copy,
+keeping the owner's fuller version and deleting the duplicate. The six branches
+listed in F34 remain undeletable from a hosted session and are the owner's to
+remove; their content is preserved.
+
+That write to this branch is what **F36** recorded. The owner confirms the
+finding was right to file and that it will not recur. F36 stands as written —
+including its observation that the second copy was the more correct one under
+rule 13, which is what the new `check-ledger.sh` now enforces automatically.
+
+## C16 — round 3.4's other findings, as resolved upstream
+- **F33** → **ESC-79** (gating is additive; removals are announced) and
+  **ESC-80** (arming verifies the base is protected first and fails closed).
+- **F34** → **ESC-78**, the branch sweep.
+- **F35** → already fixed before I filed it. I ran the **v0.4.37** copy of
+  `update-from-template.sh`; the current one takes `--base`. The finding was
+  real against the version in my hand and is obsolete against the version that
+  existed — worth recording as the difference between "the template is wrong"
+  and "my checkout was old", which this lane could not tell apart from inside.
+- **`run/web` carried `9ae8471`**, the merge the review gate rejected. Round
+  3.6 rebuilds the lane from `main`, so that commit goes with the old branch.
+  Nothing to revert.
+
+## Redaction log
+
+Required by rule 4a. Every entry is a rule 13 value removed from the tip of
+this ledger, with what it was and why the finding survives without it.
+
+### R1 — 2026-08-20T13:00Z — an absolute home directory quoted inside F36
+- **Where:** `test-kit/reports/web.md`, the F36 bullet beginning "And their copy
+  was more correct than mine in one respect worth recording".
+- **What was removed:** the literal container path for this session's checkout,
+  `/home/` plus the account name plus `/grimsverk-anvil`, replaced with
+  `<home>/grimsverk-anvil`.
+- **Why the finding is unchanged:** F36's point is that the owner's copy of a
+  worker log had redacted that path and mine had not, so mine breached rule 13.
+  The finding is about the *presence or absence of a redaction*, not about the
+  value itself. After this redaction the sentence names both sides as
+  `<home>/…`, which reads oddly — the difference it describes is no longer
+  visible in the sentence, and this entry is where that difference now lives:
+  **mine carried the literal path, theirs carried `<home>`.** The finding, its
+  severity and its conclusion are untouched.
+- **How it was found:** `test-kit/check-ledger.sh web` refused the push —
+
+  ```
+  REFUSED  an absolute home directory:
+           test-kit/reports/web.md:2931: … container path `…` from the log, theirs had redacted
+  ```
+
+  This is the checker catching exactly the case rule 4a says has happened
+  before: "a value was quoted as evidence inside a finding". First run of the
+  new checker on this ledger, and it earned its place immediately.
+- **History note, per rule 4a:** this redaction is at the tip only. The value
+  remains in this branch's git history, in the round-3.4 commit that introduced
+  it. Removing it from history would need a force-push, which this branch must
+  never do; that call is the owner's.
