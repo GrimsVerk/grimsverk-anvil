@@ -1888,3 +1888,53 @@ log is present (`workers/oracle-20260820013147.log`).
 `git diff run/web worker/oracle-… | grep -i test-kit` returns nothing. The
 oracle's rulings cite only `docs/` evidence ids (ESC-1, BL-3, BL-4) and vision
 statements. No pipeline artifact referenced `test-kit/` at any point.
+
+---
+
+## Summary block — web lane, round 3 (Part 2 rule 6)
+
+- **Driver's exit reason:** a required check is red for a defect inside the
+  gate itself (F24), and its fix lives in `.github/workflows/ci.yml`, a
+  CODEOWNERS-owned path this run may not touch (Part 2 rule 3, AGENTS.md "Gate
+  paths are off-limits"). Not a limit, not a refusal, not a failure pattern —
+  a blocked pipeline, reported rather than worked around.
+- **Phases reached:** `SETUP` (green for the first time) → **`ORACLE`** →
+  `WAIT` → stop. One iteration of sixty.
+- **Pull requests opened: 2, merged: 0.** PR #5 (oracle rulings) and PR #6
+  (run evidence), **both authored by the App** `autogrims[bot]`, both into
+  `run/web`, both `mergeable_state=blocked`.
+- **Oracle decisions written: 3 — OD-1, OD-2, OD-3.** OD-1 adds requirement
+  **R1000** citing ESC-1; OD-2 declines BL-4; OD-3 **HALTS** on BL-3 against
+  vision tenet V5.
+- **Uncertainties filed (BL ids): none this round** — the planner never ran, so
+  the two design gaps the bait map expects HIGH uncertainties for (CLI syntax,
+  batch line format) are still untested. OD-1 explicitly left both open for the
+  planner, which is the correct hand-off.
+- **Criteria status:** untouched; the acceptance pass was never reached.
+- **Limits:** 30 pull requests / 12 hours / 60 iterations. Used 2 / ~0.35h / 1.
+  Nothing near a limit. No usage gauge exists in a web session by design, and
+  v0.4.35's command file says so and asks for countable limits instead — Part 2
+  rule 8 satisfied.
+- **Findings this round:** C5, C6, C7 (three earlier findings confirmed fixed),
+  F21 (register scrub), F22 (licence conflict), **F23 (blocker — the ESC-53
+  marker breaks the `plan` exemption)**, **F24 (blocker — ESC-48's fix never
+  propagated to the required CI check; stops BOTH lanes)**, **F25 (blocker for
+  diagnosis — no CI logs or artifacts reachable from a web session)**, F26
+  (docs).
+- **The headline:** the web lane finally ran the pipeline. Setup passed, a real
+  worker was dispatched, it produced three well-argued rulings that hit all
+  three seeded baits — including **the HALT path, never exercised before** —
+  and the App opened its pull request server-side exactly as ESC-53 designed.
+  Everything the template promised about *doing the work* held up. What stopped
+  it was a check that could not read an API correctly, at a site the project's
+  own escape log had already fixed once somewhere else.
+- **Value of the twin-run design, demonstrated twice this round:** F23 is
+  reachable only from the web lane (the local driver commits no marker), and
+  F24 is visible on both — but only the local lane can read the log that
+  explains it. Neither lane alone would have produced this diagnosis.
+
+**Lane closed 2026-08-20T01:52Z.** The run is stopped, not restarted, and no
+limit was raised (Part 2 rule 7). `main` was never touched by this session.
+Both open pull requests are left as they are, for the owner: they carry the
+oracle's rulings and this run's evidence, and both merge the moment F24 is
+fixed.
