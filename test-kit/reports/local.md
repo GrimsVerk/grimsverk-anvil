@@ -853,3 +853,133 @@ Beyond the two green CI runs recorded above, the owner supplied a stronger
 proof than either lane could observe: **the v0.4.35 release tag both lanes
 rendered from was itself minted by an Actions job that ran to completion after
 the repositories went public.** The release exists, therefore Actions ran.
+
+| 01:39:11Z | WAIT | iteration 2. PR **#4** (`docs/oracle-20260820012830--run-local`), opened by `app/autogrims`. Oracle exited 0, 1 commit. |
+| 01:39:42Z | WAIT → fix | `PR #4 red (plan review ) — dispatching a fix`. Both rednesses are template defects the fix session cannot touch — F10 and F11. |
+
+### Per-check durations, first honest reading (Part 2 rule 9, ESC-45)
+
+With Actions working, real numbers at last. PR #4:
+
+| Check | Result | Duration |
+| --- | --- | --- |
+| `open-pr` | pass | 7s |
+| `checks` | pass | 9s / 10s |
+| `acceptance-criteria` | pass | 7s |
+| `arm-auto-merge` | pass | 7s |
+| `plan` | **fail** | 7s |
+| `review` | **fail** | 15s |
+
+`arm-auto-merge` is present and passing (ESC-36) — the arming half is now
+positively observed; whether it *completes* a merge still needs a green PR.
+`checks` at 9–10s is the only number worth a second look, since it runs
+`uv sync --locked`, ruff, ruff-format, mypy and pytest; on a scaffold with one
+placeholder test and a warm uv cache that is plausible rather than the ESC-45
+"skip reporting success" shape, and its log shows each step executing. Recorded,
+not filed.
+
+---
+
+### F10 — BLOCKER: the `CODEOWNERS actually binds` check fails closed on an unreadable API, which is exactly what it promises not to do
+- **Where:** `.github/workflows/ci.yml`, `plan` job, step "CODEOWNERS actually binds". Round 2.2, PR #4, and it will fail identically on every pull request in this configuration.
+- **What happened:**
+
+  ```
+  codeowners: {"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/repos#list-codeowners-errors","status":"404"} unresolvable line(s) in .github/CODEOWNERS.
+  {"message":"Not Found",...}gh: Not Found (HTTP 404)
+  ##[error]Process completed with exit code 1.
+  ```
+
+  Read that first line closely: the count of unresolvable lines is a JSON error
+  body. The step is:
+
+  ```sh
+  errs="$(gh api "repos/${GITHUB_REPOSITORY}/codeowners/errors" --jq '.errors | length' 2>/dev/null || true)"
+  if   [ -z "$errs" ];   then echo "codeowners: cannot read the validation API here — not treating that as a failure."
+  elif [ "$errs" = "0" ]; then echo "codeowners: resolves cleanly…"
+  else                        # fail
+  ```
+
+  `gh` writes the 404 body to **stdout**; the step redirects only **stderr**.
+  So `errs` is a non-empty JSON string, `[ -z "$errs" ]` is false, `"$errs" = "0"`
+  is false, and control reaches the failure branch. The `-z` guard — the entire
+  implementation of "an unreadable API is a note, not a block" — is unreachable
+  whenever the API answers with an error document rather than nothing.
+
+- **Why the API 404s here, and why that is a supported configuration:** the
+  endpoint reads CODEOWNERS from the repository's **default branch**, and this
+  repository's default branch is `main`, which by the test's design carries the
+  kit and no scaffold:
+
+  ```
+  $ git ls-tree -r --name-only origin/main | grep -i codeowners
+  (no output)
+  ```
+
+  This is not an exotic setup — it is the per-base-branch lane feature the
+  template shipped as the ESC-46 fix (`deliver-loop.sh --base`). Any run whose
+  base branch is not the default branch can hit this, and the check has no ref
+  parameter to ask about the branch actually under test.
+
+- **The template already knows the right answer, one script over.**
+  `.github/scripts/unattended-ready.sh` asks the same question and gets it
+  right, because it asks about the branch:
+
+  ```
+  ready    CODEOWNERS resolves cleanly (at run/local)
+  ```
+
+  So the driver's preflight is green and the required check is red, about the
+  same file, at the same moment.
+
+- **Expected:** the comment above the step in `ci.yml` states the policy
+  verbatim — "It fails only on a definite answer. An unreadable API is a note,
+  not a block: a check that goes red when GitHub is having a bad morning is a
+  check people learn to re-run without reading." The behaviour is the opposite,
+  and the message it prints is incoherent (a JSON blob where a count belongs),
+  which is what makes it hard to diagnose from the check summary alone.
+- **Severity: blocker.** `plan` is a required check, so no pull request can
+  merge. It is also unfixable from inside the pipeline: `.github/` is off-limits
+  to every agent (Part 2 rule 3, `AGENTS.md` "Gate paths are off-limits") and
+  `.github/CODEOWNERS` is CODEOWNERS-owned, so the fix session the driver
+  dispatched cannot resolve it by design.
+
+### F11 — BLOCKER: the review gate's engine is not installed, so the judgment gate cannot run at all
+- **Where:** `.github/workflows/review.yml` → `.github/scripts/review.sh`, round 2.2, PR #4, `review` check (required).
+- **What happened:**
+
+  ```
+  Error: claude native binary not installed.
+
+  Either postinstall did not run (--ignore-scripts, some pnpm configs)
+  or the platform-native optional dependency was not downloaded
+  (--omit=optional).
+
+  Run the postinstall manually (adjust path for local vs global install):
+    node node_modules/@anthropic-ai/claude-code/install.cjs
+
+  .github/scripts/review.sh: line 374: printf: write error: Broken pipe
+  ----- review agent output -----
+
+  -------------------------------
+  review: engine 'claude' exited non-zero (1) — failing closed
+  ```
+
+- **Expected:** `AGENTS.md` lists **review** as one of the four required gates,
+  "an independent read-only LLM reviewing the diff against this file, both
+  design documents, the plan, and the mechanical facts CI computed". The
+  workflow installs the engine itself, so a fresh scaffold is expected to be
+  able to run it.
+- **What the template got right:** it **failed closed** — `review: engine
+  'claude' exited non-zero (1) — failing closed`. A gate that cannot form a
+  judgment blocks rather than waving the change through, which is the documented
+  policy and the correct direction. The defect is the install, not the fallback.
+- **Severity: blocker.** Second required check that cannot go green, and equally
+  unfixable from inside the pipeline (`.github/` is off-limits).
+
+**Combined effect:** two required checks are red for reasons no diff in project
+space can address, so round 2.2 cannot merge anything either. Unlike F8 this is
+**not** rig or billing — both are template defects in v0.4.35. The driver is
+expected to reach its three-strike stop and land its evidence, exactly as it did
+in round 2.1; letting it get there is a better artifact than a kill, so it is
+not being interrupted.
