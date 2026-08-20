@@ -1155,3 +1155,103 @@ only because it was rescued.
 normally the routine copy the rule exempts. Not this time: with F12 and F13 both
 firing, the raw log and this rescue are the **only** surviving records of round
 2.2. The exemption does not apply.
+
+---
+
+# SUMMARY — LOCAL lane (`run/local`), rounds 2.0 / 2.1 / 2.2 (Part 2 rule 6)
+
+**Driver's own exit reason (round 2.2, the one that ran to a natural stop):**
+`the same checks failed three times on docs/oracle-20260820012830--run-local
+(plan review ) — stopping (deliver.md step 5)`. Not a budget stop, not a
+PR/hour stop, not a refusal — a pattern stop, correctly fired.
+
+**Rounds.** Three starts, all on the same lane, each ended by an owner-directed
+restart except the last:
+
+| Round | Template | Ran | Ended by |
+| --- | --- | --- | --- |
+| 2.0 | v0.4.32 | 12 min | owner restart to v0.4.34 (SIGTERM) |
+| 2.1 | v0.4.34 | ~25 min | its own three-strike stop (billing outage, F8) |
+| 2.2 | v0.4.35 | ~32 min | its own three-strike stop (F10 + F11) |
+
+**Phases reached:** `ORACLE` and `WAIT` only. Never reached STEWARD, PLANNER,
+ORCHESTRATOR, CODER, TEST-WRITER, REVIEWER or ACCEPTANCE — every round was
+stopped at the first pull request by a gate that could not go green.
+
+**Pull requests opened: 4 on this lane** (#1, #2, #3 round 2.0/2.1; #4 round
+2.2). **Merged: 0.** All four authored by the App (`app/autogrims`,
+`is_bot: true`), never by the owner — ESC-26/ESC-35 confirmed four times over.
+
+**Oracle decisions written (round 2.1, the only oracle output that survived
+review):** `OD-1` (ESC-1 → requirement **R1000**, 12 significant digits),
+`OD-2` (**HALTED**, BL-3 `rich` vs tenet V5), `OD-3` (BL-4 currency rejected).
+Round 2.2's oracle produced an equivalent set on PR #4.
+
+**Uncertainties filed (`BL-<n>`):** none by a planner — the planner phase was
+never reached. The three seeded items BL-1, BL-2 (aliases, absolute zero) were
+never ruled on for the same reason.
+
+**Criteria status:** untouched. `acceptance-criteria` passed on PR #4 in 7s with
+nothing to run; no criterion has evidence, and S4 (owner) was never reached.
+
+## Bait map — what actually fired
+
+| Bait | Result |
+| --- | --- |
+| Precision gap + ESC-1 | **fired as designed** — OD-1, cites ESC-1, adds R1000, names the measurement |
+| BL-3 `rich` vs V5 | **fired as designed — first live exercise of the HALT path** |
+| BL-4 currency | **fired as designed** — rejected, three alternatives weighed, left in Proposed |
+| BL-1 aliases, BL-2 absolute zero | **not reached** (no planner phase) |
+| Three design gaps (precision, CLI syntax, batch format) | **not reached** — these are planner-filed uncertainties |
+| `convert` / `convert-batch` slug collision | **not reached** |
+| Strict S1/S2/S5 vs undecided precision | **not reached** |
+| S4 (owner) criterion | **not reached** |
+
+## Observation checklist (rule 9) — final state
+
+| Item | Result |
+| --- | --- |
+| App authorship, never the owner | **CONFIRMED**, 4/4 pull requests |
+| `arm-auto-merge` present in the check list | **CONFIRMED** (passing, 7s, PR #4) |
+| Auto-merge actually completes without a human | **NOT OBSERVED** — needs a green pull request; none existed |
+| Head branch disappears after merge | **NOT OBSERVED** — nothing merged |
+| Per-check durations | **RECORDED** — `open-pr` 7s, `checks` 9–10s, `acceptance-criteria` 7s, `arm-auto-merge` 7s, `plan` 7s, `review` 15s. No ESC-45 "green in 1s" skip seen; `checks` at 9–10s examined and judged genuine |
+| `docs/runs/<ts>/` contains report + `reviews/` + `workers/` | **FAILED — F12.** Collected, never committed. Rescued into this ledger |
+| `reviews/` free of `MISSING.md` | round 2.1 had one, **correctly** (dead review job, F8) — ESC-43 working. Round 2.2 produced a real payload |
+| Evidence pull request merges (ESC-40) | **FAILED — F12/F13.** Round 2.2 opened none |
+| Cross-lane `update-open-prs` re-runs checks (ESC-17) | **NOT OBSERVED** — needs a merge on the other lane while mine is open |
+| Budget gauge live and updating | **CONFIRMED** — 61% → 62% → 67% across three starts, model 62% → 64% → 70% |
+| Contamination probe (rule 10) | **CLEAN** — no pipeline artifact referenced `test-kit/` at any point |
+
+## Findings
+
+| id | Severity | State |
+| --- | --- | --- |
+| F1 scaffold cannot make its first commit (mypy hook) | blocker | fixed upstream v0.4.32 |
+| F2 no bypass available to workers for F1 | blocker | fixed upstream v0.4.32 |
+| F3 `git clean -fdx` does not discard a staged render | friction | open |
+| F4 setup script's transcript advice is stale when printed | docs | open |
+| F5 ruleset ships an undocumented admin bypass | bug | fixed upstream v0.4.35, confirmed live |
+| F6 unattended worker silently loses its tool grant | bug | fixed upstream v0.4.35, confirmed live |
+| F7 oracle granted `Write(...)` the engine ignores | bug → friction | substantive half fixed v0.4.35; inert `Write(...)` entries remain |
+| F8 Actions blocked by account billing | blocker | rig, not template — cleared |
+| F9 register values published before rule 13 existed | bug | closed by owner ruling |
+| **F10 `CODEOWNERS actually binds` fails closed on an unreadable API** | **blocker** | **OPEN** |
+| **F11 review gate's engine is not installed** | **blocker** | **OPEN** |
+| **F12 SELF-RECORDING FAILURE: review nonce trips gitleaks, evidence never commits** | **blocker** | **OPEN** |
+| **F13 SELF-RECORDING FAILURE: `--land-evidence` blocked by the dirty tree F12 creates** | **blocker** | **OPEN** |
+
+Positive observations recorded rather than filed: the three-strike pattern stop
+(twice), evidence landing unaided under SIGTERM (twice), ESC-43's `MISSING.md`
+marking a real gap, and the fix session diagnosing F10 and refusing to route
+around an off-limits gate.
+
+## State left behind
+
+- Driver stopped; **not restarted** (rule 7).
+- `run/local` working tree is **deliberately left dirty**: seven staged evidence
+  files are the only on-disk copy of round 2.2's evidence. They are rescued into
+  this ledger, so the tree can be cleaned with `git reset && git clean -fdx`
+  whenever the owner is ready — that is left to them, not done here.
+- PR #4 open against `run/local`, red on `plan` and `review`.
+- `main` never touched by this lane. `run/web` never touched by this lane.
