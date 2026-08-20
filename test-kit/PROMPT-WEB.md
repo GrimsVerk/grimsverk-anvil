@@ -38,6 +38,14 @@ PR'd, so it needs none of this.) If `gh` itself has no working credential,
 record the exact error (and quote `/tmp/anvil-env-setup.log` if it exists)
 as a blocker finding, push the ledger, and stop the lane.
 
+Two branches are yours: `run/web` (your lane) and `chore/test-report-web`
+(your ledger). Every other branch you push must be one the template's own
+scripts created and named. **Never invent a branch** — no archive, no
+backup, no copy, no parking spot. Anything worth keeping goes on your
+ledger branch under `test-kit/reports/`; if something cannot be kept that
+way, that is a finding, not a new branch (Part 2, rule 14). Clean up your
+own lane's spent branches at the end of every round, and only your own.
+
 Do this, in order:
 
 1. State your lane out loud. Read `test-kit/TESTPLAN.md` in full. Part 1 is

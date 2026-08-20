@@ -447,6 +447,28 @@ is disposable; your findings are the deliverable. These rules bind both lanes.
     committing. A register value found in anything pushed is itself a
     finding.
 
+14. **Two branches are yours. Every other branch is the pipeline's, and you
+    never invent one.** You push to exactly two branches of your own: your
+    lane base (`run/<lane>`) and your ledger (`chore/test-report-<lane>`).
+    Everything else you push must be a branch the template's own scripts
+    created and named — `docs/run-<timestamp>--<lane>`, `docs/oracle-*`,
+    `docs/plan-*`, `feat/*`, `template/<version>--<lane>`. Those are created
+    by the pipeline, merged by the pipeline, and deleted when they merge.
+
+    **Never invent a branch of your own.** No archive branch, no backup
+    branch, no copy, no parking spot, whatever the prefix. Anything worth
+    keeping goes on your ledger branch, under `test-kit/reports/`. If
+    something cannot be preserved that way, that is a finding — write it
+    down; do not solve it with a new branch. (This happened: a lane pushed
+    `evidence/run-<timestamp>--<lane>` holding a byte-identical copy of what
+    it had already committed to its own ledger.)
+
+    **Clean up your own lane at the end of every round**, as part of rule 6:
+    delete every branch of your lane that has merged or whose pull request
+    you closed, leaving your lane and your ledger standing. Read the wiping
+    drill in Part 0 first — the order matters. Never delete, merge, or push
+    to the other lane's branches, and never to `main`.
+
 ## Part 3 — What the owner compares afterwards
 
 ### The bait map — what each planted input should have produced
