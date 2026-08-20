@@ -1895,3 +1895,79 @@ once before, is at present a start-time check rather than a running limit.
 Driver still ALIVE at 09:03:46Z, iteration 9, awaiting the owner's decision.
 Raw log to this point preserved as
 `test-kit/reports/local-driver-round3.2-partial.log`.
+
+---
+
+## Round 3.2 final: four merges, and ESC-40 answered — the evidence pull request does NOT merge
+
+Before the stop, the loop broke out on its own and the lane merged **four**
+pull requests, all by `app/autogrims`:
+
+| PR | Head |
+| --- | --- |
+| #12 | `docs/oracle-20260820080937--run-local` |
+| #15 | `docs/oracle-plan-od-1--run-local` |
+| #19 | `docs/oracle-20260820090807--run-local` |
+| #21 | `docs/oracle-plan-od-1--run-local` |
+
+On `SIGTERM` the evidence landed cleanly and richly — **8 worker logs, 5 review
+payloads** — and evidence pull request **#22** opened. No failsafe needed.
+
+### F17 — BLOCKER: the run-evidence pull request cannot merge; it strands `BEHIND` with nothing left that would ever update it
+
+This is the first live reading of **ESC-40**, and it is negative.
+
+- **All eleven required checks pass**, including `review` at 1m42s of real
+  judgment and `arm-auto-merge` at 5s.
+- **Auto-merge is armed, by the App**:
+
+  ```
+  "autoMerge": {"enabledAt":"2026-08-20T09:24:31Z",
+                "enabledBy":{"is_bot":true,"login":"app/autogrims"},
+                "mergeMethod":"MERGE"}
+  ```
+
+- **And it will not merge**, because:
+
+  ```
+  $ gh pr view 22 --json mergeStateStatus
+  gate=BEHIND
+  $ gh api repos/…/rulesets/21061515 --jq '.rules[]|select(.type=="required_status_checks")|.parameters'
+  {"strict_required_status_checks_policy": true}
+  $ git rev-list --count origin/docs/run-20260820T080932Z--run-local..origin/run/local
+  2
+  ```
+
+  The ruleset `setup-github.sh` builds requires branches to be **up to date**
+  before merging. The evidence branch is cut at the stop, from a commit two
+  merges old, so it is born `BEHIND`.
+
+- **Nothing will ever fix it.** The job that updates stale branches,
+  `update-open-prs`, fires only on a **merge** event. The evidence pull request
+  is by construction the *last* pull request of a run — there are no further
+  merges on this base, so the updater never runs again, and auto-merge waits
+  forever on a condition that cannot change.
+
+- **Expected:** `AGENTS.md` treats the run report and review payloads as the
+  durable evidence an unattended run leaves behind, "committed at every stop",
+  and ESC-40 asks specifically whether the evidence pull request merges. It
+  does not. The evidence is *pushed* and *reviewable*, so it is not lost — but
+  it never reaches the base branch on its own, and every future run's evidence
+  will strand the same way.
+
+- **One escape route exists, and it is accidental:** because `update-open-prs`
+  is **not base-scoped** (F15), a merge on the **other lane** would call
+  `gh pr update-branch` on this stranded pull request and unblock it. So the
+  bug F15 files as needless cross-lane churn is also the only thing that could
+  rescue F17. Recorded because it is the sort of coupling that makes a fix to
+  one break the other.
+
+- **Severity: blocker** for ESC-40 specifically. Everything upstream of it
+  worked: the stop, the collection, the commit, the push, the pull request, the
+  arming, the checks.
+
+**Round 3.2 close-out.** Phases reached: **ORACLE, WAIT, STEWARD, fix** — the
+deepest any round has gone. 4 merges. Findings added: F15 (friction), F16
+(blocker, fixed upstream in v0.4.39), F17 (blocker, new). Confirmed live this
+round: ESC-36 both halves, ESC-21 with its path named, ESC-59, and the budget
+probe's live rollover. Raw log: `test-kit/reports/local-driver-round3.2.log`.
