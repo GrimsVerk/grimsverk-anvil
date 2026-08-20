@@ -1,0 +1,20 @@
+Preparing worktree (new branch 'worker/oracle-20260820132118')
+HEAD is now at 1065d9a Merge pull request #44 from GrimsVerk/docs/oracle-plan-od-1--run-local
+=== spawn-worker[oracle-20260820132118] engine=claude branch=worker/oracle-20260820132118 base=run/local (1065d9a2d2830b39b5a3966d979cc0829a3db104) bypass=0 ===
+=== 2026-08-20T13:21:18Z ===
+Done. The pre-commit hooks ran at commit time and passed (the code checks skipped, correctly, on a docs-only diff); the full CI gate runs when the driver opens the PR — I could not execute the suite in this sandbox and am not claiming otherwise.
+
+**Decisions written**, both resolving BL-5, the only evidence in scope:
+
+- **OD-4** — R1000 is carried by the `convert` milestone plan (`covers: [R1, R2, R4, R5, R1000, R1001]`); no steward plan is cut for OD-1. This takes BL-5's proposed default: a standalone plan would deliver a formatting rule with nothing printing, which fails the vertical-slice rule. Vision field uses the no-vision class — the vision decides what the tool is, not which document plans it — with the weighing carried in Alternatives as the schema demands.
+- **OD-5** — adds **R1001**: one-shot invocation is `anvil <value> <from-unit> <to-unit>`, three positionals, converted value alone on stdout formatted per R1000, diagnostics on stderr, exit 0 on success. Relied on V3 (simplicity), weighed V2 as the nearest statement against. I deviated from the default's second half here deliberately: rather than having the planner re-file the syntax as a fresh uncertainty, I ruled it now — BL-5 had already classified it HIGH, put it before the oracle with a concrete proposal, and a deferral would have spent a planning round deciding nothing. Batch invocation and line format remain explicitly open per `docs/DESIGN.md` §11.
+
+**Contradictions found and not decided:** none beyond scope — BL-1/BL-2 sit in Proposed with nothing logged against a landed requirement, BL-3 is already halted (OD-3), BL-4 already declined (OD-2).
+
+**Handoff:** `docs/oracle/handoff-2026-08-20-2.md` — one plan to cut (`convert`), what it must carry (`acceptance/S1.sh` with the ESC-1 reproducer row, `acceptance/S3.sh`, the formatting and stream-separation tests), and the do-not-act list.
+
+**Vision gap worth the owner's attention:** the truer ground for OD-5's value-alone-on-stdout ruling is scriptability — output built for pipes first — and no vision statement says that, so I leaned on V3. A citable sentence about scriptability would make future interface decisions steerable by the actual reason. (Run 1's note stands too: the purpose sentence "answers instantly and offline" carries no V-id.)
+
+Both files are committed on a `docs/` branch; not pushed, per the contract.
+
+WORK_ON_BRANCH docs/oracle-20260820132118--run-local

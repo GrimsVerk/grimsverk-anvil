@@ -1,0 +1,22 @@
+Preparing worktree (new branch 'worker/oracle-20260820130342')
+HEAD is now at c60df9e Record the setup-github transcript
+=== spawn-worker[oracle-20260820130342] engine=claude branch=worker/oracle-20260820130342 base=run/local (c60df9e9062cb2820322baa60745fa0b9fd4559d) bypass=0 ===
+=== 2026-08-20T13:03:43Z ===
+Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.
+Run complete. All three pieces of commissioned evidence are resolved, committed as `dc0a228` on the worker branch. Not pushed, per the contract.
+
+**Decisions written** (`docs/DESIGN.oracle.md`, appended):
+
+- **OD-1** resolves **ESC-1**: printed results carry at most 12 significant digits (`format(value, '.12g')` semantics), applied identically in one-shot and batch mode. Adds **R1000**, relying on V1 (a wrong number presented confidently is the worst output). The measurement is part of the decision: the plan implementing R1000 must put the ESC-1 reproducer (0.1 km → m prints exactly `100`) into `acceptance/S1.sh`'s fixed table plus unit tests, after which ESC-1's completing correction row closes its pending check column — exactly what that column asked for, using an existing mechanism rather than a new one.
+- **OD-2** resolves **BL-4**: currency conversion stays out. It contradicts R8 (offline, deterministic) and §3's explicit non-goal, and every vision priority trades breadth away; a live or hardcoded rate is a confidently wrong number waiting to happen. No requirements added — the item is resolved by decision, not work. If the owner wants currency, the move is editing `docs/DESIGN.md`, which stays theirs.
+- **OD-3** is a **HALT** on **BL-3**: the ask names `rich` specifically and rules out hand-rolled ANSI, so the only ruling that grants it adds a runtime dependency, which core tenet V5 forbids in those words. This is an owner-vs-owner conflict (the owner filed BL-3 and wrote V5), so no agent picks the winner. The halt records the available stdlib compromise, why it wasn't taken, and the smallest owner action that unblocks it.
+
+**Not decided, and why:** BL-1 (aliases) and BL-2 (below absolute zero) — outside this run's commissioned scope, sitting in Proposed with no contradiction logged against landed work.
+
+**Handoff:** `docs/oracle/handoff-2026-08-20-1.md` — routes OD-1 to planning (recommended: fold R1000 into the `convert` milestone plan rather than a standalone steward plan, since formatting has no surface until the CLI prints), and marks BL-3 and BL-4 as not-to-act-on, including "do not build a stdlib substitute for BL-3".
+
+**Vision feedback, the useful part:** the purpose sentence — "answers instantly and offline" — carries no V-id, so it cannot be cited as the statement relied on; OD-2 leaned on V3 where that sentence was the truer ground. Giving it an id would let decisions cite the actual reason. Also, V5 may want an explicit exception mechanism (or an explicit "no exceptions ever"), since BL-3 shows the owner's asks and the tenet can collide.
+
+**Verification honesty:** my tool grant blocked running `oracle-decisions.sh` and `pytest` locally; I hand-verified the three entries against the check script's exact extraction and quote-matching logic (line-anchored fields, normalized verbatim vision quotes, five-field halt shape, evidence resolving at base `c60df9e`), and the pre-commit hooks passed. CI is the authoritative verification and has not run.
+
+WORK_ON_BRANCH worker/oracle-20260820130342

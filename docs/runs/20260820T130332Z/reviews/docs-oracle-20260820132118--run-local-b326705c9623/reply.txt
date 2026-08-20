@@ -1,0 +1,17 @@
+Reviewing this PR: it's an oracle ruling + handoff on a `docs/` branch, opened by the bot as expected for unattended oracle runs.
+
+**Scope check.** The entire diff sits inside `docs/DESIGN.oracle.md` (append-only ledger) and a new file under `docs/oracle/` — both on AGENTS.md's cap-exemption list, so the 81-line total and the `docs/` branch prefix are fine regardless of the normal ~50-line ceiling. No `docs/DESIGN.md`, `docs/VISION.md`, or `docs/plans/` file is touched, so criterion 5's owner-authorship gate doesn't apply here (correctly — this diff never goes near the two owner-only documents).
+
+**Append-only integrity.** The diff only adds content after the existing OD-3 entry; nothing already landed in `docs/DESIGN.oracle.md` is modified, consistent with the ledger's append-only rule. The new handoff file is newly created, not an edit to a prior handoff.
+
+**Schema conformance.** Both OD-4 and OD-5 carry all required fields. OD-5's "Vision statement relied on" (V3) and "Vision statements against" (V2) quotes match `docs/VISION.md` verbatim, and the against-field does real weighing rather than just searching ("V2 governs how errors behave, not how arguments are spelled..."). OD-4 correctly uses the "(no vision statement decided this)" opt-out class (a plan-assignment question genuinely isn't a vision tradeoff) and backs it with substantive alternatives, as the schema requires when that opt-out is used. Requirement ids are increasing (R1000 existing, R1001 new), and citations (BL-5) resolve to backlog evidence that landed at the base commit per the visible git history (`3fea486` merged via PR #44 before this PR's base).
+
+**Authority check.** Both decisions resolve BL-5, a logged backlog item — within the oracle's "only what the evidence already logged" mandate. OD-5 rules on the CLI syntax `docs/DESIGN.md` §11 deliberately left open, which is exactly the kind of design gap the oracle process exists to close via cited evidence.
+
+**Transparency.** The handoff's "For the owner" section candidly flags that OD-5's V3 citation is a proxy for a scriptability principle the vision doesn't yet state — that's the right way to surface a weak tiebreaker rather than hiding it.
+
+No gate-path, dependency, blind-test, or design/vision-document issues found.
+
+No blocking findings.
+
+REVIEW_VERDICT: PASS
