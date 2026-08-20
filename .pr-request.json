@@ -1,1 +1,1 @@
-{"base": "run/web", "title": "File BL-10: the batch request line format", "body": "The convert-batch milestone plan cannot be written until the batch request line format is fixed, so this files BL-10 instead. docs/DESIGN.md section 11 leaves it deliberately undecided.\n\nOpened by the delivery driver on base run/web."}
+{"base": "run/web", "title": "Oracle: rulings and handoff", "body": "Rules on BL-10 and BL-11, the batch request and error line formats.\n\nOpened by the delivery driver on base run/web."}

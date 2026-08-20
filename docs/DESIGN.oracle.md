@@ -679,3 +679,168 @@ of the smallest kind: the two S3 rows above, buildable only once the
 `convert` milestone has produced `acceptance/S3.sh`, in the same after-the-MVP
 position `od1-output-precision` occupies. BL-9 leaves the uncertainty queue by
 this citation.
+
+## OD-9 — Batch request line: three whitespace-separated tokens in R1001's order; blank lines are skipped
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-10
+- **Requirements added:** R1004
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V3 — "Simplicity comes before completeness: a small tool that is obviously right beats a large one that must be trusted."
+- **Vision statements against:** V2 — "Clear, honest errors come before
+  feature breadth: refusing loudly beats guessing silently." It is the
+  nearest, because skipping an empty line silently can be read as the silence
+  V2 forbids. It does not forbid it: a skip produces no answer and fabricates
+  nothing, so nothing is guessed — V2's target is a wrong or missing refusal,
+  and a blank line makes no request to refuse. Treating blank lines as
+  failures would turn the grouping whitespace and trailing blank lines
+  ordinary human-edited files carry into refusals about nothing, and error
+  noise a consumer learns to ignore is the opposite of the loud refusal V2
+  wants. Every line that carries any token and is not a well-formed request
+  is refused loudly, per R6.
+- **Alternatives considered:** (a) comma-separated fields, `5,km,mi` —
+  rejected: a second grammar (quoting, embedded separators) for fields that
+  can never contain the separator, and the batch line stops matching the
+  command line for no gain; machinery against V3. (b) full command lines per
+  row, with flag parsing — rejected: a request line is data, not a program
+  invocation; importing the R5/R1001 flag grammar into a data format adds
+  parse states nobody asked for. (c) a comment syntax and/or a header row —
+  rejected: no logged evidence asks for either, a generated thousand-row file
+  needs neither, and V4 calls that breadth expendable. (d) a blank line as a
+  failed line — rejected for the reason weighed in the field above: it
+  refuses loudly about nothing. (e) the filed default — three
+  whitespace-separated tokens in R1001's positional order, surrounding
+  whitespace ignored, blank or whitespace-only lines skipped, any other token
+  count a failed line — accepted.
+- **Rationale:** BL-10 is the first half of the format `docs/DESIGN.md` §11
+  deliberately left open, and every candidate is buildable, so the tiebreaker
+  chooses the grammar that is already fixed elsewhere: R1001 (OD-5) fixed the
+  order value, from-unit, to-unit for the command line, and a request line
+  that is exactly those three tokens makes the whole format one sentence and
+  the reader a whitespace split. A user who knows the tool already knows the
+  file format. Unit symbols match exactly as R1001 requires, and its BL-1
+  caveat carries over unchanged. No flag parsing applies inside a line —
+  tokens are data, so `-5 km mi` is a request, not an option. Confidence is
+  high on the token form and the failed-line rule, moderate on skipping blank
+  lines silently; if the owner would rather see blank lines refused, a
+  superseding decision costs one entry.
+
+**R1004 — Batch request line format.** In batch mode (R6), each line of
+standard input is a conversion request: exactly three whitespace-separated
+tokens, in R1001's positional order — value, from-unit, to-unit — so
+`5 km mi`, with leading and trailing whitespace ignored. Unit symbols are
+matched exactly as R1001 fixes them, case-sensitively; a BL-1 ruling that
+supersedes R1001's matching sentence supersedes this one identically. There
+is no comment syntax, no header row, and no separator other than whitespace,
+and no flag parsing applies inside a request line. An empty or
+whitespace-only line is skipped: it produces no output line and does not
+affect the exit code. Any other line that does not split into exactly three
+tokens is a failed line under R6. *Evidenced by:* S5, whose fixture is
+written in this format, and which also asserts the blank-line skip (see
+Measurement).
+
+**Measurement.** This decision fixes an external input format, and the
+existing mechanism that observes external formats is the §13 acceptance
+scripts, run on every pull request. `acceptance/S5.sh` does not exist yet —
+BL-10 was filed precisely because it could not be written — so the
+`convert-batch` plan that implements R1004 writes it, with the five-line
+fixture in this format. One behaviour here sits outside S5's five-line
+criterion: the blank-line skip. The same script therefore also runs a second
+standard-input document — two valid requests separated by a blank line —
+asserting exactly two output lines and exit code 0. Existing machinery
+pointed at a new case, per the vision's durable-evidence section; nothing new
+is invented.
+
+Downstream: R1004 belongs to the `convert-batch` milestone (R6). No plan for
+it exists yet — this ruling and OD-10 are what unblock the planner — so this
+is new-plan work, not a change to a landed plan. BL-10 leaves the uncertainty
+queue by this citation.
+
+## OD-10 — Batch output: one stdout line per request, in input order; a failed line prints `error: <message>` in place; stderr stays empty
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-11
+- **Requirements added:** R1005
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V2 — "Clear, honest errors come before feature breadth: refusing loudly beats guessing silently." Also V1 — "Correct conversions come before everything else: a wrong number presented confidently is the worst output this tool can produce."
+- **Vision statements against:** V1 — "Correct conversions come before
+  everything else: a wrong number presented confidently is the worst output
+  this tool can produce." It is the nearest, because OD-6 rejected
+  errors-on-stdout for single-shot exactly on this ground: a pipe ingests
+  error prose as data. It does not forbid this: an `error:` line is not
+  number-shaped — an R1000 result is `%g` output, digits, sign, point,
+  exponent, never the string `error:` — so a consumer that parses it as a
+  number fails loudly at parse time, and one that checks the prefix gets the
+  exact failing row. The stderr alternative is the one that produces V1's
+  failure here: with fewer stdout lines than input lines, every row after the
+  first failure is a right-looking number silently attached to the wrong
+  question — wrong numbers presented confidently, at scale, with no in-band
+  marker to catch them. In batch, in-band errors are the loud option.
+- **Alternatives considered:** (a) errors on standard error, results only on
+  standard output — the property OD-6 chose for single-shot — rejected:
+  single-shot has one request per exit code, so the caller always knows what
+  failed; a batch run has one exit code for a thousand rows, and losing the
+  row-to-row correspondence turns a partial failure into silent misalignment,
+  the V1 worst case weighed above. Recovering correspondence by numbering
+  stderr lines is new machinery against V3. (b) result lines that echo the
+  request — rejected: OD-6 already rejected the echo for single-shot, OD-4
+  obliges batch results through `format_result` identical to the single-shot
+  line, and the parsing tax lands on §4's script author, the format's primary
+  consumer. (c) a sentinel on the failed row — an empty line, `-`, or `NaN` —
+  with details on standard error — rejected: it keeps alignment but the
+  sentinel is either number-shaped (`NaN`, exactly the meaningless
+  number-shaped answer R1003 just banned) or invisible, and it splits one
+  failure across two streams; the error text belongs where the row is.
+  (d) exit code alone, no per-row marker — rejected: R6 already requires an
+  error line, and discarding which row failed makes a thousand-row failure a
+  needle hunt, against V2. (e) the filed default — one stdout line per
+  non-skipped request in input order, success identical to the single-shot
+  line, failure as `error: <message>` in place, stderr empty, exit non-zero
+  if any line failed — accepted.
+- **Rationale:** BL-11 is the second half of the §11 gap, and the planner was
+  right that the two candidates genuinely pull against each other; the vision
+  decides it through what each does to the consumer. The chosen contract
+  keeps line N of the output answering line N of the input, which is the
+  property that makes batch worth using from a script, and it makes every
+  failure loud in the one place the consumer is already looking — the row —
+  prefixed with a marker no result can ever be and carrying the same
+  offending-input message (R4, R1003) single-shot prints. R1002 is untouched:
+  it governs single-shot only, by its own text, and OD-6's reasoning is
+  re-weighed here rather than overruled — the stream split that protects a
+  single-shot pipe is the thing that corrupts a batch one. Confidence is high
+  on the shape (in-band, in-order, one line per request); the exact prefix
+  spelling is cosmetic and a superseding decision costs one entry.
+
+**R1005 — Batch output contract.** In batch mode (R6), standard output
+carries exactly one line per non-skipped request line (R1004), in input
+order. For a successful request the line is the result value formatted per
+R1000, identical to the single-shot line R1002 fixes: no unit suffix, no echo
+of the request, nothing else. For a failed line it is `error: ` — lowercase,
+colon, one space — followed by the same message single-shot writes to
+standard error for that failure, which names the offending input (R4, R1003);
+a line with the wrong token count (R1004) is a failed line with a message
+naming that line's defect. Nothing else is ever written to standard output,
+and standard error stays empty for the whole batch run. The exit code is
+non-zero if any line failed and 0 otherwise, including an input with no
+requests. A defective invocation itself — `--batch` with positionals, an
+unknown flag — is not batch output; it is a usage error under R5 and R1001
+and follows R1002's streams. *Evidenced by:* S5, whose expected output is
+compared whole-line against this contract.
+
+**Measurement.** This decision fixes an external output format, and the
+existing mechanism that observes printed output is the §13 acceptance scripts
+on every pull request. `acceptance/S5.sh` — written by the `convert-batch`
+plan, which until this decision could not write it — asserts the exact
+expected standard-output lines, whole-line as OD-6 obliged for S1, including
+the `error:` line at its fixture position; asserts standard error is empty;
+and asserts the non-zero exit. Its fixture carries OD-4's obligation: the
+ESC-1 precision row, `0.1 km m`, whose output line is exactly `100`. Existing
+machinery pointed at the new contract, per the vision's durable-evidence
+section; nothing new is invented.
+
+Downstream: R1005 belongs to the `convert-batch` milestone (R6), alongside
+R1004; the same new plan claims both. With OD-9 that milestone's three
+inherited obligations from OD-4 and OD-5 now have their missing halves, and
+planning is unblocked. `docs/plans/oracle/od5-convert-cli.md` is untouched —
+R1001's "`--batch` is reserved" sentence already anticipates R6 being built
+later. BL-11 leaves the uncertainty queue by this citation.
