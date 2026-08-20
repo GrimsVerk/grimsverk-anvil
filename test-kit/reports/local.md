@@ -2379,3 +2379,133 @@ the run, per step 5(a).
 | Time (UTC) | PHASE | Key fields |
 | --- | --- | --- |
 | 11:10:19Z | ORACLE | iteration 1. Worker `oracle-20260820111019`, base `run/local`, template v0.4.42. |
+
+---
+
+## Round 3.4 died hard at ~11:11Z — and the wreckage tested three fixes at once
+
+The driver vanished roughly **one minute** after start, between 11:10:19Z and
+11:11:38Z. The entire run:
+
+```
+deliver-loop: budget: weekly at 10% (model 9%), allowance 20 points, window resets Aug 27, 11am (Europe/Amsterdam)
+deliver-loop: budget: weekly at 10% (model 9%), spent 0 of 20 points on the per-model weekly limit
+deliver-loop: iteration 1: phase ORACLE
+deliver-loop: dispatch oracle worker (oracle-20260820111019)
+```
+
+Nothing after. **No stop line, no trap, no evidence landed** — the buffer was
+left with 425 bytes of content, `worker-oracle-20260820111019.out` was 0 bytes,
+the worker log ended at its own header with no engine output, and a worktree was
+left behind. This is a harder death than round 3.3's.
+
+### Cause: UNDETERMINED, and I am not attributing it to the template
+
+Stated plainly because the distinction matters for the upstream report:
+
+- **No trap fired.** ESC-75 promises TERM/INT/HUP are trapped and named; nothing
+  was named. That is consistent with `SIGKILL`, which cannot be trapped, and
+  inconsistent with the driver deciding anything.
+- **No OOM.** `journalctl -k` shows no `oom-kill`/`killed process` entries, and
+  the machine has 21 GiB available of 31 GiB.
+- **The worker produced no engine output at all** — its `.out` file is zero
+  bytes — so the whole process group appears to have gone at once.
+- **I cannot rule out my own launch method.** The driver is started with
+  `nohup … &` from inside a tool call; earlier rounds launched identically ran
+  for ~1 hour (3.2), 5 minutes (3.3) and 1 minute (3.4). That inconsistency
+  argues against a deterministic harness kill, but it does not clear it, and I
+  have no way to observe a `SIGKILL`'s sender from inside.
+
+**So this is logged as an environment/operator-side event of unknown origin, not
+a template finding.** What follows is what the template did *about* it, which is
+the part worth reporting.
+
+### ESC-76 — CONFIRMED live, against a real dead run, and its advice was correct
+
+Readiness refused, named the debris, and told me what to do with it before
+deleting it:
+
+```
+MISSING  leftover worktrees under .worktrees/ (oracle-20260820111019) — a previous run
+         died mid-dispatch and the driver refuses to start on them. READ THEM FIRST
+         (git -C .worktrees/<name> log --oneline; git -C .worktrees/<name> status): one
+         can hold a worker's finished but unpushed work. Then 'git worktree remove' each,
+         or 'git worktree prune' if the directories are already gone
+unattended-ready: REFUSED — 1 missing item(s) above.
+```
+
+I followed its instruction rather than assuming. The worktree held nothing —
+`git log` showed only the base commit, `git status` was clean, `git diff
+run/local` was empty — so no work was lost. **The point stands regardless: the
+check refused before a new run could start on a dead one's debris, and it told
+the operator to look for salvageable work first rather than "clean up".** That
+is the check mobo's F24 asked for, working on its first live encounter.
+
+### F13 — FIXED in v0.4.41/42 (ESC-60), confirmed against exactly the scenario it was built for
+
+F13 was: `--land-evidence` refuses because the tree is dirty, and the failure it
+recovers from always leaves the tree dirty. Here:
+
+```
+$ .claude/scripts/deliver-loop.sh --base run/local --land-evidence
+deliver-loop: landing the leftover buffer of run 20260820T111014Z — dispatching nothing.
+deliver-loop: landing this run's evidence in docs/runs/20260820T111014Z ...
+deliver-loop: collect-evidence: 1 worker log(s) into docs/runs/20260820T111014Z/workers.
+deliver-loop: collect-evidence: 0 review(s) into docs/runs/20260820T111014Z/reviews (21 skipped).
+$ echo $?
+0
+```
+
+It landed the buffer **under the dead run's own id**, pushed
+`docs/run-20260820T111014Z--run-local`, and opened pull request **#33** as the
+App. **F13 closed.**
+
+### The landed post-mortem is honest — the ESC-75 contrast with F20
+
+The report it wrote:
+
+> Landed post-mortem 2026-08-20T11:13:28Z by `--land-evidence`:
+> the run stopped without its exit landing firing, so its stop and
+> its exit code were never recorded. The last lines above are the
+> closest thing to a cause of death this report can offer.
+
+No exit code 0. No claim of success. It states exactly what is unknown and why,
+and offers the last log lines as the best available cause of death. Set that
+beside F20's round-3.3 report — "Stopped … with exit code 0. … Every stop says
+why; none degrades silently" — on a run that had also died without reaching a
+documented stop. **Same failure shape, opposite honesty.** This is what ESC-75
+was for, and the post-mortem path honours it.
+
+### ESC-77 — CONFIRMED live in a worker log (step 5c)
+
+```
+$ grep -c "Write(docs/" .claude/orchestration-logs/oracle-20260820111019.log
+0
+```
+
+The two inert `Write()` rejection warnings that had opened every worker log
+since round 2.0 are gone. **F7 fully closed.**
+
+### ESC-74 and ESC-67 — readings for step 5(a)
+
+Both budget lines printed, and **no `weekly window reset mid-run`** appeared —
+on the same `11am (Europe/Amsterdam)` boundary that produced the spurious
+re-baseline in round 3.3. The run was too short to show per-iteration updating
+beyond iteration 1; `spent 0 of 20 points on the per-model weekly limit` is the
+new accounting line and it was correct at that moment.
+
+### TEMPLATE SELF-RECORDING FAILURE: the round-3.4 run report and worker log were preserved by `--land-evidence`, not by the driver's own exit landing
+
+Filed under Part 2 rule 11, which requires this be its own row whenever a
+failsafe rather than the template's machinery preserved evidence.
+
+**With one honest qualification:** the driver's exit landing did not fail on its
+own terms — it never ran, because the process appears to have been killed
+untrappably by something outside itself, cause undetermined (above). So this row
+records *that the failsafe was needed and worked*, not that the template's
+landing logic is broken. The distinction is exactly the kind rule 11 exists to
+keep visible, and flattening it either way would mislead the upstream reader.
+
+- **Preserved by the failsafe:** `docs/runs/20260820T111014Z/run.md` and
+  `workers/oracle-20260820111019.log`, on pull request #33.
+- **Severity: bug**, per rule 11's floor.
