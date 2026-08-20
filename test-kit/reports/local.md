@@ -3057,3 +3057,65 @@ readings in twelve minutes: `spent 0 → 0 → 3 → 3 of 20 points`, weekly
 model work (the oracle worker) and holds flat across the mechanical WAIT, which
 is exactly the accounting rule 8 asked for. No `weekly window reset mid-run`
 line — ESC-74 still holding on the same boundary.
+| 13:2xZ | WAIT/MERGE | **PR #44** (`docs/oracle-plan-od-1--run-local`) and **PR #45** (`docs/oracle-20260820132118--run-local`) both merged. Three merges this round. |
+| 13:28:22Z | STEWARD fail | `the steward worker (steward-od-1) failed with exit code 2 — its engine did not finish` |
+| 13:28:22Z | recovery | `that dispatch produced no pull request (1 in a row) — recording its scope as processed and re-detecting` |
+| 13:28:25Z | STEWARD | iteration 8, re-dispatched. Budget: weekly 19% (model 18%), spent 5 of 20. |
+
+### ESC-66 — CONFIRMED live. This is F16's loop, caught and counted.
+
+F16 was: a dispatch that yields no pull request, re-dispatched forever, with no
+stop rule that could see it — each iteration used a fresh branch name so the
+signature never repeated. The driver now says all three of the missing things in
+one line:
+
+```
+that dispatch produced no pull request (1 in a row) — recording its scope as processed and re-detecting
+```
+
+It **counts** consecutive no-pull-request dispatches, it **records the scope as
+processed** so the detector stops re-summoning the same work, and it says so out
+loud. Per the owner, two in a row stops the run. Watching for that.
+
+### ESC-75's dispatch-failure half — CONFIRMED live
+
+```
+the steward worker (steward-od-1) failed with exit code 2 — its engine did not finish
+  — see .claude/orchestration-logs/steward-od-1.log
+```
+
+It distinguishes *the engine died* from *the session timed out*, gives the exit
+code, and names the log to read. Round 3.3's equivalent event produced
+`Execution error` in a worker log and `exit code 0` in the report.
+
+### ESC-69 — observed in the worker's own output
+
+The steward's log ends with the contract's closing token:
+
+```
+WORK_ON_BRANCH docs/steward-od-1-uncertainty
+```
+
+So the written contract ("do not push, never address a human, finish with
+`WORK_ON_BRANCH`") is being honoured by the workers, and it is what lets ESC-68
+push the branch that actually carries the work.
+
+### Pattern worth flagging: three engine deaths, all while a second run shares the account
+
+Not a finding yet — an observation with a hypothesis attached. Engine-level
+failures have now happened three times in this test bed:
+
+| Round | Symptom |
+| --- | --- |
+| 3.3 | worker log ends `Execution error`; run stopped |
+| 3.4 | worker log ends at its header, zero engine output |
+| 3.6 | `failed with exit code 2 — its engine did not finish` |
+
+All three occurred while **`find_best_mobo`'s driver was running its own workers
+on the same subscription**, and the direct probes I ran between rounds (`claude
+-p`, including with the worker's exact `--model`/`--effort`) always succeeded
+when nothing else was competing. That is consistent with a concurrency or
+throughput limit on nested sessions rather than anything wrong with the template
+— but it is only consistent with it, not evidence for it, and I have not tried
+to reproduce it deliberately. Recorded so the owner can weigh it against what
+the other test bed saw at the same timestamps.
