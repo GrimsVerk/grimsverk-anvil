@@ -3140,3 +3140,16 @@ request merged with a check still running.**
 protected, so arming was legitimate. The refusal is the thing to watch for on a
 lane whose gates have gone missing; recording each time it does not fire is what
 makes it meaningful when it does.
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 2026-08-20T13:17:41Z | STEWARD dispatch | **Refused, exit 2, correctly:** `spawn-worker: branch 'worker/steward-od-1' already exists — pick a fresh --id or clean it up`, then `setup failed (exit 2) — cleaning up`. A stale local branch from round 3.2 was in the way. It refused loudly and cleaned up after itself rather than reusing or clobbering the branch. Retried after clearing ~15 stale local `worker/*` branches — debris this session accumulated because a hosted session cannot delete refs (F34), though these were local-only. |
+| 2026-08-20T13:27:33Z | STEWARD result | **F29 is FIXED.** The result line now reads `branch=docs/od1-output-precision` — the branch the worker actually ended on — where round 3.2's read `branch=worker/<id>` for a branch with no commits. A driver following the result line now finds the work. |
+| 2026-08-20T13:28:10Z | push + open | **PR #46** — plan `od1-output-precision`, `covers: [R1000]`, 166 lines, filing **BL-5**. Merge 2 at 13:30:34, `review` done 13:30:31 — **3 seconds after**. |
+| 2026-08-20T13:31:32Z | **ORACLE** | Iteration 3, `UNCITED=BL-5`. **OD-4** grants BL-5. **PR #48**, merge 3 at 13:38:48, `review` done 13:38:46 — **2 seconds after**. |
+| 2026-08-20T13:40:09Z | **PLAN** | Iteration 4, `REQS=R1 R2 R3 R4 R5 R6 R7 R8`. The planner filed 40 lines of uncertainties rather than writing a plan. **PR #49**, merge 4 at 13:47:00, `review` done 13:46:57 — **3 seconds after**. |
+
+**F33 watch, four merges in:** every one waited for `review` and followed it by
+2–3 seconds. `arm-auto-merge` armed each time and never refused, which is
+correct — the base has been gated throughout. No pull request has merged with a
+check still running.
