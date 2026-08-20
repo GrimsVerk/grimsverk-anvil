@@ -138,3 +138,14 @@ _why that class, and `— filed by: plan`.)_
   no slice boundary, signature, external format or printed output changes on
   any candidate answer, and reversing it costs one line of plan frontmatter.
   Proceeded on the default — filed by: plan
+- **BL-9** — R4 makes "a value that is not a number" an error and
+  `docs/DESIGN.md` §6 assumes integer and decimal inputs, but Python's
+  `float()` also accepts `nan`, `inf`, `-inf` and overflowing literals such as
+  `1e400`. Question: does R4 cover those spellings, or does `anvil nan km mi`
+  convert and print `nan`? Proposed default: they are errors — `parse_value`
+  raises the same named error it raises for `five`, because a `nan` or `inf`
+  result is a number-shaped answer that means nothing. Risk: LOW — one guard
+  inside a function that already raises this error type; no signature, slice
+  boundary, external format or S1/S3 case changes on either answer, and
+  reversing it is two lines and one test. Proceeded on the default — filed by:
+  steward
