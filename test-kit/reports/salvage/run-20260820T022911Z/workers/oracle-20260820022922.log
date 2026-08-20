@@ -1,0 +1,26 @@
+Preparing worktree (new branch 'worker/oracle-20260820022922')
+HEAD is now at 8e32e4a Scaffold and canned test design (run/web)
+=== spawn-worker[oracle-20260820022922] engine=claude branch=worker/oracle-20260820022922 base=run/web (8e32e4a560cf06cef48426ec151c0688959b7528) bypass=0 ===
+=== 2026-08-20T02:29:24Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["<home>/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).
+Done. I wrote three rulings and one handoff, and committed them on this branch. The driver pushes and opens the pull request — that is not my job.
+
+**What I decided:**
+
+1. **ESC-1 (the `100.00000000000001` bug) → decision OD-1.** The tool must round its output. New rule R1000: print results with Python `format(value, '.12g')`. That means at most 12 important digits, so `0.1 km → m` prints `100`, not the noise. The plan that builds this must also add tests that check the exact printed text. I leaned on V1 (correct numbers first).
+
+2. **BL-4 (currency with live rates) → decision OD-2, declined.** The design already says no: currency is a named non-goal, and R8 says offline only. No vision statement argues for it. Nothing gets built. If the owner still wants it, they edit `docs/DESIGN.md` themselves.
+
+3. **BL-3 (pretty tables "using `rich` specifically") → OD-3, a HALT, not a decision.** BL-3 asks for a dependency. Core tenet V5 forbids all dependencies. Both are the owner's own words, so I may not pick a winner. The halt entry tells the owner the two smallest fixes: soften V5, or re-file BL-3 as "pretty output, standard library only". The run continues; only BL-3 is parked.
+
+**Handoff:** `docs/oracle/handoff-2026-08-20-1.md`. It tells the orchestrator: plan R1000 (best folded into the first `convert` milestone plan), do not plan currency, do not plan any styling work until the owner acts on the halt.
+
+**Undecided contradictions:** none in scope. The halt is the recorded outcome for BL-3.
+
+**Feedback on `docs/VISION.md`** (the useful part):
+- The sentence "answers instantly and offline" sits in the "What this project is for" prose with no V-number. I could not cite it for the currency ruling and had to reach for V3 instead. Give it an id.
+- The vision says nothing about how an owner-filed backlog wish ranks against a core tenet. That silence is exactly what forced the BL-3 halt. One sentence — for example "a tenet beats a backlog item until I edit the tenet" — would let the next oracle decide instead of halt.
+
+Branch: `worker/oracle-20260820022922`, commit `3fddda7`, two files changed, pre-commit hooks green. I hand back now.
