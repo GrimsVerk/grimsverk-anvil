@@ -2942,3 +2942,56 @@ needed, and it added a redaction log the amended kit apparently now asks for
 question, and because a second writer on this branch is why my push was rejected
 and my rebase then kept the wrong side of the conflict — which I have corrected
 by restoring their version wholesale.
+
+---
+
+# ROUND 3.6 — v0.4.45, both lanes fresh
+
+Owner's mapping: **F25 → ESC-82** — `coverage.sh` now scans only DECLARATION
+lines in the oracle ledger, so a malformed id in a decision's *prose* no longer
+wedges a repository that `oracle-decisions.sh` forbids editing. The owner tested
+the fix against this lane's actually-wedged document: **before, exit 2; after,
+exit 1** — the ordinary NOT PLANNED state. That is the deadlock in F25's two
+experiments, closed. **F25 closed.**
+
+Also new since my last round: **ESC-78** (a branch sweep at every stop),
+**ESC-79** (gating one lane no longer ungates the other — the cause of the web
+lane's F33), **ESC-80** (arming auto-merge on an unprotected base refuses rather
+than merging on the spot), and **ESC-81 — my F21**: a pidfile, refusal of a
+second driver, and the repository and base in the process's own argv.
+
+### ESC-40 — third confirmation
+
+Evidence pull request **#37** from round 3.5 also merged unaided:
+`state=MERGED merged=2026-08-20T11:49:38Z by=app/autogrims`. Three for three
+across an ordinary stop (#29), a post-mortem `--land-evidence` stop (#33), and a
+documented exit-2 stop (#37).
+
+### F27 — OPERATOR ERROR (mine): I invented a branch, which rule 14 now forbids by name
+- **Where:** `evidence/run-20260820T080932Z--run-local`, pushed by me on 2026-08-20 when PR #22's evidence needed preserving.
+- **What happened:** asked to make sure everything useful reached GitHub, I
+  created a branch of my own to hold the round-3.2 run evidence in its original
+  `docs/runs/<timestamp>/` shape. Rule 14 now names exactly this: *"a lane pushed
+  `evidence/run-<timestamp>--<lane>` holding a byte-identical copy of what it had
+  already committed to its own ledger."* That was me.
+- **Why it was wrong even though it was well-intentioned:** the content was
+  already on the ledger branch under `test-kit/reports/round3.2-evidence/`, so
+  the branch added nothing but a second place to look and a branch the pipeline
+  did not create and would never clean up. Two branches are mine; everything else
+  belongs to the template's own scripts.
+- **State now:** the branch is **already gone** from the remote — the remote
+  carries only `main`, `run/local`, `run/web`, `chore/test-report-local` and
+  `chore/test-report-web`. Nothing to delete; the copy under
+  `test-kit/reports/round3.2-evidence/` remains, which is where it always
+  belonged.
+- **Severity: operator error.** Recorded because rule 14 exists because of it.
+
+## Round 3.6 setup
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 12:2xZ | 1. Pull `main`, re-read the kit | `main` at `b366d62`. Read rule **4a** (ledger append-only, one logged redaction carve-out, `test-kit/check-ledger.sh`), rule **14** (two branches are mine, never invent one), and Part 0's new stopping rule (pidfile, never by pattern) and gating note (ESC-79). |
+| 12:2xZ | 2. Readings owed, then debris | PR #37 read (merged, above). Leftover worktree `.worktrees/oracle-20260820113705` **read before removal** as the drill requires: it held `7a9d66b Record oracle decisions OD-1..OD-3`, but `git diff --stat run/local` was empty — that work had already merged in PR #35 — so nothing was lost. Removed, pruned, stale worker branch deleted. Worktrees back to 2 (the lane and this ledger). |
+| 12:2xZ | 3. Ruleset to main-only | `include` → `["~DEFAULT_BRANCH"]`. |
+| 12:2xZ | 3. Rebuild `run/local` at v0.4.45 | Force-pushed off `main`, rendered, canned inputs installed. `_commit: v0.4.45`. All four hooks Passed; **74 files, 14 322 insertions** (one file more than v0.4.42 — the scaffold has grown a file since). Rule-13 scan over the whole tree: **NONE — clean**. `git push -f` → `+ 5297fd7...d2097b9`. |
+| 12:2xZ | 3. Wait for the web lane | `run/web` reads `_commit: v0.4.43`; polling for v0.4.45 every 3 min, 45-min bound. **Both lanes will be named in one `--gate-branch` call**, per the instruction and ESC-79. |
