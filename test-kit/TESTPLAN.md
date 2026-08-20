@@ -53,7 +53,7 @@ coder, blind test-writer, reviewer, acceptance, and the driver itself.
 The per-base-branch pipeline isolation this layout depends on landed in the
 template as the fix for ESC-46 (`deliver-loop.sh --base`, lane branch
 suffixes, `setup-github.sh --gate-branch`); everything the lanes need is in
-release **v0.4.41**, and Part 1 step 2 refuses anything older.
+release **v0.4.42**, and Part 1 step 2 refuses anything older.
 
 ---
 
@@ -103,7 +103,7 @@ pull request is opened AS THE APP by the scaffold's
 pull request server-side, where minting works (ESC-53: the dispatch API is
 unreachable from this credential and a dispatch-only workflow never
 registers off the default branch). This
-requires template **v0.4.41 or newer**. Template access for copier comes
+requires template **v0.4.42 or newer**. Template access for copier comes
 from the owner attaching BOTH repositories when creating the web session —
 grimsverk-anvil to work in, grimsverk-template only so copier can read it.
 
@@ -131,6 +131,20 @@ commands, never into anything committed, pushed, or logged (Part 2, rule 13).
 the ruleset, the App, and the web environment all stay; the stale ruleset
 still names the old lane branches, and the local agent's first setup run
 resets it (step 6a below).
+
+**Order matters, and the obvious order is wrong (anvil local F18).** Two
+things a sweep cannot tell apart:
+
+- *Stale work pull requests* — close them, by branch name or by prefix.
+- *The run's own evidence pull request* (`docs/run-<timestamp>--<lane>`) — this
+  is the artifact the round exists to produce. It may still be under
+  observation. Close it only after its readings are taken, and say in the
+  ledger which reading it was closed on.
+
+Never close "every open pull request on the base". And take every reading
+**before** the rebuild: force-pushing the lane base destroys the base any
+surviving pull request was measured against, so a reading taken afterwards is
+a reading of something else.
 
 ---
 
@@ -175,7 +189,7 @@ local lane only, **W:** the web lane only.
 
 ### 2. Confirm the template release
 
-The latest release of grimsverk-template must be **v0.4.41 or newer** (it
+The latest release of grimsverk-template must be **v0.4.42 or newer** (it
 carries the per-base lanes, the evidence recovery tools, the App-only
 credentials, the round-1 fixes, ESC-49's hook fix, ESC-50's server-side
 pull-request opener, ESC-51's REST-only session reads, and the round-2.1
@@ -190,7 +204,11 @@ and round 3.3's six — ESC-68 the result line naming the branch that carries
 the work, ESC-69 the written unattended contract, ESC-70 an evidence pull
 request that can actually merge, ESC-71 lane-scoped pull-request updates,
 ESC-72 refusing to start behind an open pull request, ESC-73 saying when a
-private repository's gates may not bind at all — the lanes cannot
+private repository's gates may not bind at all, and round 3.4's four —
+ESC-74 the budget ceiling no longer re-zeroing itself on a rounded
+timestamp, ESC-75 a stop nobody chose never reported as success, ESC-76
+readiness refusing on the leftover worktrees the driver refuses on, ESC-77
+the inert tool grants that camouflaged real errors — the lanes cannot
 merge anything without ESC-56/57). Both lanes:
 `gh release view -R GrimsVerk/grimsverk-template --json tagName --jq
 .tagName`, or read the tag copier resolves in `.copier-answers.yml` after
