@@ -3047,3 +3047,13 @@ separable too. **F21 closed.**
 | Time (UTC) | PHASE | Key fields |
 | --- | --- | --- |
 | 13:03:42Z | ORACLE | iteration 1. Worker `oracle-20260820130342`, base `run/local`, template v0.4.45. Budget at start: weekly 16% (model 13%), `spent 0 of 20 points`. |
+| 13:10:21Z | WAIT | iteration 2. PR **#42** (`docs/oracle-20260820130342--run-local`). Budget: weekly 17% (model 16%), **spent 3 of 20 points**. |
+| 13:15:28Z | **MERGE** | **PR #42 merged.** |
+| 13:15:31Z | STEWARD | iteration 3. Worker `steward-od-1`. Budget: weekly 18% (model 16%), spent 3 of 20 points. |
+
+**Budget line, step 6(a) — updating every iteration and tracking spend.** Four
+readings in twelve minutes: `spent 0 → 0 → 3 → 3 of 20 points`, weekly
+16% → 16% → 17% → 18%, model 13% → 13% → 16% → 16%. The spend increments on
+model work (the oracle worker) and holds flat across the mechanical WAIT, which
+is exactly the accounting rule 8 asked for. No `weekly window reset mid-run`
+line — ESC-74 still holding on the same boundary.
