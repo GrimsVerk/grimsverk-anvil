@@ -1,1 +1,19 @@
-[2026-08-20T09:30:44Z] attempt 1: run/web _commit=v0.4.37
+[2026-08-20T09:30:54Z] attempt 1: run/web _commit=v0.4.37
+[2026-08-20T09:33:55Z] attempt 2: run/web _commit=v0.4.37
+[2026-08-20T09:36:56Z] attempt 3: run/web _commit=v0.4.37
+[2026-08-20T09:39:58Z] attempt 4: run/web _commit=v0.4.37
+[2026-08-20T09:42:59Z] attempt 5: run/web _commit=v0.4.37
+[2026-08-20T09:46:00Z] attempt 6: run/web _commit=v0.4.37
+[2026-08-20T09:49:02Z] attempt 7: run/web _commit=v0.4.37
+[2026-08-20T09:52:03Z] attempt 8: run/web _commit=v0.4.37
+[2026-08-20T09:55:05Z] attempt 9: run/web _commit=v0.4.37
+[2026-08-20T09:58:06Z] attempt 10: run/web _commit=v0.4.37
+[2026-08-20T10:01:07Z] attempt 11: run/web _commit=v0.4.37
+[2026-08-20T10:04:08Z] attempt 12: run/web _commit=v0.4.37
+[2026-08-20T10:07:10Z] attempt 13: run/web _commit=v0.4.37
+[2026-08-20T10:10:11Z] attempt 14: run/web _commit=v0.4.37
+[2026-08-20T10:13:12Z] attempt 15: run/web _commit=v0.4.37
+[2026-08-20T10:16:14Z] attempt 16: run/web _commit=v0.4.37
+[2026-08-20T10:16:14Z] RESULT: TIMEOUT after 16 attempts; run/web still at v0.4.37
+
+[exited with code 2]

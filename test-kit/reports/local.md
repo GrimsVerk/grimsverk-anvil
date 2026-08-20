@@ -1971,3 +1971,73 @@ deepest any round has gone. 4 merges. Findings added: F15 (friction), F16
 (blocker, fixed upstream in v0.4.39), F17 (blocker, new). Confirmed live this
 round: ESC-36 both halves, ESC-21 with its path named, ESC-59, and the budget
 probe's live rollover. Raw log: `test-kit/reports/local-driver-round3.2.log`.
+
+---
+
+# ROUND 3.3 — restart at v0.4.39, HELD at the lane handshake
+
+Owner's instruction: F16 fixed both halves — ESC-66 (the driver compares a
+worker's branch against the base before pushing, reports "adds nothing" as its
+own outcome, records the dispatched scope as processed, and stops after two
+dispatches in a row that produce no pull request) and ESC-67 (the budget line is
+logged every iteration: weekly, per-model, and points spent). ESC-65 fixed the
+truncation that hid the rollover this lane caught live.
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 09:2xZ | Stop the round 3.2 driver | `SIGTERM`. It landed evidence first — 8 worker logs, 5 review payloads — and opened evidence PR #22. No failsafe. |
+| 09:29Z | Reset ruleset to main-only | `include` → `["~DEFAULT_BRANCH"]`. |
+| 09:29Z | Close round-3.2 leftovers | **Operator error — see F18.** The sweep closed PR #22 along with the stale oracle branches. |
+| 09:3xZ | Rebuild at v0.4.39 | `_commit: v0.4.39`. All four hooks Passed; 73 files, 13 649 insertions. Rule-13 scan clean. `git push -f` → `+ f046f98...ee07cfa`. |
+| 09:30Z–10:16Z | Bounded wait for `run/web` at v0.4.39 | **TIMEOUT.** 16 polls over 45 minutes, `run/web` read `_commit: v0.4.37` every time. |
+
+### The web lane did not restart — it is still running round 3.2 at v0.4.37
+
+This is not a stalled lane. It is an **active** one, on the previous release:
+
+```
+$ git log -1 --format='%cI %s' origin/run/web
+2026-08-20T10:16:06Z Merge pull request #27 from GrimsVerk/docs/oracle-20260820101037--run-web
+```
+
+It merged a pull request at 10:16:06Z — eight seconds before the poll's final
+attempt. So the two lanes are now on **different template releases**, which
+breaks the premise the whole comparison rests on ("the two scaffolds come from
+the same template release with the same answers"). Per Part 1's timeout branch I
+would gate `run/local` alone and continue; the owner has asked me to hold, so
+nothing has been gated and no driver has been started. Recorded and awaiting
+their decision.
+
+Poll log: `test-kit/reports/wait-logs/anvil-local-waitweb39.log`.
+
+### F18 — OPERATOR ERROR (mine): the round-3.2 evidence pull request was closed by my own cleanup sweep
+- **Where:** round 3.3 restart, step 3 ("close round-3.2 leftovers"), 09:29:52Z.
+- **What happened:** I implemented the step as a loop closing **every** open pull
+  request targeting `run/local`. PR **#22** — the run-evidence pull request I had
+  filed F17 about two minutes earlier — was open and targeting `run/local`, so it
+  was closed with the stale oracle pull requests. The owner was about to update
+  its branch by hand to observe whether it would then merge (the ESC-40 reading).
+- **Compounding factor, from the same drill:** step 4 force-pushed `run/local`
+  from `f046f98` to `ee07cfa`. The base #22 was measured against no longer
+  exists, so reopening cannot replay the experiment — the two histories are
+  unrelated. That destruction came from the requested rebuild, not from the
+  close, but I sequenced the two without flagging that they were in conflict.
+- **What was preserved:** all of it. The evidence commit `8c77559` survived in
+  the local object store and is now on GitHub twice — as
+  `test-kit/reports/round3.2-evidence/` on this branch, and as its own archive
+  branch `evidence/run-20260820T080932Z--run-local` (commit `cc64d96`), with the
+  absolute home paths in `run.md` replaced by `<home>` per rule 13 and every
+  other byte unchanged.
+- **What was lost:** the *live* ESC-40 experiment. F17's conclusion does not
+  depend on it — the eleven green checks, the App-armed auto-merge, `BEHIND`,
+  `strict_required_status_checks_policy: true` and the two-commit gap were all
+  captured before anything was closed — but "update the branch by hand and watch
+  whether it then merges" cannot now be run on that pull request.
+- **Lesson for the drill, worth carrying:** "close leftovers" and "the evidence
+  pull request" are not the same category, and a blanket sweep cannot tell them
+  apart. The evidence pull request of the round being torn down is the one thing
+  in the cleanup list that may still be under active observation.
+- **Severity: operator error, not a template finding.** Logged under rule 4's
+  "if you are unsure whether something is a finding, it is a finding", and
+  because the owner's reconstruction of this round would otherwise show a
+  pull request closing itself for no reason.
