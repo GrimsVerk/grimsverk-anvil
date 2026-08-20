@@ -601,3 +601,81 @@ asserted string is now exact rather than presumed.
   request. The `convert` plan should claim R1001 and R1002 in the same
   `covers:` list — they landed in this run and live in the same milestone.
   Confidence is high.
+
+## OD-8 — BL-9 is granted: a non-finite parse (`nan`, `inf`, overflow) is an R4 error
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-9
+- **Requirements added:** R1003
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V2 — "Clear, honest errors come before feature breadth: refusing loudly beats guessing silently." Also V1 — "Correct conversions come before everything else: a wrong number presented confidently is the worst output this tool can produce."
+- **Vision statements against:** V3 — "Simplicity comes before completeness: a
+  small tool that is obviously right beats a large one that must be trusted."
+  It is the nearest, because the zero-guard implementation exists: accept
+  whatever `float()` accepts, add nothing. It does not forbid the guard: a tool
+  that prints `nan` as a result line is precisely one that "must be trusted"
+  rather than being obviously right, since the meaningless answer is
+  number-shaped and flows silently down a pipe; and the guard is one finiteness
+  check inside the function that already raises this exact error. V3 argues for
+  the smallest rule that keeps every printed result meaningful, which is what
+  was chosen.
+- **Alternatives considered:** (a) let them convert — `anvil nan km mi` prints
+  `nan`, `anvil 1e400 km mi` prints `inf` — rejected: a number-shaped answer
+  that means nothing, presented confidently on standard output where R1002
+  promises a result; a script consumer ingests it as data, which is the V1/V6
+  worst case, and `nan` additionally propagates through downstream arithmetic
+  without ever failing, the exact opposite of V2's loud refusal. (b) blacklist
+  the literal spellings before parsing — rejected: `float()` accepts many
+  spellings (`nan`, `NaN`, `Infinity`, `INF`, with signs and surrounding
+  whitespace), so a string list chases an open set, and it cannot catch `1e400`
+  at all, which is digit-shaped and only becomes infinite after parsing;
+  checking the parsed value for finiteness catches every route to a non-finite
+  result in one guard. (c) reject `nan` but admit infinities — rejected: an
+  infinite length is exactly as meaningless a conversion result as `nan`, and
+  admitting it re-opens the overflow route the evidence names. (d) the filed
+  default — parse, then reject any non-finite result with the same named error
+  raised for `five` — accepted.
+- **Rationale:** The steward's LOW classification was correct — one guard
+  inside `parse_value`, no signature, slice boundary, external format or
+  existing S1/S3 case changes on either answer — but the behaviour it decides
+  is external: whether `anvil nan km mi` refuses or answers. R4 already makes
+  "a value that is not a number" a named error, and `nan` and `inf` are the
+  IEEE spellings of "no meaningful number here"; a design whose §6 assumes
+  integer and decimal inputs did not intend `float()`'s full grammar to widen
+  what counts as an answer. The ruling is deliberately expressed as a
+  finiteness condition on the parsed value, not as a list of spellings, so it
+  is robust to the §6 question it does not decide: whether scientific notation
+  like `1e5` is accepted stays open ("may be ignored"), and R1003 holds on
+  either answer — if the parser accepts scientific notation, finite values pass
+  and overflowing ones refuse; if it rejects it wholesale, `1e400` is already a
+  parse error. Confidence is high.
+
+**R1003 — Non-finite values are not numbers.** A value token whose parse does
+not yield a finite float is "a value that is not a number" under R4. This
+covers `nan`, `inf` and `-inf` in every spelling `float()` accepts, and any
+literal whose value overflows to infinity, such as `1e400`. The refusal is
+R4's, unchanged: an error message naming the offending token on standard
+error, a non-zero exit, and nothing on standard output (R1002). Equivalently:
+the value parser returns only finite floats. *Evidenced by:* S3, whose cases
+must include at least one non-finite spelling and one overflowing literal.
+
+**Measurement.** This decision changes a CLI refusal, and the existing
+mechanism that observes refusals is `acceptance/S3.sh`, run on every pull
+request. The landed `convert` plan (`docs/plans/oracle/od5-convert-cli.md`)
+already carries the guard itself — its slice 1 contract has `parse_value`
+raising `NotANumberError` on a non-finite result, naming it the BL-9 default,
+with unit tests — but its S3 script fixes seven cases and none is non-finite,
+so as planned the guard is observed by unit tests only, not by the §13 layer
+that outlives any one plan. The plan that claims R1003 therefore adds two rows
+to `acceptance/S3.sh`: `anvil nan km mi` asserting standard error names
+`nan`, and `anvil 1e400 km mi` asserting standard error names `1e400` — each
+with a non-zero exit and empty standard output, the same assertions the
+script's existing cases make. Existing machinery pointed at new rows, per the
+vision's durable-evidence section; nothing new is invented.
+
+Downstream: the `convert` plan proceeds exactly as landed — the guard is
+already in its slice 1 contract and no slice changes. R1003 is new-plan work
+of the smallest kind: the two S3 rows above, buildable only once the
+`convert` milestone has produced `acceptance/S3.sh`, in the same after-the-MVP
+position `od1-output-precision` occupies. BL-9 leaves the uncertainty queue by
+this citation.
