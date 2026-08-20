@@ -3259,3 +3259,85 @@ pending.
 **F33 watch, ten merges in:** every merge followed its `review` by 2–4 seconds.
 `arm-auto-merge` has never refused. **No pull request has merged with a check
 still running.**
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 2026-08-20T16:43:25Z | **ORACLE** | Iteration 11, `UNCITED=BL-10 BL-11`. **PR #56**, merge 11 at 16:55:57, review 16:55:54 — 3s. |
+| 2026-08-20T16:57Z | **STOP** | Owner instruction: finish the current iteration, land its evidence, summarise, stop. |
+| 2026-08-20T17:00:22Z | evidence | **PR #57** merged — run report, 11 review markers, 12 worker logs. **ESC-40 satisfied again.** |
+
+### The sweep at the stop (ESC-78), recorded as instructed
+
+```
+sweep-branches: 0 merged branch(es) deleted, 1 unmerged left alone, 0 refused.
+sweep-branches: left alone (not merged into run/web): run/local
+```
+
+- **Nothing to delete**, because `delete-merged-branch` had already removed
+  every head branch within seconds of each merge. The sweep is a genuine no-op
+  on a healthy lane, which is the correct outcome.
+- **`0 refused` must not be read as "deletion works here".** F34 established
+  that a hosted session cannot delete a ref at all. The sweep never had a
+  candidate, so its behaviour against this platform's 403 is **still untested**.
+  The first time this lane has a merged branch the auto-deleter missed, that is
+  when ESC-78 gets its real trial.
+- **It enumerated `run/local`** — the other lane's base — and reported leaving
+  it alone. Correct outcome, but the candidate set is not lane-scoped; the
+  safety rests on the merged-only test, not on the sweep knowing whose branch
+  that is. Worth a look upstream, since Part 2 rule 1 forbids touching the other
+  lane's branches at all.
+
+---
+
+## Summary block — web lane, round 3.6 (Part 2 rule 6)
+
+- **Driver's exit reason:** the owner stopped the run after iteration 11. Not a
+  limit, not a refusal, not a failure pattern.
+- **Phases reached:** SETUP → ORACLE → STEWARD → PLAN, cycling, with one WAIT
+  observed correctly naming this lane's own pull request. **11 iterations of
+  60.** ORCHESTRATE was not reached this round.
+- **Pull requests opened: 11 (plus the evidence PR #57). Merged: 12.** Every one
+  authored by `autogrims[bot]`; none by the owner.
+- **Oracle decisions: OD-1 … OD-8.** **Plans landed: 4** —
+  `od1-output-precision`, `od5-convert-cli`, `od8-nonfinite-values`,
+  `temperature-conversions`. **Uncertainties filed and ruled: BL-5 … BL-11 (7).**
+  None self-ruled.
+- **Criteria status:** untouched; no acceptance pass ran, S4 remains the
+  owner's.
+- **Limits:** 30 / 12h / 60. Used 11 pull requests, 3h52m wall-clock (including
+  a 1h31m pause on the account's usage limit), 11 iterations.
+- **Findings this round:** **F37** (a usage-limit stop reads as `engine exited
+  1`), plus confirmations: **F29 fixed** (the worker result line now names the
+  branch the worker actually used), **ESC-76 observed** clearing real debris,
+  **ESC-40 observed** again, and `check-ledger.sh` catching a rule 13 breach on
+  its first run (redaction **R1**).
+
+### The finding this round exists to report
+
+**F33 did not recur.** Eleven merges, and every one waited for its required
+`review` and followed it by **2 to 4 seconds**. In round 3.2 the equivalent
+merge landed 10 seconds after `review` started and 2m31s before it reported
+`failure`, because `--gate-branch` had rebuilt the shared ruleset and dropped
+this lane's base mid-run.
+
+Three things changed and all three held:
+
+1. **ESC-79** — gating is additive, so the local lane naming its own branch no
+   longer ungates this one. The ruleset kept `refs/heads/run/web` throughout.
+2. **ESC-80** — `arm-auto-merge` verifies the base is protected before arming.
+   It armed on all eleven pull requests and **refused on none**, which is the
+   correct result on a gated base; the refusal is the alarm, and recording that
+   it stayed silent is what will make it meaningful when it sounds.
+3. **The readiness check now refuses a run whose base carries no rules** — the
+   line that would have stopped round 3.2 before it merged anything.
+
+**One honest caveat.** This run never reached ORCHESTRATE, so every merged pull
+request was a design-layer document. The one pull request that failed `review`
+in round 3.2 was a *code* pull request, and no code was built here. The merge
+ordering is proven; the gate's behaviour under a red `review` is not re-proven
+this round.
+
+**Lane closed 2026-08-20T17:02Z.** Not restarted, no limit raised. `main` and
+`run/local` untouched by this session. Four plans stand landed and unbuilt, and
+BL-10/BL-11 are ruled, so the next run resumes at STEWARD with the batch
+milestone unblocked.
