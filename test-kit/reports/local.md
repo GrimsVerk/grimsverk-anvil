@@ -2509,3 +2509,92 @@ keep visible, and flattening it either way would mislead the upstream reader.
 - **Preserved by the failsafe:** `docs/runs/20260820T111014Z/run.md` and
   `workers/oracle-20260820111019.log`, on pull request #33.
 - **Severity: bug**, per rule 11's floor.
+
+---
+
+## Round 3.4 death — CAUSE FOUND
+
+The earlier "cause undetermined" entry is superseded. Raw evidence:
+`test-kit/reports/round3.4-death-investigation/`.
+
+### F21 — BLOCKER: two delivery drivers on one machine are indistinguishable by command line, so one operator's cleanup kills the other's run
+
+**`find_best_mobo`'s driver and this lane's driver have byte-identical command
+lines.** Observed live:
+
+```
+$ tr '\0' ' ' < /proc/483772/cmdline
+bash .claude/scripts/deliver-loop.sh --base run/local --budget-points 20 --max-prs 30 --max-hours 12
+$ readlink /proc/483772/cwd
+/home/loke/code/GrimsVerk/find_best_mobo
+```
+
+That is character-for-character what this lane launches. Both test beds are
+`GrimsVerk` projects, both use the default lane name `run/local`, and both were
+given `--budget-points 20 --max-prs 30 --max-hours 12` by the same owner. The
+script path in the command line is **relative** (`.claude/scripts/deliver-loop.sh`),
+so nothing in the visible process identity names the repository.
+
+**Consequences, all three real and all three observed in this session:**
+
+1. **My own `pkill` was cross-repository.** At ~09:2xZ I ran
+   `pkill -KILL -f "deliver-loop.sh --base run/local --budget-points 20"` to stop
+   a driver of mine that would not respond to `SIGTERM`. That pattern matches
+   `find_best_mobo`'s driver exactly. I almost certainly killed the other test
+   bed's run, and had no way to know.
+2. **The reverse killed round 3.4.** My driver and its worker died together at
+   ~11:10:19–11:11:38Z with no trap, no coredump, no OOM, no journal entry, and
+   a worker session transcript containing the prompt and **no assistant turn at
+   all** — the exact signature of `SIGKILL` arriving from outside. `find_best_mobo`'s
+   current driver started at **11:25:39Z**, meaning its previous one had stopped
+   shortly before — consistent with that operator running the same teardown in
+   the same window.
+3. **Every "is my driver alive?" check I have made was unreliable.** My monitor
+   used the same `pgrep -f` pattern, so it has been answering about *either*
+   repository's driver. That explains the contradictory `STILL ALIVE` / `GONE`
+   readings earlier in this session, which I had put down to self-matching.
+
+**Everything else was eliminated first**, and each negative is recorded in
+`evidence.md`: no coredump; no kernel OOM; `systemd-oomd` active but logging no
+kill; 21 GiB free of 31 GiB; 1.8 TB free disk; engine present and working
+(`claude 2.1.233`); a direct nested `claude -p` returning `PROBE_OK`; the same
+call with the worker's exact `--model claude-fable-5 --effort high` also
+returning `PROBE_OK`; auth `loggedIn: true`; budget healthy (`session=21
+week=10`); and two control probes showing that `nohup`-backgrounded processes
+survive tool-call boundaries **and** survive a launching call that exits
+non-zero. None of those explains it. Process-identity collision does, completely.
+
+**Expected:** an unattended driver that may run for twelve hours on a shared
+machine should be identifiable and targetable per run. `AGENTS.md` and
+`deliver-loop.sh` are careful about isolating *branches* per base (ESC-46) and
+*worktrees* per worker, but two runs in different repositories share one flat
+process namespace with nothing to tell them apart.
+
+**Suggested fix, for the upstream report:** write a pidfile at
+`.claude/deliver-loop/driver.pid` (the buffer directory already exists and is
+per-repository) and have the driver refuse to start if a live pid is in it; and
+put the run id and repository into the process's own argv — the run already has
+a unique id (`20260820T111014Z`) and it appears nowhere in the command line.
+Then "stop my run" is `kill $(cat .claude/deliver-loop/driver.pid)` and can
+never reach across repositories. A `--print-pid` or documented pidfile path
+would also let operators stop guessing at `pkill` patterns.
+
+**Severity: blocker.** It silently destroys unattended runs across projects, it
+destroys the evidence with them (no trap fires on `SIGKILL`), and it makes every
+liveness check in every operator's runbook wrong. It is also the most likely
+explanation for round 3.3's shorter death, though that one had a worker
+`Execution error` of its own and is not proven.
+
+### F22 — OPERATOR ERROR (mine): my `pkill` and my liveness checks were never repository-scoped
+- **Where:** throughout this session — the `pkill -KILL -f "deliver-loop.sh --base run/local --budget-points 20"` at ~09:2xZ, and every `pgrep -f` in my monitor script.
+- **What happened:** I matched on a command-line fragment that is not unique to
+  this repository, on a machine I knew was the owner's daily driver. I should
+  have matched on the pid I had captured at launch (`$!`), which I *did* print
+  every time and then did not use.
+- **What it cost:** probably one kill of the other test bed's run, and a series
+  of liveness readings that were about the wrong process.
+- **What I have changed:** from here I stop the driver by the pid captured at
+  launch, and the monitor checks that pid, not a pattern.
+- **Severity: operator error.** Logged because F21's fix and this one are
+  complementary: the template should make runs distinguishable, and the operator
+  should stop using patterns that cannot distinguish them.
