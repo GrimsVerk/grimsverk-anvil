@@ -98,3 +98,43 @@ _why that class, and `— filed by: plan`.)_
   same code, the same slice boundaries, the same signature and the same printed
   output; only the coverage bookkeeping differs, and reversing it costs one line
   of plan frontmatter. Proceeded on the default — filed by: steward
+- **BL-6** — The command-line invocation syntax for `anvil`. The MVP `convert`
+  milestone (R1, R2, R4, R5) cannot declare a Signatures block, and cannot
+  write `acceptance/S1.sh` or `acceptance/S3.sh`, until the syntax is fixed:
+  the positional order, and how batch mode is invoked. The second is not
+  deferrable to the `convert-batch` milestone, because it decides what this
+  milestone does *now* with a bare `anvil` and no arguments — a usage error
+  under R5, or a request to read standard input. `docs/DESIGN.md` §8 and §11
+  record both as deliberately not decided there, and the design's
+  owner-authored test note says the planning layer must file them rather than
+  settle them. Proposed default: three positionals in the order value,
+  from-unit, to-unit — `anvil 5 km mi` — with no subcommand and no other
+  flags; batch mode invoked by an explicit `--batch` flag that reads standard
+  input and takes no positionals, so a bare `anvil` is a usage error under R5;
+  unit symbols matched exactly as `docs/DESIGN.md` §5 spells them, since `BL-1`
+  (aliases) is unruled. Risk: HIGH — it is the tool's external interface, so it
+  fixes every Signatures block in the plan and the exact command lines S1 and
+  S3 execute, and changing it after the fact rewrites the CLI slice and both
+  acceptance scripts — filed by: plan
+- **BL-7** — The single-shot output contract: what a successful result line
+  contains, and which stream carries results as against errors and usage.
+  `docs/DESIGN.md` §5 says only "print the converted value", and R1000
+  (`OD-1`) governs how a result value is formatted but not what else shares
+  its line; `docs/plans/oracle/od1-output-precision.md` asserts "the printed
+  value field is exactly `100`", which presumes a line format nothing has
+  decided. Proposed default: the formatted value alone on standard output, one
+  line, with no unit suffix and no echo of the input — exactly
+  `format(value, ".12g")` and nothing else; error and usage text on standard
+  error. Risk: HIGH — it is an external format, both `acceptance/S1.sh` and
+  `acceptance/S3.sh` assert exact strings against it, and scripts that parse
+  the output make it expensive to reverse once shipped — filed by: plan
+- **BL-8** — `docs/DESIGN.md` §12 scopes the MVP `convert` milestone to R1, R2,
+  R4 and R5, but that milestone is where the installed `anvil` console command
+  from package `grimsverk_anvil` (R7) and the stdlib-only runtime (R8) first
+  exist, and no later milestone would deliver them either. Question: may the
+  `convert` plan claim `covers: [R1, R2, R4, R5, R7, R8]`? Proposed default:
+  yes — otherwise `coverage.sh` reports two requirements nobody ever scheduled,
+  for work this milestone actually does. Risk: LOW — the same shape as `BL-5`:
+  no slice boundary, signature, external format or printed output changes on
+  any candidate answer, and reversing it costs one line of plan frontmatter.
+  Proceeded on the default — filed by: plan
