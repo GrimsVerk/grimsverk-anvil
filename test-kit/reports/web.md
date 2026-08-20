@@ -321,7 +321,7 @@ finding, push the ledger, and stop the lane."
   The key is intact; it simply is not a key GitHub associates with App <app_id>.
 
   **Most likely root cause, for the owner to confirm:** PROMPT-WEB names the
-  file to paste as `/home/loke/.config/grimsverk/<a different App's .pem>`. That name
+  file to paste as `<app_pem_path parent>/<a different App's .pem>`. That name
   belongs to the find_best_mobo project. If that `.pem` was generated for the
   find_best_mobo App rather than for App <app_id>, GitHub would reject it in
   exactly this way — valid signature, wrong App. The other possibility the
@@ -2977,3 +2977,18 @@ untouched by this session. `run/web` is not being run against until the owner
 restores its gates and rules on the rejected merge it carries — though the
 ruleset read at 11:58Z already lists `refs/heads/run/web`, so the restoration
 may already have happened.
+
+---
+
+## Redaction log (Part 2 rule 4a)
+
+| When | What was redacted | Where | Why |
+| --- | --- | --- | --- |
+| 2026-08-20 | an absolute key path, replaced by its register key | the F-series entry describing the App key mismatch | rule 13. The finding is unchanged — it was about which App the key belonged to, never about where the file sat. |
+| 2026-08-20 | the frozen copies of `TESTPLAN.md`, `PROMPT-LOCAL.md`, `PROMPT-WEB.md` and `README.md` on this branch, refreshed from `main` | `test-kit/` | those copies predate rule 13 and still carried the app id, an SSH host alias and a key path in plain text. They are duplicates of documents that live on `main`; nothing in this ledger changed. |
+
+**The values are still reachable in this branch's git HISTORY.** A redaction at
+the tip removes a value from the current file, not from the commits that
+introduced it. Rewriting that history would mean force-pushing a ledger branch,
+which is the one thing this branch must never do — so it is the owner's call,
+recorded here rather than acted on.
