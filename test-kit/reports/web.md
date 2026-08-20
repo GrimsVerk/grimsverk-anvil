@@ -3055,3 +3055,50 @@ this ledger, with what it was and why the finding survives without it.
   remains in this branch's git history, in the round-3.4 commit that introduced
   it. Removing it from history would need a force-push, which this branch must
   never do; that call is the owner's.
+
+## Setup log — round 3.6
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 2026-08-20T12:58:38Z | 2 — release | **OK**, `v0.4.45`. |
+| 2026-08-20T12:59Z | ledger branch | Merged `origin/main`; the frozen kit copies conflicted and were resolved to **main's** versions, which is what rule 4a's "the kit files are main's" implies. `check-ledger.sh` then refused the push over a register value inside F36 — see redaction **R1**. |
+| 2026-08-20T13:00Z | pre-flight — ruleset | Already reset to `["~DEFAULT_BRANCH"]` by the local lane, and **the six branches F34 listed as stranded are gone** from the remote. The owner's sweep landed. |
+| 2026-08-20T13:00:38Z | 3W — rebuild off `main`, render | **OK**, exit 0. `_commit: v0.4.45`, `_src_path` canonical https. The old `run/web` — and with it merge `9ae8471`, the change the review gate rejected — is gone with the rebuild. |
+| 2026-08-20T13:00:5xZ | 4, 5 — canned inputs, `uv sync`, `pre-commit` | **OK.** Hooks ran real work on the commit: ruff check, ruff format, mypy, secrets — all Passed. |
+| 2026-08-20T13:01:07Z | 6 — `git push -f origin run/web` | **OK**, first attempt, no bypass banner (ruleset was main-only, so there was nothing to bypass). |
+| 2026-08-20T13:01:1xZ | notify the local lane | **No channel exists.** `ListAgents` → "No reachable agents" — consistent with **ESC-81**, two drivers that can no longer reach each other. The signal is the branch itself, which the local agent polls for per Part 1 step 6a-4. Reported to the owner instead. |
+
+### Readiness check — every line, as instructed
+
+```
+unattended-ready: GrimsVerk/grimsverk-anvil
+  ready    auto_merge: true in .copier-answers.yml
+  ready    auto-merge workflow is present
+  note     repository settings (auto-merge, branch deletion): the full check's job — a runtime identity cannot see them
+  note     the rulesets themselves: the full check's job — a runtime identity reads only their effect on its base branch, below
+  MISSING  no rules bind the run's base branch 'run/web' — every pull request this run opens would merge ungated; add the branch to the gates ruleset: scripts/setup-github.sh --gate-branch 'run/web'
+  note     App mint impossible here (a hosted platform's proxy owns the credential — ESC-50); the ambient login drives, and pull requests open as the App via the open-pr workflow
+  note     secret names (CLAUDE_CODE_OAUTH_TOKEN): the full check's job — a runtime identity cannot list secrets
+  note     CODEOWNERS validation: the full check's job
+  ready    docs/VISION.md is filled in
+  ready    no pull request is open against 'run/web' — the run starts on a clear base
+  ready    no leftover worktrees — no dead run's debris in the way
+
+unattended-ready: REFUSED — 1 missing item(s) above.
+An unattended run against this configuration fails while nobody is watching.
+EXIT=1
+```
+
+**This refusal is the correct one and the good one.** The single missing item is
+the gate on my own base branch, which is the local lane's duty and is being
+waited on. Two lines are new since this lane last read this check, and both come
+from findings this test produced:
+
+- `no pull request is open against 'run/web' — the run starts on a clear base`
+- `no leftover worktrees — no dead run's debris in the way` (**ESC-76**)
+
+**And the line that matters most for F33 is now load-bearing rather than
+advisory:** the check refuses to start a run whose base carries no rules. Had
+this existed in round 3.2, the run would have stopped the moment `run/web` was
+ungated instead of merging a rejected change into it. Bounded gating wait
+started, 3-minute poll to a 45-minute limit.
