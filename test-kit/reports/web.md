@@ -2826,3 +2826,74 @@ started here, per the owner's instruction.
   was copied and what was deliberately not. Round 3.2's evidence is not in that
   list because its pull request (#31) **merged**, so it lives on `run/web`.
 - Severity: friction, and a real gap in ESC-78's reach.
+
+## Update to v0.4.43 — and F35, the update script cannot run on a lane
+
+### F35 — `update-from-template.sh` refuses any base but the default branch, so no lane can use it
+- Where: `scripts/update-from-template.sh`, against the per-base lane layout
+  ESC-46 introduced.
+- What happened:
+
+  ```
+  $ scripts/update-from-template.sh
+  update-from-template: you are on 'run/web', not 'main'.
+
+  A template update branches off the default branch, so that the pull request
+  contains the update and nothing else.
+  $ echo $?
+  1
+  ```
+
+  The refusal is reasonable in a normal project and impossible here: the
+  scaffold lives on the lane branches, and `main` carries only the test kit —
+  no `.copier-answers.yml`, which is the one file `copier update` cannot work
+  without. So the script sends you to the only branch where the operation
+  cannot run. Every other script in the pipeline is `RUN_BASE`-aware; this one
+  is not.
+- Done instead, mirroring exactly what the script does after its branch check:
+  `copier update --defaults --trust --vcs-ref=v0.4.43` on `run/web`, then the
+  branch it would have used — **`template/v0.4.43--run-web`**, which Part 2
+  rule 14 names as a pipeline branch, so no branch was invented — then the
+  commit message it would have written, `Update from template v0.4.43`.
+- The update itself was clean: `_commit: v0.4.43`, ten files modified, one
+  added (`.claude/scripts/sweep-branches.sh`, ESC-78), **no conflict markers
+  and no `.rej` files**. The three files matching a naive `<<<<<<<` grep are
+  `GLOSSARY.md` and the two scripts that *document* conflict markers; none has
+  a marker at line start.
+- Severity: bug — a lane cannot run its own template update by the documented
+  route. Upstream fix: honour `RUN_BASE`, or branch from the current branch
+  when it is a configured lane base.
+
+### C14 — the update landed green, and CODEOWNERS is now observed binding for the first time
+**PR #38** (`template/v0.4.43--run-web`), App-authored, all checks green:
+
+```
+checks success | secrets success | plan success | template-sync success
+test-the-tests success | acceptance-criteria success | review success
+arm-auto-merge success | open-pr success
+```
+
+**`template-sync` passing is the load-bearing one**: it replays `copier update`
+from the base commit and fails unless the result is byte-for-byte this pull
+request. It passed, which proves nothing hand-written rode along with the
+update — including the fact that I ran copier myself rather than through the
+script.
+
+**It did not merge, and that is correct.** `mergeable=true`,
+`mergeable_state=blocked`, with `requested_reviewers: ["GrimsVerk"]`. The diff
+touches `.github/workflows/`, `.github/scripts/` and `.claude/scripts/` — all
+CODEOWNERS-owned — so GitHub requires the owner's review even under auto-merge,
+exactly as `AGENTS.md` says it must.
+
+**I did not approve it, and the reason belongs in this ledger.** This session
+carries the owner's injected credential, and the pull request is authored by
+the App, so GitHub would accept my approval — the ESC-35 arrangement working.
+Approving would also be the single thing F16 warned about: the asymmetry is
+policy, not mechanism, and the one place it must hold is a change to the gates
+themselves. A template update rewriting `auto-merge.yml`, `unattended-ready.sh`
+and the driver's own scripts is precisely the diff a human is supposed to read.
+**It waits for the owner.**
+
+This is also the first time in the whole test that CODEOWNERS has been
+positively observed doing its job — every earlier pull request touched only
+un-owned paths and merged mechanically.
