@@ -53,7 +53,7 @@ coder, blind test-writer, reviewer, acceptance, and the driver itself.
 The per-base-branch pipeline isolation this layout depends on landed in the
 template as the fix for ESC-46 (`deliver-loop.sh --base`, lane branch
 suffixes, `setup-github.sh --gate-branch`); everything the lanes need is in
-release **v0.4.39**, and Part 1 step 2 refuses anything older.
+release **v0.4.41**, and Part 1 step 2 refuses anything older.
 
 ---
 
@@ -103,7 +103,7 @@ pull request is opened AS THE APP by the scaffold's
 pull request server-side, where minting works (ESC-53: the dispatch API is
 unreachable from this credential and a dispatch-only workflow never
 registers off the default branch). This
-requires template **v0.4.39 or newer**. Template access for copier comes
+requires template **v0.4.41 or newer**. Template access for copier comes
 from the owner attaching BOTH repositories when creating the web session —
 grimsverk-anvil to work in, grimsverk-template only so copier can read it.
 
@@ -175,7 +175,7 @@ local lane only, **W:** the web lane only.
 
 ### 2. Confirm the template release
 
-The latest release of grimsverk-template must be **v0.4.39 or newer** (it
+The latest release of grimsverk-template must be **v0.4.41 or newer** (it
 carries the per-base lanes, the evidence recovery tools, the App-only
 credentials, the round-1 fixes, ESC-49's hook fix, ESC-50's server-side
 pull-request opener, ESC-51's REST-only session reads, and the round-2.1
@@ -185,7 +185,12 @@ ESC-56 marker carve-out, ESC-57 CI CODEOWNERS ref, ESC-58 engine install
 proof, ESC-59 nonce redaction, ESC-60 died-commit landing, ESC-61 no
 template escape ids in rendered gated documents, and round 3.2's four —
 ESC-64 self-committing setup transcript, ESC-65 budget reset with spaces,
-ESC-66 the empty-diff livelock stop, ESC-67 the budget line every iteration — the lanes cannot
+ESC-66 the empty-diff livelock stop, ESC-67 the budget line every iteration,
+and round 3.3's six — ESC-68 the result line naming the branch that carries
+the work, ESC-69 the written unattended contract, ESC-70 an evidence pull
+request that can actually merge, ESC-71 lane-scoped pull-request updates,
+ESC-72 refusing to start behind an open pull request, ESC-73 saying when a
+private repository's gates may not bind at all — the lanes cannot
 merge anything without ESC-56/57). Both lanes:
 `gh release view -R GrimsVerk/grimsverk-template --json tagName --jq
 .tagName`, or read the tag copier resolves in `.copier-answers.yml` after
