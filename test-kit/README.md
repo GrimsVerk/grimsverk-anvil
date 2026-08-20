@@ -37,5 +37,7 @@ flow, wrong-ref CODEOWNERS probe (v0.4.31), the first-commit mypy hook fix —
 ESC-49 (v0.4.32), the server-side pull-request opener for web sessions —
 ESC-50 (v0.4.33), REST-only session reads — ESC-51 (v0.4.34), the round-2.1
 batch — ESC-52..55 plus local F5/F6/F7 (v0.4.35), round 3's five —
-ESC-56..60 (v0.4.36), and the id-namespace leak both lanes caught identically
-— ESC-61 (**v0.4.37**).
+ESC-56..60 (v0.4.36), the id-namespace leak both lanes caught identically —
+ESC-61 (v0.4.37), the updater's lane blindness and its unapprovable pull
+request — ESC-62/63 (v0.4.38), and round 3.2's four — ESC-64..67, the
+livelock stop among them (**v0.4.39**).
