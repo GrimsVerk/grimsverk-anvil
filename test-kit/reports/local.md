@@ -1693,3 +1693,80 @@ first red in five rounds that the pipeline can actually fix itself** — the
 decision is on a branch and has not landed, so append-only does not bar
 correcting it, and `docs/DESIGN.oracle.md` is inside the fix session's grant.
 Watching whether the fix session takes it.
+
+---
+
+## THIS LANE MERGED — the pipeline is running end to end
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 08:22:29Z | fix | fix session dispatched against PR #12's `plan` red |
+| **08:29:39Z** | **MERGE** | **PR #12 merged by `app/autogrims`** — first merge on `run/local` |
+| 08:30:22Z | **STEWARD** | iteration 3. Worker `steward-od-1` — **a phase no round has ever reached** |
+| 08:34:38Z | WAIT | iteration 4. PR **#15** (`docs/oracle-plan-od-1--run-local`) |
+| **08:36:11Z** | **MERGE** | **PR #15 merged by `app/autogrims`** |
+| 08:36:14Z | ORACLE | iteration 5 — the loop has come round and is running normally |
+
+### The fix session repaired the oracle's own mistake
+
+The 24-character vision quote that `oracle-decisions.sh` refused was corrected,
+and PR #12 went from one red to fully green:
+
+| Check | Result | Duration |
+| --- | --- | --- |
+| `open-pr` | pass | 7s |
+| `plan` | **pass** | 6s |
+| `checks` | pass | 10s / 11s |
+| `secrets` | pass | 9s / 10s |
+| `template-sync` | pass | 12s |
+| `test-the-tests` | pass | 10s |
+| `acceptance-criteria` | pass | 12s |
+| `review` | **pass** | **2m3s** |
+| `delete-merged-branch` | pass | 4s |
+| `update-open-prs` | pass | 4s |
+
+Eleven required checks green, `review` taking two minutes of real judgment. This
+is the first time in five rounds that a dispatched fix session **succeeded** —
+rounds 2.1 and 2.2 dispatched fixes against a billing outage and an off-limits
+gate, neither of which any diff could touch. Given a defect that was genuinely
+the pipeline's own, it fixed it in seven minutes and the pull request merged.
+
+### ESC-21 — CONFIRMED on this lane too, both merges
+
+```
+docs/oracle-20260820080937--run-local -> 0 remote ref(s)
+docs/oracle-plan-od-1--run-local      -> 0 remote ref(s)
+```
+
+`delete-merged-branch` passed in 4s on PR #12. Two for two on this lane, plus
+the web lane's, and the nightly sweep has never been needed.
+
+### The merge history is exactly what the design promises
+
+```
+$ git log --oneline --first-parent -4 origin/run/local
+7a3430e Merge pull request #15 from GrimsVerk/docs/oracle-plan-od-1--run-local
+6a5ed14 Merge pull request #12 from GrimsVerk/docs/oracle-20260820080937--run-local
+02e1506 Record the round 3.2 setup-github transcript (run/local)
+1bd477f Scaffold and canned test design (run/local)
+```
+
+Merge commits, not a rebase — which is what keeps the one-line `git revert -m 1`
+rollback available that `setup-github.sh` deliberately preserves by refusing
+"require linear history". Two sanctioned direct commits at the base (the
+scaffold and the setup transcript), then nothing but merges. That is Part 3's
+closing check 3 satisfied for this lane so far.
+
+### Observation checklist — updated
+
+| Item | State |
+| --- | --- |
+| App authorship, never the owner | **CONFIRMED** — every pull request, and both merges, by `app/autogrims` |
+| `arm-auto-merge` present | **CONFIRMED** |
+| Auto-merge completes without a human | **CONFIRMED** — PR #12 and #15, and the web lane's #11 |
+| Head branch disappears after merge | **CONFIRMED — immediately, via `delete-merged-branch`, ~4-6s** |
+| Per-check durations | **RECORDED** — no ESC-45 skip-as-success seen; `review` at 2m0s/2m3s is the honest signature |
+| Evidence PR merges (ESC-40) | still unobserved — needs a run that stops |
+| Cross-lane `update-open-prs` (ESC-17) | job runs; scenario still not fired (see F15) |
+| Budget gauge live | **CONFIRMED** — five readings, monotonic |
+| Contamination probe (rule 10) | **CLEAN** — no artifact has referenced `test-kit/` |
