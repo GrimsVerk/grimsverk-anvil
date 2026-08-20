@@ -2041,3 +2041,94 @@ Poll log: `test-kit/reports/wait-logs/anvil-local-waitweb39.log`.
   "if you are unsure whether something is a finding, it is a finding", and
   because the owner's reconstruction of this round would otherwise show a
   pull request closing itself for no reason.
+
+---
+
+## ⚠ COMPARISON CAVEAT — from round 3.3 the two lanes are NOT version-matched
+
+**Owner's decision, 2026-08-20.** The web lane was mid-run at **v0.4.37** and
+productive — five merges in 45 minutes, and further into the pipeline than any
+lane had reached (`docs/plan-anvil-temperature--run-web`,
+`docs/oracle-plan-od-7--run-web`). It runs to its own stop rather than being
+torn down. The local lane goes **forward** to v0.4.41 rather than back.
+
+So from this point:
+
+| Lane | Template | Role |
+| --- | --- | --- |
+| `run/web` | **v0.4.37** | effectively a **control** — the last release before the round-3.3 fixes |
+| `run/local` | **v0.4.41** | carries ESC-65, 66, 67, 68, 69, 70, 71, 72, 73 |
+
+**This invalidates the parts of Part 3 that assume one release.** Specifically:
+the scaffold diff (`git diff run/local run/web -- ':!src' ':!tests' ':!docs'
+':!test-kit'`) is now expected to be **large and meaningful**, not near-empty,
+and any difference between the lanes' phases, counts or artifacts is
+confounded by four template releases. It is a deliberate owner decision, not a
+lane deviation, and it should be read as a v0.4.37-vs-v0.4.41 comparison rather
+than a local-vs-web one.
+
+## Round 3.3 — restart at v0.4.41, `run/local` gated alone
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 10:2xZ | Re-render at v0.4.41 | `_commit: v0.4.41`. All four hooks Passed; 73 files, 13 762 insertions. Rule-13 scan: **NONE — clean**. `git push -f` → `+ ee07cfa...b9cdcd3`. |
+| 10:2xZ | Gate `run/local` **alone** | TESTPLAN Part 1 step 6a-4's timeout branch, on the owner's instruction. `include` → `["~DEFAULT_BRANCH","refs/heads/run/local"]`. `run/web` deliberately **not** gated by this lane — it is mid-run under its own arrangements and gating it now would change the rules under a running lane. |
+| 10:23Z | Full readiness | **GREEN.** |
+| 10:23Z | Start the driver | pid 445727, `--budget-points 20 --max-prs 30 --max-hours 12`. |
+
+### ESC-72 — CONFIRMED live: readiness now refuses to start behind an open pull request
+
+A new line in the readiness output, which did not exist in any earlier round:
+
+```
+ready    no pull request is open against 'run/local' — the run starts on a clear base
+```
+
+This is the check the owner says would have caught what stranded the other test
+bed. Here it passes because the base was cleared first — but it is now a
+positive precondition rather than an unexamined assumption.
+
+### ESC-65 — CONFIRMED live: the budget reset time is no longer truncated
+
+Every earlier round's banner ended mid-sentence:
+
+```
+deliver-loop: budget: weekly at 74% (model 82%), allowance 20 points, window resets Aug
+```
+
+Round 3.3's does not:
+
+```
+deliver-loop: budget: weekly at 6% (model 6%), allowance 20 points, window resets Aug 27, 10:59am (Europe/Amsterdam)
+```
+
+`window resets Aug` was the truncation that hid the rollover this lane caught by
+probing directly at 09:03Z. The full timestamp is now printed. It also confirms
+the rollover from the other side: 74% before the reset, **6%** after.
+
+---
+
+## Proposed TESTPLAN amendment (from F18, at the owner's request)
+
+For Part 1's restart drill and any future round teardown:
+
+> **Closing leftovers and closing the run's own evidence pull request are
+> different categories, and a blanket sweep cannot tell them apart.**
+> When clearing a round, close stale *work* pull requests by name or branch
+> prefix — never by "every open pull request on the base". The run-evidence
+> pull request (`docs/run-<timestamp>--<lane>`) is the artifact the round exists
+> to produce and may still be under active observation, by the owner or by an
+> open checklist item. Close it only after its readings are taken, and say in
+> the ledger which reading it was closed on.
+>
+> A corollary for the rebuild that follows: force-pushing the lane base destroys
+> the base any surviving pull request was measured against. If a pull request is
+> being kept for observation, take the reading **before** the rebuild, not after
+> — the two steps are in conflict and the drill currently orders them the wrong
+> way round.
+
+## Phase transitions — round 3.3 (Part 2 rule 5)
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 10:23:17Z | ORACLE | iteration 1. Worker `oracle-20260820102317`, base `run/local`, template v0.4.41. |
