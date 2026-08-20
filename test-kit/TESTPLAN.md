@@ -60,7 +60,8 @@ release **v0.4.35**, and Part 1 step 2 refuses anything older.
 ## Part 0 — One-time rig (owner, already done, survives every wipe)
 
 Nothing here repeats per round. It is listed so a refusal can be traced, not
-so anyone redoes it: the GitHub App (ID 4635498) with Contents RW, Pull
+so anyone redoes it: the GitHub App (`app_id` in the owner's register —
+see below) with Contents RW, Pull
 requests RW, Checks RO — installed on **grimsverk-anvil and
 grimsverk-template**; the repository secrets `CLAUDE_CODE_OAUTH_TOKEN`,
 `APP_ID`, `APP_PRIVATE_KEY` (secrets survive branch wipes); and the claude.ai
@@ -106,6 +107,26 @@ requires template **v0.4.35 or newer**. Template access for copier comes
 from the owner attaching BOTH repositories when creating the web session —
 grimsverk-anvil to work in, grimsverk-template only so copier can read it.
 
+**The owner's identity register.** This repository is public, so no personal
+value — machine paths, hostnames, SSH aliases, app ids — appears in it. They
+live in ONE file on the owner's machine, outside every repository:
+`~/.config/grimsverk/identity.json`, shaped like:
+
+```json
+{
+  "repos_root": "path/to/your/repos",
+  "ssh_host": "your-github-ssh-alias",
+  "app_id": "your-github-app-id",
+  "app_pem_path": "path/to/the/app/private-key.pem"
+}
+```
+
+Wherever this kit writes `<repos_root>`, `<ssh_host>`, `<app_id>` or
+`<app_pem_path>`, the LOCAL agent resolves it from that file. The web agent
+never needs it — the web side holds no private values at all (ESC-50). And
+the resolution goes one way only: values come OUT of the register into
+commands, never into anything committed, pushed, or logged (Part 2, rule 13).
+
 **Wiping between rounds (owner):** delete every branch except `main`. Secrets,
 the ruleset, the App, and the web environment all stay; the stale ruleset
 still names the old lane branches, and the local agent's first setup run
@@ -142,9 +163,10 @@ local lane only, **W:** the web lane only.
 ### 1. Get the repository
 
 - **L:** clone with the owner's SSH alias, into the standard location:
-  `cd ~/code/GrimsVerk && git clone
-  git@github.com-grimsverk:GrimsVerk/grimsverk-anvil.git && cd
-  grimsverk-anvil` (the plain `git@github.com:` host has no key attached).
+  `cd <repos_root> && git clone
+  git@<ssh_host>:GrimsVerk/grimsverk-anvil.git && cd grimsverk-anvil`
+  (`<repos_root>` and `<ssh_host>` come from the owner's register; the plain
+  `git@github.com:` host has no key attached).
 - **W:** the session starts with BOTH repositories checked out — the owner
   attached them at session creation. grimsverk-anvil is your workspace;
   grimsverk-template is present ONLY so copier can read it (Part 2, rule 12)
@@ -250,12 +272,14 @@ first round after a wipe:
    This resets the `grimsverk-gates` ruleset to the default branch only
    (unblocking lane creation for BOTH lanes), asserts the merge settings, and
    leaves the existing secrets alone. If it prompts for the App ID and `.pem`
-   path, the values are in your prompt. Do NOT pass `--verify`: `main`
+   path, the values are `app_id` and `app_pem_path` in the register. Do NOT
+   pass `--verify`: `main`
    carries no workflows, so its throwaway pull request would wait forever;
    the checks register on the first real lane pull request instead.
 2. Ensure the driver's local identity file exists —
    `cp .claude/app-identity.example .claude/app-identity`, fill in the App ID
-   and `.pem` path from your prompt — then prove it:
+   and `.pem` path from the register (`app_id`, `app_pem_path`) — then prove
+   it:
    `.claude/scripts/app-token.sh >/dev/null && echo "App identity OK"`.
 3. Push your lane (step 6) if not already done.
 4. **Gate BOTH lanes once both exist.** Poll
@@ -385,6 +409,15 @@ is disposable; your findings are the deliverable. These rules bind both lanes.
     ruled out — access is the owner's to grant, once, at session creation.)
     `_src_path` must end up as the canonical https URL. The local lane reads
     the template only the same way, through copier.
+13. **The public record stays generic.** This repository is public. Values
+    from the owner's identity register (Part 0) — machine paths, home
+    directories, SSH aliases, hostnames, usernames, the app id — must never
+    appear in a ledger, report, commit message, or any pushed file. Refer to
+    them by key (`<app_pem_path>`, `<repos_root>`). Command output you quote
+    as evidence often embeds them (absolute paths in tracebacks, cache
+    paths, remote URLs): replace the value with its `<key>` before
+    committing. A register value found in anything pushed is itself a
+    finding.
 
 ## Part 3 — What the owner compares afterwards
 
