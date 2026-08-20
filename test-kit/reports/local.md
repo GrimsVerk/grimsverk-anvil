@@ -2309,3 +2309,73 @@ and credited `(anvil local F18)`:
 Following it here is what produced the ESC-40 reading above: had I swept first,
 as in round 3.3, the merge would still have happened but the evidence for it
 would have been destroyed with the base.
+
+---
+
+# ROUND 3.4 — v0.4.42
+
+Owner's mapping: F19 → **ESC-74** (reset boundary compared as an instant, only a
+real move >1h re-baselines), F20 → **ESC-75** (every deliberate stop goes through
+`stop <code> <reason>`; a stop with no reason is **exit 7 — WITHOUT REACHING A
+DOCUMENTED STOP**, never 0; TERM/INT/HUP trapped and named; a failed dispatch
+records engine death vs session timeout), F7 → **ESC-77** (inert `Write()`
+grants removed), and mobo's F24 → **ESC-76** (readiness refuses on leftover
+worktrees).
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 11:07Z | 1. Readings on PR #29 **first** | Taken before any rebuild, per the amended drill. **It had already merged itself** — see the ESC-40 section above. Nothing to close, branch already gone, no open pull requests on the base. |
+| 11:09Z | 2. Update the lane to v0.4.42 | Rebuilt from `origin/main` and re-rendered. **`.copier-answers.yml` records `_commit: v0.4.42`**, `_src_path` canonical https. Read "update" as a rebuild, on the strength of step 1's phrase "before anything rebuilds the base". All four hooks Passed; 73 files, 13 897 insertions. Rule-13 scan: **NONE — clean**. `git push -f` → `+ 1653200...dac5b28`. |
+| 11:10Z | 3. Readiness | **GREEN**, and both requested lines print — quoted in full below. |
+| 11:10Z | 4. Start the driver | pid 474371, `--budget-points 20 --max-prs 30 --max-hours 12`. |
+
+### Step 3, answered explicitly
+
+Both lines are present and both are `ready`:
+
+```
+ready    no pull request is open against 'run/local' — the run starts on a clear base
+ready    no leftover worktrees — no dead run's debris in the way
+```
+
+**ESC-76 confirmed present** (the leftover-worktree refusal, from mobo's F24) and
+**ESC-72 confirmed present** (the open-pull-request refusal). Both pass here
+because the base was cleared first; they are now stated preconditions rather
+than assumptions.
+
+### ESC-77 — CONFIRMED, at the source and pending in the logs
+
+```
+$ grep -c 'Write(docs/' .claude/scripts/spawn-worker.sh
+0
+```
+
+The two inert grants are gone from the rendered scaffold. **F7 closed at
+source**; step 5(c) is to confirm the warnings are absent from an actual worker
+log this round.
+
+### ESC-67 — CONFIRMED live: the budget line is now per-iteration and names the spend
+
+A second budget line appears that has never existed before:
+
+```
+deliver-loop: budget: weekly at 10% (model 9%), allowance 20 points, window resets Aug 27, 11am (Europe/Amsterdam)
+deliver-loop: budget: weekly at 10% (model 9%), spent 0 of 20 points on the per-model weekly limit
+```
+
+`spent 0 of 20 points on the per-model weekly limit` is the accounting F16's
+second half showed was missing — the ceiling is now a running total, not a
+start-time snapshot.
+
+### ESC-74 — first reading good
+
+The banner reports `window resets Aug 27, 11am (Europe/Amsterdam)` and **no**
+`weekly window reset mid-run` line appeared, on the same boundary that produced
+the spurious re-baseline in round 3.3. Watching every iteration for the rest of
+the run, per step 5(a).
+
+## Phase transitions — round 3.4 (Part 2 rule 5)
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 11:10:19Z | ORACLE | iteration 1. Worker `oracle-20260820111019`, base `run/local`, template v0.4.42. |
