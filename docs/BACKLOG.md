@@ -86,3 +86,22 @@ _append-only, so a landed item never changes position.)_
 _(nothing yet — filed by `/plan` when a design leaves a question open; format:_
 _`BL-<n>` — the question, the proposed default, HIGH or LOW risk, one line on_
 _why that class, and `— filed by: plan`.)_
+
+- **BL-5** — The command-line invocation syntax for `anvil`. The plan
+  implementing OD-1 / R1000 is the plan covering the MVP `convert` milestone
+  (R1, R2, R4, R5), and it cannot declare a Signatures block or write the S1
+  and S3 acceptance scripts until the syntax is fixed: the positional order,
+  and how batch mode is invoked — the second decides whether a bare `anvil`
+  with no arguments is a usage error under R5 or a request to read standard
+  input. `docs/DESIGN.md` §8 and §11 record both as deliberately not decided
+  there, and the design's owner-authored test note says the planning layer must
+  file them rather than settle them. **Proposed default:** three positionals in
+  the order value, from-unit, to-unit — `anvil 5 km mi` — printing the result
+  as the bare formatted number on one line (that part R1000 already decides);
+  batch mode invoked by an explicit `--batch` flag that reads standard input
+  and takes no positionals; any other shape — missing, surplus, or unrecognised
+  arguments — prints usage to standard error and exits non-zero.
+  **Risk: HIGH** — it is the tool's external interface, so it fixes every
+  Signatures block in the plan and the exact command lines S1 and S3 execute,
+  and changing it after the fact rewrites the CLI slice and both acceptance
+  scripts — filed by: steward
