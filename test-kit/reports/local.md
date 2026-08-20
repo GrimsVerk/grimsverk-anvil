@@ -2636,3 +2636,147 @@ refuses to watch anything else**, and reports liveness with `kill -0` on that pi
 alone. Nothing I run can now reach `find_best_mobo`'s driver, and no reading of
 mine can be about its process. F21 stands unchanged as a template finding — the
 template should make runs distinguishable; this only fixes my half.
+
+---
+
+## Round 3.5 — 11 minutes, 1 merge, and the cleanest stop of the whole test
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 11:37:05Z | ORACLE | iteration 1, worker `oracle-20260820113705` |
+| 11:44:14Z | push | `the worker's work is on 'docs/oracle-decisions-2026-08-20-1', not 'worker/oracle-20260820113705' — pushing what it reported` |
+| 11:44:22Z | WAIT | iteration 2, PR **#35** |
+| 11:47:56Z | **MERGE** | **PR #35 merged by `app/autogrims`** |
+| 11:47:59Z | SETUP | iteration 3 — `setup problem: coverage: malformed requirement id(s): — /design is interactive and owner-landed; the loop cannot do it` |
+| 11:47:59Z | **STOP** | **exit code 2, with a reason** |
+
+### F20 — FIXED in v0.4.42 (ESC-75), confirmed live
+
+The landed report:
+
+```
+Stopped 2026-08-20T11:47:59Z with exit code 2: setup problem: coverage: malformed
+requirement id(s): — /design is interactive and owner-landed
+
+See .claude/scripts/deliver-loop.sh's header for what each exit code
+means. Every stop says why; none degrades silently.
+```
+
+A **non-zero** code, a **named reason**, both in the log and in the landed
+report. Compare round 3.3's `exit code 0` on a run that had died without
+reaching a documented stop. **F20 closed.**
+
+### ESC-68 — CONFIRMED live, and it is the direct cure for F16
+
+```
+WORKER_RESULT id=oracle-20260820113705 branch=docs/oracle-decisions-2026-08-20-1 …
+- 11:44:14Z the worker's work is on 'docs/oracle-decisions-2026-08-20-1', not
+  'worker/oracle-20260820113705' — pushing what it reported
+```
+
+The worker committed to a branch of its own choosing; the driver noticed, said
+so, and pushed the branch that actually carries the work. F16's empty-diff loop
+was exactly this mismatch going unnoticed — the driver pushing an empty ref and
+then re-dispatching forever. It is now detected and named in one line.
+
+### ESC-67 — CONFIRMED live, updating every iteration
+
+```
+- 11:37:0xZ budget: weekly at 11% (model  9%), spent 0 of 20 points …
+- 11:44:21Z budget: weekly at 11% (model 10%), spent 1 of 20 points …
+- 11:47:59Z budget: weekly at 12% (model 10%), spent 1 of 20 points …
+```
+
+Three readings in eleven minutes, weekly moving 11% → 12%, model 9% → 10%, and a
+running **spend against the ceiling**. This is what Part 2 rule 8 asked me to
+confirm and what F16's second half showed was missing. **Rule 8 satisfied.**
+
+### ESC-74 — CONFIRMED live
+
+No `weekly window reset mid-run` line anywhere in the run, across three budget
+readings on the same `11am (Europe/Amsterdam)` boundary that produced the
+spurious re-baseline in round 3.3.
+
+---
+
+### F23 — the driver truncates `coverage.sh`'s diagnostic and drops the only actionable part
+- **Where:** round 3.5 SETUP phase; the stop line and the landed report.
+- **What happened.** The driver reported:
+
+  ```
+  setup problem: coverage: malformed requirement id(s): — /design is interactive and owner-landed; the loop cannot do it
+  ```
+
+  Note the colon followed by nothing. Run directly, the same script names the
+  offender:
+
+  ```
+  $ .github/scripts/coverage.sh
+  coverage: malformed requirement id(s):
+    R1000 — Output precision. (in docs/DESIGN.oracle.md)
+
+  An id is R or S followed by digits — R1, R12, S3. …
+  Renumber it …, or if it is deliberately not a requirement id, write it without
+  the bold id form.
+  ```
+
+  `coverage.sh` produces a multi-line diagnostic: the header, the offending ids,
+  an explanation, and a remedy. The driver keeps **only the first line** — which
+  is the one line that contains no information. The owner reads the run report
+  and learns that some id somewhere is malformed.
+- **Expected:** the same class of defect as ESC-65, where truncating the budget
+  line hid a real rollover. A diagnostic's first line is its label; its value is
+  in the lines after it.
+- **Severity: bug.**
+
+### F24 — SETUP misroutes a fixable ledger-format error into "only the owner can do this", and stops the run on it
+- **Where:** round 3.5, iteration 3, SETUP phase.
+- **What happened:** the driver concluded `/design is interactive and owner-landed; the loop cannot do it` and stopped. But the actual fault is a **formatting slip in `docs/DESIGN.oracle.md`** — the one design document an agent is explicitly allowed to write. Nothing about it requires `/design`, `docs/DESIGN.md`, or the owner.
+- **How the slip happened, and it is worth reporting on its own.** `docs/DESIGN.md` writes ids with the id bolded alone:
+
+  ```
+  - **R1** — Convert between length units: m, km, cm, mm, mi, ft, in — *Evidenced by:* S1
+  ```
+
+  The oracle wrote the id and its title inside one bold span:
+
+  ```
+  **R1000 — Output precision.** A conversion result is printed as …
+  ```
+
+  `coverage.sh` is right to reject it — its own comment says the silent version
+  of this bug meant an id "is neither counted as covered nor reported as
+  missing". **The gate worked.** But `docs/DESIGN.oracle.md`'s schema documents
+  every field of a *decision* and never shows a worked example of the
+  *requirement line itself*, which is the one thing `coverage.sh` parses. The
+  oracle had to infer the form from `docs/DESIGN.md` and inferred it wrong.
+- **Expected:** a fault in the agent-writable ledger should route back to the
+  oracle, not to the owner-only interactive path. Stopping the run was the most
+  expensive possible response to a one-line formatting error.
+- **Severity: bug.**
+
+### F25 — a landed malformed id may be permanently unrepairable: append-only meets a whole-file format scan
+- **Where:** consequence of F24. **Flagged as reasoning from the documents, not as an observed failure** — I have not attempted the repair.
+- **The argument.** `coverage.sh` scans whole documents for the bold-id form
+  (`.github/scripts/coverage.sh:114`, `awk … match(line, /\*\*R[0-9]+\*\*/)`), so
+  the malformed line is found wherever it sits in the file. `docs/DESIGN.oracle.md`
+  is append-only, and states it in its own words: *"A decision that has landed is
+  never edited or removed."* The decision carrying `**R1000 — Output precision.**`
+  **landed in PR #35 at 11:47:56Z.** So:
+  - editing the line in place is forbidden by the ledger's rule and by
+    `.github/scripts/oracle-decisions.sh`, which enforces it as a required check;
+  - a superseding decision — the sanctioned remedy — *appends* text and cannot
+    remove the malformed line, so the scan still finds it.
+
+  If both hold, `coverage.sh` fails on this repository from now on, and the SETUP
+  phase stops every future run at iteration 3. The lane would be permanently
+  blocked by a formatting error that the process forbids fixing.
+- **What would settle it:** whether `oracle-decisions.sh` actually rejects a
+  correction that only reformats an id inside a landed decision, and whether
+  `coverage.sh` has any notion of a superseded id. Both are one experiment each;
+  I have run neither, and I am not going to edit a landed decision to find out.
+- **Severity: blocker if confirmed.** Recorded now because the owner is fixing
+  the template and this is cheap to design around before it is expensive.
+
+Evidence pull request **#37** is open and untouched, per the amended drill — its
+readings have not been taken. Raw log: `test-kit/reports/local-driver-round3.5.log`.
