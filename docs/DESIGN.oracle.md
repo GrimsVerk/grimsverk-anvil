@@ -414,3 +414,190 @@ Downstream: `docs/plans/oracle/od1-output-precision.md` proceeds exactly as
 landed — no frontmatter change, no new requirement, nothing re-planned. BL-5
 leaves the uncertainty queue by this citation. The two obligations above bind
 the future `convert-batch` plan and are restated in this run's handoff.
+
+## OD-5 — Invocation syntax: `anvil <value> <from-unit> <to-unit>`; batch via `--batch`; a bare `anvil` is a usage error
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-6
+- **Requirements added:** R1001
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V2 — "Clear, honest errors come before feature breadth: refusing loudly beats guessing silently." Also V3 — "Simplicity comes before completeness: a small tool that is obviously right beats a large one that must be trusted."
+- **Vision statements against:** V3 — "Simplicity comes before completeness: a
+  small tool that is obviously right beats a large one that must be trusted."
+  It is the nearest, because the zero-flag alternative exists: detect a
+  non-tty standard input and enter batch mode implicitly, and then `--batch`
+  is added machinery. It does not forbid the flag: implicit detection is
+  hidden behaviour — the same command line does different things depending on
+  how it was launched, which is a tool that "must be trusted" rather than one
+  that is obviously right — and it makes a bare `anvil` at a terminal block
+  silently waiting for input instead of refusing loudly, which is exactly what
+  V2 forbids. One explicit, visible flag is the smaller trust surface, so V3
+  argues for it, not against it.
+- **Alternatives considered:** (a) a subcommand form, `anvil convert 5 km mi` —
+  rejected: the tool does one thing, so the subcommand token buys extensibility
+  nobody asked for at the price of four tokens where three carry the meaning,
+  against V3; (b) a filler word, `anvil 5 km to mi` — rejected: a fourth token
+  to parse, misspell, and report usage errors about, with no information in it;
+  (c) batch entered implicitly when arguments are absent or stdin is not a tty
+  — rejected: a bare `anvil` at a terminal would hang silently instead of
+  printing usage, which both R5 and V2 rule out, and behaviour that depends on
+  how the process was launched is guessing silently; (d) batch as a
+  subcommand, `anvil batch` — rejected: it mixes two grammars (subcommand for
+  batch, positionals for single-shot) where one flag keeps one grammar; (e)
+  the filed default — three positionals in the order value, from-unit,
+  to-unit; `--batch` reading standard input; exact §5 symbols — accepted.
+- **Rationale:** BL-6 is the HIGH uncertainty the design left open on purpose
+  (§8, §11), and every candidate syntax is buildable, so the vision's
+  tiebreakers choose: the smallest grammar whose refusals are loud. The
+  positional order value, from-unit, to-unit reads as the request is spoken —
+  "5 km in miles" — and matches §1's own phrasing ("you give it a value, the
+  unit it is in, and the unit you want"). Making a bare `anvil` a usage error
+  rather than a stdin read keeps R5 simple and honest now, and reserving
+  `--batch` decides today's behaviour without building R6. Unit symbols match
+  §5 exactly because BL-1 (aliases) is unruled — a ruling there supersedes
+  that one sentence and nothing else here. Confidence is high on the shape
+  (positionals, explicit flag, loud bare-invocation error) and moderate on
+  cosmetics like the flag's spelling; a superseding decision costs one entry.
+
+**R1001 — Invocation syntax.** Single-shot: exactly three positional
+arguments, in the order value, from-unit, to-unit — `anvil 5 km mi` — with no
+subcommand. Batch (R6): `anvil --batch` reads requests from standard input and
+accepts no positional arguments. Every other invocation — a bare `anvil`, a
+wrong positional count, `--batch` combined with positionals, an unrecognised
+flag — is a usage error under R5: usage text and a non-zero exit. Unit symbols
+are matched exactly as `docs/DESIGN.md` §5 spells them, case-sensitively; if
+BL-1 is later granted, its decision supersedes this matching sentence only.
+Until the `convert-batch` milestone builds R6, `--batch` is reserved, not
+delivered: the MVP treats it as an unrecognised flag, a usage error under R5.
+*Evidenced by:* S1 and S3, whose command lines this requirement fixes; S5
+exercises `--batch` once R6 exists.
+
+**Measurement.** This decision fixes the exact command lines the §13 scripts
+execute. The existing mechanism — `acceptance/S1.sh` and `acceptance/S3.sh`,
+run as a required check on every pull request — is the observation: S1's table
+invokes `anvil <value> <from> <to>` literally, and S3 must include the bare
+`anvil` invocation among its missing-argument cases. Both scripts are written
+by the `convert` milestone plan, which until this decision could not write
+them. No new mechanism is needed; per the vision's durable-evidence section,
+the scripts that observe the interface are the ones this ruling unblocks.
+
+Downstream: R1001 belongs to the MVP `convert` milestone's CLI layer. No plan
+exists for that milestone yet — BL-6 was filed precisely because planning
+stopped on it — so this is new-plan work, and the plan claims R1001 in its
+`covers:` list.
+
+## OD-6 — Single-shot output: the formatted value alone on standard output; errors and usage on standard error
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-7
+- **Requirements added:** R1002
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V3 — "Simplicity comes before completeness: a small tool that is obviously right beats a large one that must be trusted."
+- **Vision statements against:** V2 — "Clear, honest errors come before
+  feature breadth: refusing loudly beats guessing silently." It is the
+  nearest, because a bare `100` names no unit, so a misread invocation yields
+  a plausible number with no context on the line to catch it — which sounds
+  like the silence V2 distrusts. It does not forbid this: V2 is about errors,
+  and under this contract every error is loud — named offending input on
+  standard error, non-zero exit, nothing on standard output to mistake for a
+  result. A successful result is not a guess: both units were fixed by the
+  command line the caller typed one moment earlier, and echoing their own
+  question back at them is output breadth, not error clarity. The §4
+  script-author, a named user, would have to strip that echo from every pipe.
+- **Alternatives considered:** (a) echo the request on the result line —
+  `5 km = 3.10685596119 mi` — rejected: friendlier to eyes, but every script
+  consumer must parse the value back out of prose, and `docs/DESIGN.md` §4
+  names the script author piping a thousand rows as a core user; decoration
+  that taxes the primary consumer, against V3; (b) the value with a target-unit
+  suffix, `3.10685596119 mi` — rejected: the same parsing tax, smaller; the
+  target unit is the third argument the caller chose and adds no information;
+  (c) errors on standard output — rejected: a pipe would ingest error prose as
+  data, a wrong "number" delivered confidently downstream, the V1/V6 worst
+  case; standard error plus a non-zero exit is the loud refusal V2 requires
+  and R4/R5 already demand the exit code; (d) the filed default — the
+  formatted value alone on standard output, one line, errors and usage on
+  standard error — accepted.
+- **Rationale:** R1000 (OD-1) fixed how a result value is formatted; BL-7
+  asks what else shares its line and which stream carries what. The answer
+  that is obviously right is: nothing else, and standard output carries
+  results only. It makes the tool composable the way §4 promises — `anvil` in
+  a pipe emits exactly the number — and it retroactively makes
+  `od1-output-precision`'s asserted string honest: the "printed value field"
+  is the whole line, so the ESC-1 case prints exactly `100` and a script can
+  assert it with `=`, not a regex. This is an external format, expensive to
+  reverse once scripts parse it, which is why it is decided now, before
+  `acceptance/S1.sh` and `acceptance/S3.sh` exist, rather than shipped by
+  accident and defended later. Confidence is high.
+
+**R1002 — Single-shot output contract.** On success, `anvil` writes exactly
+one line to standard output: the result value formatted per R1000, with no
+unit suffix, no echo of the input, and no other text — the line is
+`format(value, ".12g")` of the result, then a newline, and nothing else is
+ever written to standard output. Error and usage messages (R4, R5) are written
+to standard error, and a failed invocation writes nothing to standard output.
+This requirement governs single-shot output only; the batch line format (R6)
+remains undecided in `docs/DESIGN.md` §11 and is not ruled here. *Evidenced
+by:* S1, whose expected values are compared against the whole output line, and
+S3, which must additionally assert that error and usage text arrive on
+standard error while standard output stays empty.
+
+**Measurement.** The behaviour this decision fixes is printed output and
+stream separation, and the existing mechanism that observes printed output is
+the §13 acceptance scripts on every pull request. Two obligations on the
+`convert` plan make the contract observed rather than narrated:
+`acceptance/S1.sh` compares the entire stdout line (not a substring) against
+each expected value, and `acceptance/S3.sh` asserts stderr carries the message
+and stdout is empty for each failure case. Existing machinery, pointed at the
+new contract; nothing new is invented, per the vision's durable-evidence
+section.
+
+Downstream: R1002 belongs to the MVP `convert` milestone's CLI layer,
+alongside R1001; the same new plan claims it. `docs/plans/oracle/od1-output-precision.md`
+is untouched — its slice 1 already prints through one function and its
+asserted string is now exact rather than presumed.
+
+## OD-7 — BL-8 is granted: the `convert` plan covers R7 and R8
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-8
+- **Requirements added:** (none)
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** (no vision statement decided this)
+- **Vision statements against:** V6 — "A conversion that is numerically wrong,
+  however plausible it looks, is rejected outright — as is any run that
+  reports success while a criterion's evidence cell is empty or narrated
+  rather than executed." It is the nearest, because letting the `convert`
+  plan claim R7 and R8 looks like claiming the packaging and the stdlib-only
+  posture are delivered by bookkeeping. It does not forbid the ruling, for the
+  reason OD-4 already recorded: `covers:` feeds `coverage.sh`, which answers
+  "is every requirement planned" and nothing more. Doneness for R7 and R8 is
+  S4 — an **(owner)** criterion, verified by the owner on their own machine —
+  and no acceptance row is touched by this ruling; its evidence cell stays
+  empty until the owner fills it.
+- **Alternatives considered:** (a) a separate packaging plan for R7 and R8 —
+  rejected: it would contain no work of its own, because the installed `anvil`
+  console command and the dependency-free posture come into existence in
+  exactly the MVP's diff (the scaffolded `pyproject.toml` entry point and the
+  absence of any added dependency); a plan that is frontmatter around another
+  plan's work is bookkeeping pretending to be a slice; (b) leave R7 and R8
+  uncovered until a later milestone — rejected: §12's later milestones
+  (`temperature`, `convert-batch`) do not create the package or the dependency
+  posture either, so `coverage.sh` would report two requirements nobody ever
+  scheduled, permanently, for work the MVP in fact does; (c) route through an
+  edit to `docs/DESIGN.md` §12's scope line — not available to this ledger
+  (that document is owner-landed) and unnecessary, since §12 scopes the MVP by
+  its acceptance criteria and R7/R8's criterion S4 is the owner's own run, not
+  a per-PR gate; (d) the filed default: yes, `covers: [R1, R2, R4, R5, R7,
+  R8]` — accepted.
+- **Rationale:** The same shape as BL-5/OD-4, and the planner's LOW
+  classification was correct: no slice boundary, signature, external format or
+  printed output changes on any candidate answer — only the coverage
+  bookkeeping differs, and reversing it costs one line of plan frontmatter.
+  The milestone that first makes R7 and R8 true is the one that should carry
+  their ids, so that `coverage.sh`'s "covered" means "scheduled where the work
+  actually happens". This ruling changes no behaviour, so there is nothing new
+  to measure: R7 and R8's observable surface is S4, already assigned to the
+  owner by §13, plus the offline test-suite rule CI enforces on every pull
+  request. The `convert` plan should claim R1001 and R1002 in the same
+  `covers:` list — they landed in this run and live in the same milestone.
+  Confidence is high.
