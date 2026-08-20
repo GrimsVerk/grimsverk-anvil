@@ -135,3 +135,38 @@ _why that class, and `— filed by: plan`.)_
   block, alters no acceptance script's expected values and no external format,
   and reversing it is a one-line `docs/` pull request. Proceeded on the default
   in `docs/plans/oracle/anvil-temperature.md` — filed by: plan
+- **BL-8** — The batch-mode line format for `anvil --batch`. `docs/DESIGN.md`
+  §11 records it as deliberately not decided ("what a request line looks like,
+  what an error line looks like"), and **OD-4** says in terms that the plan
+  covering the `convert-batch` milestone (R6) must file it rather than settle
+  it. That plan cannot declare a Signatures block for the batch entry point or
+  write `acceptance/S5.sh` until it is fixed, because S5 compares output
+  exact-match: every byte of every line is the contract. Four things need
+  deciding together — the request-line grammar; what an error line says; **which
+  stream each line goes to**, since R1001 sends single-shot error messages to
+  standard error while R6 and S5 describe result lines and error lines as one
+  printed sequence; and which non-zero exit code a batch with a failed line
+  returns.
+  **Proposed default:** a request line is the three single-shot positionals
+  separated by whitespace — `5 km mi`, the R1001 order — and a line carrying any
+  other number of fields is a bad line, not a usage error. A good line prints
+  its R1000-formatted result on standard output, byte-identical to the same
+  conversion run single-shot. A bad line prints, on **standard output**, in
+  stream order, `anvil: line <n>: <reason>`, where `<n>` is the 1-based input
+  line number and `<reason>` is the same text the single-shot path prints
+  (`unknown unit: 'xyz'`, `not a number: 'abc'`, `cannot convert 'kg' (mass) to
+  'm' (length)`, `result is out of range: ...`), plus one new reason for a
+  malformed line. Blank and whitespace-only lines are skipped: no output line,
+  and not a failure. The exit code is 1 if any line failed and 0 otherwise,
+  reusing the MVP's "refused conversion" code and leaving 2 to R1001's
+  usage-error path. Error lines go to standard output because R1000 and R1002
+  together guarantee that a result line always begins with a digit, `-` or `.`,
+  so an `anvil: `-prefixed line can never be mistaken for a result, and because
+  splitting the two kinds of line across two streams loses the ordering that
+  ties an error to the request that caused it — the line number is what carries
+  traceability once blank lines may be skipped.
+  **Risk: HIGH** — it is the tool's second external output format. It fixes the
+  Signatures block for the batch entry point, every expected byte in
+  `acceptance/S5.sh`, and the boundaries of the batch slices; reversing it after
+  S5 lands rewrites the acceptance script and the batch code together — filed
+  by: plan
