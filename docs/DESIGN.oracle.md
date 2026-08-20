@@ -236,3 +236,53 @@ decision not to decide, recorded.
 
 <!-- Append decisions below, newest at the bottom. Never edit one that has
 landed; supersede it with a new decision naming its id. -->
+
+## OD-1 — Results print at most 12 significant digits; float artifacts are a defect, not output
+
+- **Date:** 2026-08-20
+- **Evidence:** ESC-1
+- **Requirements added:** R1000
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V1 — "Correct conversions come before everything else: a wrong number presented confidently is the worst output this tool can produce."
+- **Vision statements against:** V6 — "A conversion that is numerically wrong, however plausible it looks, is rejected outright — as is any run that reports success while a criterion's evidence cell is empty or narrated rather than executed." It can be read to forbid any rounding at all, since a rounded value is not the bit-exact float the converter computed. It does not: the bit-exact float is itself an approximation of the true decimal answer, and `100.00000000000001` for 0.1 km in metres is that approximation's error leaking into the output — the digits the rule below removes are exactly the wrong ones, and printing them is what V6 rejects.
+- **Alternatives considered:** (a) shortest round-trip repr — the status quo, and the defect ESC-1 logged; (b) a fixed count of decimal places — pads whole-number results with false precision and truncates small ones (0.001 mm in km has no digits left at two decimal places); (c) exact decimal arithmetic end to end via the `decimal` module — heavier machinery that still needs a display rule at the end, because factors such as ft→m produce non-terminating quotients, so it adds complexity without removing the decision; (d) 6 significant digits, the `%g` default — discards real precision from results scripts may pipe onward, against V1. Twelve significant digits keeps every digit this table's arithmetic can vouch for and drops the ones it cannot.
+- **Rationale:** IEEE-754 doubles carry 15–17 significant decimal digits, and the artifact ESC-1 observed lives in the last one or two of them; a conversion here is a handful of multiplications and at most one addition, so the first twelve digits of the rounded result are digits of the true answer. Rounding the *display* to 12 significant digits therefore removes only wrong digits — V1's "wrong number presented confidently" — while changing no computed value. Confidence: high on the shape of the rule, moderate on the exact figure 12; if that figure is wrong, superseding it costs one entry.
+
+**R1000 — Output precision.** A converted result is printed rounded to at most
+12 significant digits, with trailing zeros (and a bare trailing decimal point)
+stripped — `g`-style formatting, so magnitudes outside that shape may use
+exponent notation. Consequences: 0.1 km to m prints `100`, never
+`100.00000000000001`; 100 C to F prints `212`; a result of 373.15 prints
+`373.15`.
+
+**Measurement, per the durable-evidence ruling in `docs/VISION.md`.** No new
+collection mechanism is needed — two existing ones observe this behaviour once
+the case is in them, and the plan that implements R1000 carries both: (1) the
+fixed table `acceptance/S1.sh` checks must include the ESC-1 case — 0.1 km to
+metres printing exactly `100` — so the rule is exercised through the installed
+command on every pull request; (2) the test suite gains a unit test for the
+formatting rule, demonstrated red against the unrounded output and green
+against the fix. Once both have merged, the ESC-1 correction row is appended to
+`docs/escapes.md` naming the demonstrated check.
+
+## OD-2 — BL-3 rejected: no `rich`, no table output; results stay plain single-line text
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-3
+- **Requirements added:** (none)
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V5 — "No runtime dependency may be added: the Python standard library is the whole toolbox, and a diff that adds one violates this tenet." and V3 — "Simplicity comes before completeness: a small tool that is obviously right beats a large one that must be trusted."
+- **Vision statements against:** V2 — "Clear, honest errors come before feature breadth: refusing loudly beats guessing silently." is the nearest, if aligned tables are read as a form of clarity. It does not forbid this: it names errors, not result formatting, and it ranks breadth below clarity — and for the script authors §4 of `docs/DESIGN.md` names, a plain deterministic line *is* the clear output, while ANSI-decorated tables are what breaks their pipes.
+- **Alternatives considered:** (a) adopt `rich`, as BL-3 asks — a runtime dependency, which the vision's one core tenet forbids outright; (b) hand-rolled ANSI tables — stdlib-legal, but BL-3 itself calls that wasted effort, and any table output breaks the one-result-line-per-request shape R6 promises batch callers; (c) reject and keep plain text — chosen. This is a rejection rather than a halt: a tenet-compliant ruling existed, and V3 would have rejected the feature even with V5 deleted, so no decision violating a tenet was ever on the table.
+- **Rationale:** BL-3 names, as its only acceptable means, exactly the thing V5 exists to forbid, and its end — prettier output — is completeness, which V3 ranks below simplicity and which nothing in the vision ranks above anything. The item is owner-filed, but it sits in Proposed, and the vision is the tiebreaker the owner made supreme: a pipeline that adopted `rich` overnight on the strength of a backlog suggestion would be overriding the owner's only core tenet on the owner's own prompt. If the owner wants this feature, the price is one edit to V5 — that edit, not a superseding oracle decision, is the designed reversal path.
+
+## OD-3 — BL-4 rejected: currency stays a non-goal; no live data at run time
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-4
+- **Requirements added:** (none)
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V1 — "Correct conversions come before everything else: a wrong number presented confidently is the worst output this tool can produce."
+- **Vision statements against:** (none — no statement in docs/VISION.md tells against this; the only mention of feature breadth, in V2, ranks it below clarity of errors, and V4 offers breadth as the first thing to trade away)
+- **Alternatives considered:** (a) live rates fetched over the network — possible with `urllib` and no new dependency, so V5 is not the obstacle; the design is: §3 of `docs/DESIGN.md` names currency and live-data units a non-goal, R8 requires the tool fully offline and deterministic, and a fetched rate is a number no offline test, acceptance script, or the owner's own no-network S4 check can ever verify, so V1's worst output becomes routine; (b) baked-in fixed rates — offline, but an exchange rate goes stale the day it is committed, and a stale rate is precisely a wrong number presented confidently, worse than refusing; (c) reject — chosen: a currency symbol stays an unknown unit and gets R4's loud error.
+- **Rationale:** The design already decided this — currency is a named non-goal and R8 makes the tool offline and deterministic — so this ruling restates the design rather than amends it; the entry exists so BL-4 is resolved on the record instead of resurfacing as unprocessed evidence every run. An exchange rate is not a conversion factor: it is time-varying data, and a converter whose answers change by the hour cannot satisfy a suite, an acceptance script, or V1. Reversing this belongs to the owner, by editing §3 and R8 of `docs/DESIGN.md`, which are theirs.
