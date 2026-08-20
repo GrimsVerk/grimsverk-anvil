@@ -983,3 +983,38 @@ space can address, so round 2.2 cannot merge anything either. Unlike F8 this is
 expected to reach its three-strike stop and land its evidence, exactly as it did
 in round 2.1; letting it get there is a better artifact than a kill, so it is
 not being interrupted.
+
+| 01:53:58Z | WAIT | iteration 3. PR #4 still red (`plan review`); second fix session dispatched. |
+
+### The fix session diagnosed F10 correctly and refused to route around it — recorded positively
+
+Round 2.1's fix sessions had nothing to say about the billing outage. This
+round's first fix session, working only from a read-only grant, reached F10
+independently and wrote it into the run report:
+
+> The only real fix is in `.github/workflows/`, which `AGENTS.md` puts
+> off-limits to agents. It would also be self-defeating here: adding a workflow
+> file to this branch takes it out of the planning-documents carve-out, and the
+> 92-line diff would then fail the exempt-branch size cap — a second red for the
+> same push. Filing the escape row is likewise blocked, since `docs/escapes.md`
+> must land on its own pull request and one is already open against `run/local`.
+
+It then verified the oracle's output rather than assuming it was the culprit —
+"OD-1..OD-3 carry all eight fields, cite `ESC-1`/`BL-3`/`BL-4` which all exist at
+the base commit, quote `docs/VISION.md` verbatim, and `R1000` sits above the
+oracle offset" — and closed by stating the limits of its own evidence:
+
+> this session's tool grant is read-only plus a fixed set of git commands, so I
+> could not open the CI job log or execute the gate scripts. The diagnosis is
+> elimination across all ten steps of the job plus the project's own recorded
+> precedent for this exact failure — not a local re-run. Running
+> `gh api repos/GrimsVerk/grimsverk-anvil/codeowners/errors` yourself will
+> confirm it in one line.
+
+Three template promises kept at once, under a gate it could not pass: it did not
+weaken or route around an off-limits gate (`AGENTS.md`, "Gate paths are
+off-limits"); it observed the one-pull-request-per-base rule even when that
+blocked the escape filing it wanted to make; and it obeyed "Honesty about
+verification" — naming exactly what it could not observe and what the owner
+should run instead. **Not a finding. This is the machinery working, and it is
+worth as much to the upstream report as the two defects it was defeated by.**
