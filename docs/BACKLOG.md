@@ -86,3 +86,15 @@ _append-only, so a landed item never changes position.)_
 _(nothing yet — filed by `/plan` when a design leaves a question open; format:_
 _`BL-<n>` — the question, the proposed default, HIGH or LOW risk, one line on_
 _why that class, and `— filed by: plan`.)_
+
+- **BL-5** — R1000 (decision `OD-1`) requires the 12-significant-digit rule "in
+  single-shot and batch output alike", but batch mode is the unbuilt
+  `convert-batch` milestone (R6), and the plan for R1000 may not widen into it.
+  Question: may `docs/plans/oracle/od1-output-precision.md` claim
+  `covers: [R1000]` while delivering only the single-shot half? Proposed
+  default: yes — one formatting function, `format_result`, is the only place a
+  result becomes text, so the later batch plan inherits the rule as a one-line
+  call rather than re-deciding it. Risk: LOW — every candidate answer leaves the
+  same code, the same slice boundaries, the same signature and the same printed
+  output; only the coverage bookkeeping differs, and reversing it costs one line
+  of plan frontmatter. Proceeded on the default — filed by: steward
