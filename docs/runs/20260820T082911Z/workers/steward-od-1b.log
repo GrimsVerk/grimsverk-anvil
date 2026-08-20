@@ -1,0 +1,7 @@
+Preparing worktree (new branch 'worker/steward-od-1b')
+HEAD is now at 76cb78e Merge pull request #14 from GrimsVerk/docs/oracle-20260820082926--run-web
+=== spawn-worker[steward-od-1b] engine=claude branch=worker/steward-od-1b base=run/web (76cb78ef961dc594b5b03820c0fbf51ddc3b35e4) bypass=0 ===
+=== 2026-08-20T08:36:10Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Permission allow rule (--allowed-tools): Write(docs/plans/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/plans/oracle/**) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/BACKLOG.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/BACKLOG.md) instead (Edit rules cover all file-editing tools).

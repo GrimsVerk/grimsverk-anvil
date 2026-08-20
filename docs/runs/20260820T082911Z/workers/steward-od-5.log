@@ -1,0 +1,45 @@
+Preparing worktree (new branch 'worker/steward-od-5')
+HEAD is now at b2a2850 Merge pull request #17 from GrimsVerk/docs/oracle-20260820085212--run-web
+=== spawn-worker[steward-od-5] engine=claude branch=worker/steward-od-5 base=run/web (b2a285080f462e2f43cd5fc2a9fc69c8955eccbc) bypass=0 ===
+=== 2026-08-20T09:01:08Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Permission allow rule (--allowed-tools): Write(docs/plans/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/plans/oracle/**) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/BACKLOG.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/BACKLOG.md) instead (Edit rules cover all file-editing tools).
+Done. Here is the short version.
+
+## What I did
+
+I did **not** write a new plan. OD-5 and the run handoff both say the existing plan only needs a small change. So I changed it.
+
+File: `docs/plans/oracle/anvil-convert-mvp.md` (slug `anvil-convert-mvp`)
+Decision: **OD-5 / R1002** — `anvil` refuses `inf`, `-inf`, `nan`, and any conversion that overflows. It never prints `inf` or `nan` as a result.
+
+Four edits:
+- `covers:` now lists **R1002**.
+- The Summary names OD-5 and closes its one open question.
+- The Uncertainties entry records the ruling by its `OD-5` id (it used to say "proceeded on the default").
+- Slice 2 gains the measurement OD-5 asks for: two rows in `acceptance/S3.sh` (`anvil inf km m`, `anvil 1e308 km mm`) and unit tests for both code paths. Estimate moved ~200 → ~215 lines.
+
+No slice boundary, no signature, no S1 table row changed.
+
+## Did it work
+
+Commit `001b91c` on branch `worker/steward-od-5`. Pre-commit hooks passed. I did **not** push and did **not** open a pull request — that is the driver's step.
+
+Two things I could not check, because this session has no permission to run them:
+- `.github/scripts/oracle-decisions.sh`
+- `uv run pytest` and the lint/type gate
+
+The change touches one Markdown file and no code, so the test suite is not affected. CI will run both.
+
+## What I had to guess
+
+Nothing. OD-5 answered the only open question, and it names the amendment word for word. I filed no new `BL-<n>`.
+
+## Plans this decision makes partly wrong
+
+One: **`docs/plans/oracle/anvil-convert-mvp.md`** — and that is the one I just corrected. It was wrong only in bookkeeping (missing `R1002`, missing the S3 rows), never in direction.
+
+## What you do now
+
+Nothing, unless you want to read the plan. The driver opens the pull request; CI and the review gate judge it.

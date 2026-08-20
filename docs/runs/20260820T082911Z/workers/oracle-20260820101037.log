@@ -1,0 +1,26 @@
+Preparing worktree (new branch 'worker/oracle-20260820101037')
+HEAD is now at 5e73b84 Merge pull request #26 from GrimsVerk/docs/oracle-plan-od-7--run-web
+=== spawn-worker[oracle-20260820101037] engine=claude branch=worker/oracle-20260820101037 base=run/web (5e73b8455b7087efa6420b4a876992abc2895edf) bypass=0 ===
+=== 2026-08-20T10:10:38Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).
+Done. Here is the report.
+
+**What I did.** The scope was one item: BL-9. It asks what `anvil --batch` does when the input bytes are not valid UTF-8. Today Python would crash the batch with a traceback. That breaks R6, which says one bad line must not stop the rest.
+
+**The ruling.** I wrote **OD-8** in `docs/DESIGN.oracle.md`. It adds one requirement, **R1004**: batch input is decoded with `errors="replace"`. Bad bytes become the replacement character (U+FFFD, a "this byte was broken" symbol). A line with that character can never look like a unit or a number. So the line always fails loudly through the normal error path, with its correct line number, and all later lines still run. No new message shape, no new exit code. This is the same default the plan already used, so no code direction changes.
+
+- Vision statement relied on: **V2** (refuse loudly, do not guess silently).
+- Weighed against: **V1** — the error echo shows U+FFFD, not the exact bad bytes. It does not forbid the ruling: the echo only touches the error channel, never a printed number.
+
+**It worked.** Both files are committed on branch `worker/oracle-20260820101037`, commit `457fd3e`. I checked the gate rules by hand (the check script itself needed a run approval I did not have): id order, all eight fields, verbatim full-sentence quote, evidence at base, R1004 above the R1000 offset — all pass.
+
+**What happens next (for the orchestrator, from the handoff at `docs/oracle/handoff-2026-08-20-6.md`):**
+1. Amend `docs/plans/oracle/anvil-convert-batch.md` on a `docs/` branch: add R1004 to `covers`, and add unit tests that push real bad bytes through `main(["--batch"])`. Tests through `run_batch` cannot see this path — the decode happens in `main` — so this is required, not optional.
+2. `acceptance/S5.sh` does not change at all.
+3. Still off-limits: BL-3 (halted at OD-2), BL-4 (rejected), BL-1 and BL-2 (owner-filed, not commissioned).
+
+**Not decided:** nothing was skipped. Every logged item (BL-1 through BL-9, ESC-1) now has a ruling, a halt, or an open owner action.
+
+**Vision feedback (the useful part):** V2 says refuse loudly, but not at what grain — per line or per whole stream. I derived "per line" from R6. And nothing in the vision says how faithfully an error must echo the input the user sent. One sentence on that would have settled the V1 counter-argument in OD-8 directly.

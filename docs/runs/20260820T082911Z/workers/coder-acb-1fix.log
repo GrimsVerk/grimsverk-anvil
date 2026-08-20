@@ -1,0 +1,22 @@
+Preparing worktree (new branch 'worker/coder-acb-1fix')
+HEAD is now at 91992f4 Merge branch 'worker/tw-acb-1' into feat/anvil-convert-batch--run-web
+=== spawn-worker[coder-acb-1fix] engine=claude branch=worker/coder-acb-1fix base=feat/anvil-convert-batch--run-web (91992f47335ff85673b51b5eeb05111164f95357) bypass=0 ===
+=== 2026-08-20T10:40:26Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Done. Here is what happened.
+
+**What I did**
+- Made `src/grimsverk_anvil/units.py` — the `Unit` type, the `UNITS` table, and `lookup`.
+- Made `src/grimsverk_anvil/convert.py` — `ConversionError`, `convert`, `format_result`.
+- Cut those parts out of `src/grimsverk_anvil/cli.py`. It now imports them and keeps `main`, `usage`, `convert_request`, `parse_batch_line`, `run_batch`.
+- Copied the code word for word. No message text and no behaviour changed.
+- Updated `docs/architecture.md`.
+- Touched no file under `tests/`.
+
+**Did it work**
+- `uv run pytest` → 43 passed.
+- `uv run ruff check . && uv run ruff format --check . && uv run mypy` → all passed.
+- Committed as `8ab7679` on branch `worker/coder-acb-1fix` (the branch of this worktree). Not pushed. No pull request.
+
+**What you do now**
+- Nothing is needed from you. The work is ready for assembly.

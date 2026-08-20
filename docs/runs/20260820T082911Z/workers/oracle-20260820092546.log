@@ -1,0 +1,24 @@
+Preparing worktree (new branch 'worker/oracle-20260820092546')
+HEAD is now at 20ab40c Merge pull request #20 from GrimsVerk/docs/plan-anvil-temperature--run-web
+=== spawn-worker[oracle-20260820092546] engine=claude branch=worker/oracle-20260820092546 base=run/web (20ab40ce41386ce9e8c64c31423ad6d57a886ea3) bypass=0 ===
+=== 2026-08-20T09:25:46Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).
+The push was declined by the permission mode, so the commit stays local on the branch — the driver can push it. That matches the role's "commit on a branch and stop." Report follows.
+
+## Oracle report — run 4, scope BL-7
+
+**What I did.** I ruled on BL-7 and wrote one decision, **OD-6**, in `docs/DESIGN.oracle.md`. The ruling: the `temperature` plan carries the two non-functional requirements **R7** (installed console command `anvil` from package `grimsverk_anvil`) and **R8** (standard library only, offline, deterministic). This ratifies the default the plan already proceeded on, so the diff downstream is zero — `docs/plans/oracle/anvil-temperature.md` already lists `covers: [R3, R7, R8]` and nothing in it changes.
+
+**Why this way.** The vision does not decide plan bookkeeping, so the decision uses the explicit no-vision class and the alternatives field carries the weight. The strongest rival was the MVP plan — R7's substance (the `pyproject.toml` scripts entry) is actually built there — but nothing measurable separates the two homes: both requirements are evidenced only by S4, which is owner-verified, so no script covers them whichever plan claims them. The tie went to the default on record, the same tiebreak OD-4 used. No new requirement, no waiver; S4's acceptance row stays `pending / owner`.
+
+**Measurement.** No new mechanism needed: `coverage.sh` already observes exactly this ruling — R7 and R8 now report `covered by anvil-temperature`, listed as expected non-functional absences.
+
+**Contradictions found and not decided.** None in scope. BL-1 and BL-2 stay Proposed (owner-filed, not commissioned); BL-3 stays halted at OD-2; the batch line format stays open for the `convert-batch` plan to file.
+
+**Handoff.** `docs/oracle/handoff-2026-08-20-4.md` — its headline for the orchestrator: nothing needs planning from this ruling; R6 is the only remaining coverage gap and it waits on its milestone.
+
+**Vision feedback (the useful part).** BL-7 as filed contains a factual error I recorded in OD-6: the temperature plan is *not* the first whose acceptance script runs the installed command — the MVP's S1 does too. Also, `docs/VISION.md` has no statement about where non-functional requirements live in the plan structure; that is fine, but if the owner has an opinion (for example "a constraint is carried by the first plan that establishes it"), one sentence would have decided BL-7 without the opt-out class.
+
+**State.** Both files are committed as `855b7ea` on branch `worker/oracle-20260820092546`. The push was declined by the permission mode, so the commit is local only — the driver needs to push the branch. I verified the gate's conditions by inspection (script execution was also declined): evidence resolves, schema complete, append-only preserved, id increases.

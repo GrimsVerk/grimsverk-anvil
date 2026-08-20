@@ -1,0 +1,22 @@
+Preparing worktree (new branch 'worker/plan-20260820093834')
+HEAD is now at 6327520 Merge pull request #23 from GrimsVerk/docs/oracle-20260820092546--run-web
+=== spawn-worker[plan-20260820093834] engine=claude branch=worker/plan-20260820093834 base=run/web (63275201c922466cd8672ee46bedf0b215b0990e) bypass=0 ===
+=== 2026-08-20T09:38:35Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Permission allow rule (--allowed-tools): Write(docs/plans/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/plans/oracle/**) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/BACKLOG.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/BACKLOG.md) instead (Edit rules cover all file-editing tools).
+## Plan pending oracle rulings
+
+**What I did.** I read the design files. I planned to write the `convert-batch` milestone (R6, batch mode). I could not write it yet. One thing is not decided, and I am not allowed to decide it myself.
+
+**The blocked question.** How a batch line looks. What a good line prints. What a bad line prints. Which stream each goes to. Which exit code a failed batch gives.
+
+`docs/DESIGN.md` §11 says this is on purpose. `OD-4` says the batch plan must file it, not answer it. It is **HIGH** risk: it fixes the code signatures and every byte of `acceptance/S5.sh`.
+
+**So I filed it.** New item `BL-8` in `docs/BACKLOG.md`, under "Uncertainties awaiting oracle ruling". It carries the question, my proposed default, and why it is HIGH.
+
+Commit: `d484705` — `File BL-8: the batch line format the convert-batch plan needs`. One file, nothing else. It sits on the worker branch; the driver gives it the `docs/`-prefixed name, same as the earlier filings.
+
+**No plan file yet.** No path, no slug — the plan cannot be written before the ruling.
+
+**What happens now.** The driver runs the oracle on `BL-8`. Then it calls me again. I record the `OD-<n>` id in the plan and write the slices.

@@ -1,0 +1,29 @@
+Preparing worktree (new branch 'worker/steward-od-7')
+HEAD is now at 70e274f Merge pull request #25 from GrimsVerk/docs/oracle-20260820094755--run-web
+=== spawn-worker[steward-od-7] engine=claude branch=worker/steward-od-7 base=run/web (70e274f977fa45f224b7b1a1d8b63690c2717eb5) bypass=0 ===
+=== 2026-08-20T09:56:40Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Permission allow rule (--allowed-tools): Write(docs/plans/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/plans/oracle/**) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/BACKLOG.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/BACKLOG.md) instead (Edit rules cover all file-editing tools).
+Done. Here is what I did.
+
+**The plan**
+- Path: `docs/plans/oracle/anvil-convert-batch.md`
+- Slug: `anvil-convert-batch` (no other plan slug is inside it, and it is not inside another one)
+- It implements **OD-7 / R1003**, and covers **R6, R1003**
+- Three slices: (1) the batch loop, (2) the error lines and the usage fix, (3) the `acceptance/S5.sh` proof plus README
+
+**Committed on branch** `worker/steward-od-7`, commit `e2eec8b`. Two files only: the plan and `docs/BACKLOG.md`. I did not open the pull request.
+
+**What I had to guess** — one thing, and I filed it:
+- **BL-9**: what `anvil --batch` does when the input bytes are not valid UTF-8. Today that would crash the whole batch. My default: read standard input with `errors="replace"`, so the bad line is refused like any other bad line and the rest still run. Risk is LOW (one line of code). The oracle reviews it next cycle.
+
+Everything else came from the decision itself or from landed requirements, so I made those calls in the plan and wrote down what answered each one.
+
+**One existing plan is now partly wrong**
+- `docs/plans/oracle/anvil-convert-mvp.md`: its `acceptance/S3.sh` table says `anvil --batch` must print usage and exit 2. That stops being true when this milestone lands. My plan repairs that one row (it becomes `anvil --batch extra`) and adds `anvil --batch` to the usage text. I did **not** edit the MVP plan document.
+- `docs/plans/oracle/anvil-temperature.md`: not affected.
+
+**Not verified here**: I could not run the test suite or the gate scripts in this session (no approval for those commands). The change is documents only — no code — so no test result changes.
+
+**Next step for you**: review and merge the plan pull request when the driver opens it. Then the batch code can be built.
