@@ -2000,3 +2000,78 @@ asking an agent to delete the owner's file. **F22: closed.**
 | 2026-08-20T02:25:1xZ | 4, 5 — canned inputs, `uv sync`, `pre-commit` | **OK.** Hooks did real work on the commit: `ruff check Passed`, `ruff format Passed`, `mypy Passed`, `Detect hardcoded secrets Passed`. |
 | 2026-08-20T02:25:38Z | 6 — `git push -f origin run/web` | **OK**, first attempt. No "Bypassed rule violations" banner — the ruleset was already reset to `~DEFAULT_BRANCH` only, so there was nothing to bypass (consistent with F16). |
 | 2026-08-20T02:25:4xZ | 7W — gating | Not yet gated; ruleset reads `["~DEFAULT_BRANCH"]`. Bounded wait started, 3-minute poll to a 45-minute limit. |
+
+## PHASE log — round 3.1 run
+
+- Run id `20260820T022911Z`, started 2026-08-20T02:29:11Z. Head `8e32e4a`,
+  `docs/DESIGN.md` `448a080`, `docs/VISION.md` `9a57a1e`. Identity `GrimsVerk`
+  (ambient, ESC-50). `coverage.sh` rc 1. Limits 30 PRs / 12h / 60 iterations.
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 2026-08-20T02:28:52Z | setup | `run/web` gated (3 minutes); `unattended-ready.sh --runtime` **GREEN**. |
+| 2026-08-20T02:29:11Z | **ORACLE** | `BASE=run/web REASON=evidence UNCITED=BL-3 BL-4 ESC-1`. Iteration 1. |
+| 2026-08-20T02:29:22Z | dispatch | Oracle worker, 6m43s, `exit=0 commits=1`. Same three rulings as round 3 — OD-1 (R1000, cites ESC-1), OD-2 (BL-4 declined), OD-3 (BL-3 **HALTED** against V5). Reproducible across runs. Contamination probe: 0 hits for `test-kit`. |
+| 2026-08-20T02:36:22Z | push + open | **PR #7 opened by `autogrims[bot]`**, marker retained (ESC-56). |
+| 2026-08-20T02:37Z | WAIT → red | `plan` **failure**, at a NEW step. See F27. |
+
+### F27 — BLOCKER and a REGRESSION: v0.4.36's own `AGENTS.md` cites template escape ids, so `escape-refs` fails on the first pull request of EVERY generated project
+- Where: `AGENTS.md` line 134 (shipped by the template) versus
+  `.github/scripts/escape-refs.sh`, step 5 of the required `plan` check.
+- What happened: ESC-56 fixed F23, and the sentence added to explain it
+  introduced a citation:
+
+  ```
+  or the opener's `.pr-request.json` marker (the one non-document member — the
+  pull-request machinery a driver without App identity must commit, ESC-53/56)
+  ```
+
+  `escape-refs.sh` scans `AGENTS.md` (line 65: `DOCS+=("AGENTS.md")`) and
+  resolves every `ESC-<n>` in it against **the project's** `docs/escapes.md` at
+  the base commit. `ESC-53` is an entry in the TEMPLATE's ledger; the project's
+  ledger does not contain it:
+
+  ```
+  escape-refs: citation(s) that do not resolve at the base commit:
+    AGENTS.md cites ESC-53
+
+  A gated document may cite an escapes entry only once that entry exists on the
+  default branch. ... Land the entry first ... then cite it from here.
+  ```
+
+- **This is not caused by the test kit.** Rendered a clean scaffold from the
+  same release into an empty directory and compared:
+
+  ```
+  template's own docs/escapes.md ESC ids:  (none — the starter ledger is empty)
+  ESC ids cited by the shipped AGENTS.md:  ESC-53
+  ```
+
+  So a brand-new project generated from v0.4.36 fails the required `plan` check
+  on its very first pull request, before anyone has written anything. This
+  repository's ledger holds `ESC-1` only, but any project's would fail equally.
+- **It is a regression introduced by the fix for my own F23.** Round 3, on
+  v0.4.35, this step passed: `escape-refs: 1 citation(s) across 3 document(s),
+  all resolve at 965a87c`. The new prose is what broke it.
+- Progress worth recording alongside it: **ESC-56 is confirmed working.** Steps
+  3 and 4 of the `plan` job now pass with the marker in place, and locally
+  `plan-resolve.sh` returns RC 0 naming "the opener's `.pr-request.json`
+  marker" among the exempt paths. The blocker simply moved one step later.
+  ESC-57 could not be observed this round — step 12 is skipped once step 5
+  fails.
+- Root cause class, and it is the same one twice now: the template authors a
+  **gated document** using ids from **its own** escapes ledger, and ships it
+  into projects whose ledger starts empty. AGENTS.md's own rule — "Citations
+  are by id, and they point backward only … only once the entry exists on the
+  default branch" — is being broken by AGENTS.md itself.
+- Upstream fix (NOT applied — `AGENTS.md` is CODEOWNERS-owned and off-limits):
+  either drop the parenthetical id from the shipped prose, or have
+  `escape-refs.sh` ignore citations inside template-owned text, or seed the
+  generated `docs/escapes.md` with the template entries its own documents cite.
+  The first is smallest.
+- **Not worked around.** Adding a stub `ESC-53` row to this project's
+  `docs/escapes.md` would fabricate an escape that never happened here, which
+  is precisely the "supplying the evidence it is judged by" that AGENTS.md
+  forbids. The ledger records what escaped in THIS project.
+- Severity: **blocker**, and the widest-reaching finding of the test so far: it
+  affects every project generated from v0.4.36, not only this lane.
