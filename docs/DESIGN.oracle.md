@@ -236,3 +236,61 @@ decision not to decide, recorded.
 
 <!-- Append decisions below, newest at the bottom. Never edit one that has
 landed; supersede it with a new decision naming its id. -->
+
+## OD-1 — Printed results carry at most 12 significant digits, ending the floating-point artifact
+
+- **Date:** 2026-08-20
+- **Evidence:** ESC-1
+- **Requirements added:** R1000
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V1 — "Correct conversions come before everything else: a wrong number presented confidently is the worst output this tool can produce." — and, for the measurement this decision carries, the durable-evidence ruling: "A change nothing can observe is a change nobody can evaluate."
+- **Vision statements against:** V6 — "A conversion that is numerically wrong, however plausible it looks, is rejected outright — as is any run that reports success while a criterion's evidence cell is empty or narrated rather than executed." It does not forbid this: rounding to 12 significant digits discards only binary floating-point representation noise, never measured information — the mathematically exact answer to 0.1 km in metres is exactly 100, and this rule prints that where the unrounded float printed the artifact. The rounding moves every printed number toward the true value, never away from it.
+- **Alternatives considered:** Shortest round-trip repr (Python's default str(float)) — prints the ESC-1 artifact verbatim, i.e. the defect is its defined behaviour. Fixed decimal places (two, or six) — wrong across magnitudes: 1 mm in km becomes a confidently wrong 0.00, exactly the output V1 calls worst. decimal.Decimal arithmetic — standard library, so V5-clean, but factors like 1/0.3048 are not finite decimals, so a rounding rule is still needed at the end and the extra machinery removes nothing (V3). 15–17 significant digits — inside double precision's noise band, where the ESC-1 class recurs after two chained operations.
+- **Rationale:** Twelve significant digits exceeds the precision of anything a unit converter is used for, while sitting three to four digits below where double-precision noise appears after the two multiplications a base-unit-hub conversion performs (docs/DESIGN.md §8). It is one standard-library call, strips trailing zeros, and needs no per-unit tuning. Confidence is high for the artifact class ESC-1 logged; the exact digit count (12 rather than 10 or 14) is a judgment call, recorded here precisely so it can be superseded cheaply if real output ever argues for another count.
+
+**R1000** — Every numeric conversion result `anvil` prints is formatted with
+Python's `format(value, ".12g")`: at most 12 significant digits, trailing zeros
+stripped, scientific notation only when the `g` conversion produces it, and no
+other rounding, padding, or locale formatting anywhere on the output path. In
+particular, converting 0.1 km to m prints exactly `100`, and the S2 fixtures
+print exactly `212` and `373.15`.
+
+The measurement is part of this decision, per the vision's durable-evidence
+section, and it uses existing mechanisms rather than inventing one. The plan
+that covers R1000 must make the rule observable twice: unit tests asserting
+exact printed strings — including the ESC-1 reproduction, 0.1 km → m prints
+`100` — red against the artifact and green against the fix; and the acceptance
+scripts for S1 and S2 comparing the installed command's exact stdout strings,
+with the 0.1 km → m row in S1's fixed table. Comparing exact strings rather
+than parsing floats back is the point — a numeric comparison would accept the
+artifact ESC-1 logged. Once fix and check have merged, the implementing pull
+request's author appends the ESC-1 correction row in docs/escapes.md naming
+the demonstrated check; that ledger is not the oracle's to write.
+
+Downstream: this resolves the first open question in docs/DESIGN.md §11
+(output precision, deliberately left open there). The other two §11 questions
+— exact CLI syntax and the batch line format — remain open and are not decided
+here; the planner files them as uncertainties when planning reaches them. No
+plans exist yet, so none are invalidated.
+
+## OD-2 — BL-3 declined: no rich, no table output — results stay plain standard-library text
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-3
+- **Requirements added:** (none)
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** V5 — "No runtime dependency may be added: the Python standard library is the whole toolbox, and a diff that adds one violates this tenet." — and V3 — "Simplicity comes before completeness: a small tool that is obviously right beats a large one that must be trusted."
+- **Vision statements against:** (none — no statement in docs/VISION.md tells against this. The vision prizes correct numbers, honest errors, and simplicity; nothing in it speaks for richer presentation. The nearest candidate, V2's mention of feature breadth, ranks breadth below clarity of errors, which argues in this decline's direction rather than against it.)
+- **Alternatives considered:** Adopting rich as BL-3 asks — a diff adding it is what V5 defines as a tenet violation, and AGENTS.md additionally requires owner approval landed as a repository artifact before any dependency merges, which no unattended agent can obtain. Hand-rolled ANSI alignment in the standard library — V5-clean, but BL-3 itself calls hand-rolling wasted effort, and a tool that prints one value per invocation (or per stdin line, R6) has nothing to tabulate, so it fails V3 with no gain. A HALT entry — rejected: a halt records a ruling a tenet forbade the oracle to make, and the ruling available here is the tenet applied, not the tenet violated; declining is a decision, and it was made.
+- **Rationale:** BL-3 sits in Proposed, filed by the owner but never approved (docs/BACKLOG.approved.md records nothing), while V5 is an owner-landed core tenet in the CODEOWNERS-owned tiebreaker. Between an owner's unapproved idea and the owner's landed tenet, the tenet rules — that is what the tiebreaker is for. If the owner wants this, the steer is editing V5 (for example, carving out display-only dependencies) and superseding this decision. Declining changes no behaviour, so no new measurement is owed: the invariant this keeps is already observed — plan-metrics.sh detects an added dependency mechanically, and R8's stdlib-only requirement is evidenced by S4.
+
+## OD-3 — BL-4 declined: no currency conversion — the design's live-data non-goal stands
+
+- **Date:** 2026-08-20
+- **Evidence:** BL-4
+- **Requirements added:** (none)
+- **Requirements superseded:** (none)
+- **Vision statement relied on:** the purpose statement (unnumbered, under the *What this project is for* heading) — "grimsverk-anvil exists to prove, on a real overnight run, that the grimsverk-template pipeline works end to end — and, as a side effect, to leave behind a small unit-conversion CLI that answers instantly and offline." — and V3 — "Simplicity comes before completeness: a small tool that is obviously right beats a large one that must be trusted."
+- **Vision statements against:** V2 — "Clear, honest errors come before feature breadth: refusing loudly beats guessing silently." It is the only sentence that treats feature breadth as a value at all, and it subordinates breadth to exactly the behaviour declining preserves: a currency symbol today refuses loudly with an unknown-unit error (R4, evidenced by S3), where a currency mode built on fetched rates would answer with a number the tool cannot verify.
+- **Alternatives considered:** Live rates over stdlib urllib — no new dependency, so V5-clean, but it breaks R8 ("fully offline and deterministic"), the offline purpose sentence above, and the test suite's offline rule; a rate fetched at run time is a number the tool must present on trust, and V1 calls a wrong number presented confidently the worst possible output. Bundled static rates — strictly worse: silently stale from the day they land, the confidently-wrong shape with no network to even blame. Granting BL-4 as a design change — not the oracle's to grant: docs/DESIGN.md §3 lists currency and live data as an explicit non-goal, that document is owner-landed, and overturning an owner-landed non-goal on the strength of an unapproved Proposed item would be the oracle rewriting the design rather than correcting it from evidence.
+- **Rationale:** BL-4 does not report the design wrong anywhere reality tested it — no escape, no failing criterion — it wishes the design were bigger, and the design already answers it: currency is a named non-goal. The evidence is metabolised by recording that the non-goal stands. Declining changes no behaviour, so no new measurement is owed; the behaviour the decline preserves is already measured, because S3's unknown-unit case is precisely the loud refusal a currency symbol produces today. If the owner wants currency, the steer is editing docs/DESIGN.md §3 and §5, which only they can land.
