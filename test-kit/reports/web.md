@@ -1549,3 +1549,55 @@ was a matter of restraint, not permission.
   written.
 - Severity: friction, bordering on docs — the rule is new and correct, and the
   kit's own Part 0 was the source of the literal value it now forbids.
+
+## Setup log — round 3
+
+| Time (UTC) | Step | Outcome |
+| --- | --- | --- |
+| 2026-08-20T01:24:19Z | 2 — template release | **OK.** `v0.4.35` live, meets the plan's new floor. |
+| 2026-08-20T01:25:32Z | 3W — rebuild and re-render | **OK**, exit 0. `_commit: v0.4.35`, `_src_path` canonical https. `main` now also carries a `LICENSE` (go-public prep); no overwrite prompts. |
+| 2026-08-20T01:25:43Z | 4, 5 — canned inputs, `uv sync` | **OK.** |
+| 2026-08-20T01:25:5xZ | 5 — `pre-commit` | **FIXED — see C5.** |
+| 2026-08-20T01:25:52Z | 5 — scaffold commit | **OK**, 73 files, and for the first time the hooks did real work: `ruff check Passed`, `ruff format Passed`, `mypy Passed`, `Detect hardcoded secrets Passed` (previous rounds reported "no files to check"/"Skipped" because `pre-commit` was not installed into the environment). |
+| 2026-08-20T01:26:02Z | 6 — `git push -f origin run/web` | **OK**, first attempt, and **notably WITHOUT the "Bypassed rule violations" banner** this time — the ruleset had been reset to `~DEFAULT_BRANCH` only, so there was no rule to bypass. Consistent with F16: the banner appears exactly when rules exist and are waived. |
+| 2026-08-20T01:26:12Z | 7W — readiness check | **REFUSED, exit 1 — and for the first time the refusal is the RIGHT one.** See C6. Bounded gating wait started. |
+
+## Correction rows — round 2.1 findings re-tested at v0.4.35
+
+### C5 — F10 / ESC-55 FIXED: `pre-commit` is now a scaffold dependency
+```
+$ ls .venv/bin/pre-commit          →  .venv/bin/pre-commit
+$ grep -c 'name = "pre-commit"' uv.lock   →  3
+```
+It installs with `uv sync` and the hooks now actually run on commit instead of
+reporting "no files to check". **F10: closed.** This also retires the C1
+caveat — the fix is real this time, not container residue.
+
+### C6 — F12(b) / ESC-52 FIXED: the credential probe now reads this platform correctly
+The `gh auth status` branch is gone; the readiness check emits the intended
+ESC-50 note instead of a false refusal:
+
+```
+  note     App mint impossible here (a hosted platform's proxy owns the credential
+           — ESC-50); the ambient login drives, and pull requests open as the App
+           via the open-pr workflow
+```
+
+Every earlier line is `ready` or a legitimate `note`, and the ONE remaining
+missing item is the honest one:
+
+```
+  MISSING  no rules bind the run's base branch 'run/web' — every pull request this
+           run opens would merge ungated; add the branch to the gates ruleset:
+           scripts/setup-github.sh --gate-branch 'run/web'
+```
+
+That is correct: the ruleset reads `["~DEFAULT_BRANCH"]` because the local
+agent reset it for this round and has not re-gated yet. **This is the first
+time in five sessions that the readiness check has refused for a true reason,
+in the right words, pointing at the right fix.** F12 is closed in both halves;
+the message quality is a positive finding in its own right, since the whole
+round-1..2.1 history of this lane was operators misled by wrong refusals.
+
+**Bounded wait for gating started per step 7W**, polling every 3 minutes to a
+45-minute limit.
