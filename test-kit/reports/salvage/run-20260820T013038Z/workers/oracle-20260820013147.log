@@ -1,0 +1,33 @@
+Preparing worktree (new branch 'worker/oracle-20260820013147')
+HEAD is now at 965a87c Scaffold and canned test design (run/web)
+=== spawn-worker[oracle-20260820013147] engine=claude branch=worker/oracle-20260820013147 base=run/web (965a87c52e6f313b6ff7151dab20c0a59620ce82) bypass=0 ===
+=== 2026-08-20T01:31:55Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["<home>/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Permission allow rule (--allowed-tools): Write(docs/DESIGN.oracle.md) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/DESIGN.oracle.md) instead (Edit rules cover all file-editing tools).
+Permission allow rule (--allowed-tools): Write(docs/oracle/**) is not matched by file permission checks — only Edit(path) rules are. Use Edit(docs/oracle/**) instead (Edit rules cover all file-editing tools).
+Done. The push needs an approval this session does not have, so the branch stays local — the driver can push it. Here is my report, kept simple.
+
+## What I did
+
+I ruled on all three items. I wrote 3 entries in `docs/DESIGN.oracle.md`. I wrote the handoff at `docs/oracle/handoff-2026-08-20-1.md`. Both are in one commit (`984383c`) on branch `worker/oracle-20260820013147`. I opened no pull request. That is the rule.
+
+## The three rulings
+
+1. **ESC-1 (the `100.00000000000001` bug) — decided (OD-1).** The tool must round output to 12 significant digits. "Significant digits" means the digits that carry meaning, not a fixed count of decimals. This makes `0.1 km` print as `100`, not the long ugly number. New requirement: **R1000**. The decision also demands its own measurement: blind tests plus this exact case in the `acceptance/S1.sh` table.
+
+2. **BL-4 (currency) — declined (OD-2).** The design says the tool is offline. Live money rates need the network, and stale rates give wrong numbers. The vision says simplicity beats completeness. No new work. Only the owner can reopen this, by editing the design.
+
+3. **BL-3 (pretty tables with `rich`) — HALTED (OD-3).** `rich` is a new dependency. Core tenet V5 forbids all new dependencies. When a ruling would break a core tenet, I must halt, not decide. The owner must pick: change V5, or drop the `rich` demand. The halt is recorded; the run does not stop.
+
+## Not decided, and why
+
+- **BL-1** (unit aliases) and **BL-2** (below absolute zero): not in this run's scope. They stay open for the next oracle run.
+
+## For the owner: one gap in the vision
+
+The vision says nothing about what output should *look* like — plain, colored, machine-readable. BL-3 forced me to lean only on the dependency rule (V5). One sentence like "output stays plain so scripts can parse it" would have decided BL-3 on its merits, and would also guide the open CLI-syntax questions.
+
+## What I could not verify
+
+- I could not run `.github/scripts/oracle-decisions.sh` or Python here (commands need an approval nobody can give unattended). I checked the schema and all vision quotes by hand, and they match verbatim. CI will be the real check.
+- The branch is committed but **not pushed** — the driver must push it.
