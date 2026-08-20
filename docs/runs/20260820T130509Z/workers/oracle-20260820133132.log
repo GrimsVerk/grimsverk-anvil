@@ -1,0 +1,30 @@
+Preparing worktree (new branch 'worker/oracle-20260820133132')
+HEAD is now at dd518b7 Merge pull request #46 from GrimsVerk/docs/oracle-plan-od-1--run-web
+=== spawn-worker[oracle-20260820133132] engine=claude branch=worker/oracle-20260820133132 base=run/web (dd518b782aa0d9c57865cbddc11c233c291c4d5b) bypass=0 ===
+=== 2026-08-20T13:31:33Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+The push needs approval the sandbox does not give, so the commit stays local on the branch. The delivery driver can push it. My work as oracle is done. Here is the report.
+
+## What I did
+
+I ruled on **BL-5**. That was the whole scope.
+
+**The decision: OD-4 — BL-5 is granted.** The plan `docs/plans/oracle/od1-output-precision.md` may claim `covers: [R1000]` while it delivers only the single-shot half. The steward's default was correct, and I accepted it.
+
+Why, in short: `covers:` only tells `coverage.sh` that work is *planned*. It does not claim the work *works* — acceptance evidence does that, and no acceptance row changes here. The plan makes `format_result` the one place a result becomes text, so batch mode will inherit the rule by one function call.
+
+I closed the remaining risk with two obligations on the future `convert-batch` plan, recorded in OD-4: batch lines must print through `format_result`, and `acceptance/S5.sh` must carry the ESC-1 case as a batch row that prints exactly `100`. That is an existing §13 script pointed at one new row, not new machinery — so the batch half of R1000 stays observable, per the vision's durable-evidence section.
+
+## Bookkeeping
+
+- Decision appended: `docs/DESIGN.oracle.md`, OD-4. It cites BL-5, adds no requirement, and uses the no-vision class — the vision does not speak to coverage bookkeeping, so the alternatives field carries the reasoning, as the schema requires.
+- Handoff written: `docs/oracle/handoff-2026-08-20-2.md`. Nothing needs planning. Do not act on BL-1, BL-2 (unruled, out of scope) or BL-3 (still halted at OD-2, waiting on the owner).
+- Committed as `23ce85d` on branch `worker/oracle-20260820133132`. Pre-commit passed. **The push was blocked by sandbox permissions** — the driver must push the branch. I did not open a pull request, per my mandate.
+
+## Contradictions found but not decided
+
+BL-1 (unit aliases) and BL-2 (below absolute zero) remain open. They were outside this run's scope, so I left them for a future commission.
+
+## On the vision
+
+Nothing ambiguous this time. One small note for the owner: the vision decides product questions well, but process questions (like coverage bookkeeping) always land in the no-vision class. That is fine and expected — no change needed.

@@ -1,0 +1,31 @@
+Preparing worktree (new branch 'worker/plan-20260820162018')
+HEAD is now at 3b7130a Merge pull request #53 from GrimsVerk/docs/oracle-plan-od-8--run-web
+=== spawn-worker[plan-20260820162018] engine=claude branch=worker/plan-20260820162018 base=run/web (3b7130a89b14000e255f0190560c6c93ba231ade) bypass=0 ===
+=== 2026-08-20T16:20:19Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Done. Plan written and committed.
+
+**Path:** `docs/plans/oracle/temperature-conversions.md`
+**Slug:** `temperature-conversions`
+**Branch:** `docs/plan-temperature-conversions` (commit `8987d97`)
+
+**What it plans:** the `temperature` milestone — requirement **R3**. So `anvil 100 C F` prints `212`.
+
+**Did the gate stop me?** No. The uncertainty list is empty. Every choice came from the design papers:
+- `docs/DESIGN.md` §9 already says each unit carries a to-base **and** a from-base function. That is the change temperature needs.
+- §8 says kelvin is the base unit for temperature.
+- `OD-5` and `OD-6` already fixed the command line and the output line.
+
+So nothing new went to `docs/BACKLOG.md`. I wrote a **Derivations** section instead. It names the paper that answered each question, so a reviewer can audit the empty list.
+
+**Two slices** (a slice is one piece of work you can see working end to end):
+1. The unit table learns C, F and K. Length and mass math stays identical.
+2. `acceptance/S2.sh` checks it on every future pull request.
+
+Two, not three, because the command-line code needs no change at all.
+
+**One thing to know:** after this lands, `anvil -500 C K` will print `-226.85`. A negative kelvin is impossible. That is backlog item `BL-2`, still unruled, so I may not plan a guard for it. I wrote it plainly in "Out of scope".
+
+**R6** (batch mode) is the *next* milestone, not this one. It still needs its own plan.
+
+**Your move:** nothing. The delivery driver pushes this branch and opens the pull request. I stop here — writing the plan and building it are separate jobs.

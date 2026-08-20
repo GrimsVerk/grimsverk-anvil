@@ -1,0 +1,45 @@
+Preparing worktree (new branch 'worker/steward-od-8')
+HEAD is now at fc3de44 Merge pull request #52 from GrimsVerk/docs/oracle-20260820155617--run-web
+=== spawn-worker[steward-od-8] engine=claude branch=worker/steward-od-8 base=run/web (fc3de44f82ab5ec88c330468fb624a4c942027ac) bypass=0 ===
+=== 2026-08-20T16:05:51Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Done. Here is what happened.
+
+**What I made**
+
+One plan file: `docs/plans/oracle/od8-nonfinite-values.md`
+Slug: `od8-nonfinite-values` (no other plan uses it).
+It implements decision **OD-8**, which added requirement **R1003**.
+
+**What the plan says**
+
+`anvil nan km mi` and `anvil 1e400 km mi` must fail, not print a fake number. The code guard for this is already planned in `od5-convert-cli`. So this plan adds no code. It adds two test rows to `acceptance/S3.sh`. Those rows run on every pull request. One slice, about 25 lines.
+
+**What I had to guess**
+
+Nothing. OD-8 wrote the two rows word for word. The plan lists each derived choice, so you can check that.
+
+**Which old plans are now wrong**
+
+None.
+- `docs/plans/oracle/od5-convert-cli.md` — stays as it is. Do not edit it.
+- `docs/plans/oracle/od1-output-precision.md` — no effect.
+
+**Did it work**
+
+The plan passes the parser: `.github/scripts/plan-lint.sh` reports 3 of 3 plans parse.
+Commit `9b44617` is on branch `docs/oracle-plan-od-8--od8-nonfinite-values`.
+
+**One thing I could not do**
+
+`git push` needs your approval. The branch is only on this machine.
+
+**What you do now**
+
+1. Approve the push, and I send the branch. *(Recommended)*
+2. Read the plan first, then approve.
+3. Other — tell me what to change.
+
+**One note for you, not a question**
+
+The oracle found a hole it may not rule on. A good input can still overflow during the math — about `1e305` km to mm gives `inf`, and the tool would print it. Nothing logged this, so nobody can plan it yet. One backlog line from you makes it decidable next run. I did not file it, because the oracle left that call to you.

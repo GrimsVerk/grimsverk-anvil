@@ -1,0 +1,30 @@
+Preparing worktree (new branch 'worker/oracle-20260820164325')
+HEAD is now at ee87bb4 Merge pull request #55 from GrimsVerk/docs/plan-20260820163359--run-web
+=== spawn-worker[oracle-20260820164325] engine=claude branch=worker/oracle-20260820164325 base=run/web (ee87bb4ef51418064f5671540f8852a165c8e768) bypass=0 ===
+=== 2026-08-20T16:43:26Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Done. The push was blocked by permissions, so the commit sits on the branch for the driver to take forward. Here is my report.
+
+## What I did
+
+I ruled on both scoped items. Both decisions are appended to `docs/DESIGN.oracle.md` and committed on branch `worker/oracle-20260820164325` (commit `cd6134a`). I did not open a pull request; the push needs the driver.
+
+**OD-9 rules BL-10 (adds R1004 — batch request line format).** I granted the filed default. A request line is three whitespace-separated tokens in R1001's order: value, from-unit, to-unit. Blank lines are skipped silently. Any other token count is a failed line. Vision relied on: V3 (simplicity) — the batch line is exactly the command line, so the format is one sentence. Weighed against V2: a silent skip fabricates nothing, so it is not a silent guess.
+
+**OD-10 rules BL-11 (adds R1005 — batch output contract).** I granted the filed default. Standard output carries one line per non-skipped request, in input order. Success prints the same bare value as single-shot. Failure prints `error: <message>` in that row's place. Standard error stays empty; exit is non-zero if any line failed. Vision relied on: V2 and V1. Weighed against V1 (OD-6 put single-shot errors on stderr for V1 reasons): in batch, the stderr option causes silent row misalignment — right-looking numbers on wrong questions — which is the worse V1 failure, and an `error:` line can never parse as a number.
+
+**Measurement is part of both decisions.** Both formats are observed by `acceptance/S5.sh`, which the future `convert-batch` plan writes: whole-line stdout comparison, empty stderr, non-zero exit, the ESC-1 precision row from OD-4, plus a second stdin document that proves the blank-line skip. Existing §13 machinery, no new mechanism.
+
+## Contradictions found and not decided
+
+None in scope. BL-1 and BL-2 remain unruled (no mandate — not in scope, and nothing new logged). BL-3 stays halted with the owner (OD-2). BL-4 stays rejected (OD-3).
+
+## Handoff
+
+`docs/oracle/handoff-2026-08-20-5.md`. Headline for the orchestrator: the `convert-batch` milestone plan is now fully unblocked (`covers: [R6, R1004, R1005]`), sequenced after the `convert` milestone merges. No landed plan needs amending.
+
+## Vision feedback
+
+The gap from handoff run 3 recurred: the vision never says who output is *for*. OD-10, like OD-6 before it, had to lean on `docs/DESIGN.md` §4's script-author to decide. One owner sentence — "output is for pipes first, eyes second" (or its opposite) — would have decided BL-7 and BL-11 directly, and will matter again when BL-3 is unhalted. Also flagged for the owner: OD-9's silent blank-line skip is the one judgement in this run they may want to reverse; one superseding entry does it.
+
+One blocker to note for the driver: `git push` required approval I don't have, so the branch is committed locally but not pushed.

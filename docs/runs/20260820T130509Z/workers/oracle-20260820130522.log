@@ -1,0 +1,23 @@
+Preparing worktree (new branch 'worker/oracle-20260820130522')
+HEAD is now at a658c66 Scaffold and canned test design (run/web)
+=== spawn-worker[oracle-20260820130522] engine=claude branch=worker/oracle-20260820130522 base=run/web (a658c6629ad3c4684c757c77ef474a3fdc1e08eb) bypass=0 ===
+=== 2026-08-20T13:05:23Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+Done. Here is my report, short and plain.
+
+**What I did.** I wrote three rulings in `docs/DESIGN.oracle.md`. I wrote the handoff at `docs/oracle/handoff-2026-08-20-1.md`. I committed both on branch `worker/oracle-20260820130522` (commit `cbc8525`). The pre-commit hooks passed.
+
+**The three rulings:**
+
+1. **ESC-1 (the `100.00000000000001` bug) → OD-1, decided.** Results now must print at 12 significant digits, with extra zeros removed. "Significant digits" means: keep the 12 most important digits, drop float noise. So `0.1 km` prints exactly `100` m. This adds requirement **R1000**. The measurement is part of the ruling: the `acceptance/S1.sh` table must include this exact case.
+2. **BL-3 (pretty tables with `rich`) → OD-2, HALTED, not decided.** The item asks for the `rich` library by name. Core tenet V5 forbids all runtime dependencies. You filed both, so only you can break the tie. One sentence from you fixes it: edit V5, or re-file BL-3 without `rich`. The run does not stop; this item just waits.
+3. **BL-4 (live currency rates) → OD-3, rejected.** The design says offline only, and the vision agrees (V3, V1: a stale money rate is a wrong number that looks right). No new work comes from this.
+
+**Did it work?** Yes, mostly. The files are written and committed. I could not run the CI check script or `git push` — the sandbox declined both. I checked every rule of `.github/scripts/oracle-decisions.sh` by hand instead, and the entries match its format. So: committed and verified by hand, **not** CI-verified, and **not pushed**.
+
+**What you (or the driver) do now:**
+
+1. The driver pushes the branch and opens the PR. If it does not, run: `git push -u origin worker/oracle-20260820130522` from the worktree.
+2. Answer OD-2 when you can: edit **V5** in `docs/VISION.md`, or re-file BL-3 without `rich`. Recommended: re-file without `rich` — it keeps the tool dependency-free, and plain output still works.
+
+**One note on the vision.** I found one small trap while working, and I fixed my own entries around it: the check script only validates a vision quote that sits on **one line** in the ledger. A quote that wraps to a second line passes the check without being verified at all. That is a gate hole worth an escapes entry someday — but it is not mine to file in this run.

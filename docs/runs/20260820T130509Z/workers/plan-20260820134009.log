@@ -1,0 +1,26 @@
+Preparing worktree (new branch 'worker/plan-20260820134009')
+HEAD is now at 5aa1e4e Merge pull request #48 from GrimsVerk/docs/oracle-20260820133132--run-web
+=== spawn-worker[plan-20260820134009] engine=claude branch=worker/plan-20260820134009 base=run/web (5aa1e4ea85a5399eedaf246d54f5d55ca112910f) bypass=0 ===
+=== 2026-08-20T13:40:10Z ===
+Ignoring 2 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/home/user/grimsverk-anvil"].hasTrustDialogAccepted: true in /root/.claude.json.
+**Plan pending oracle rulings.** I stopped before writing any slices, because two questions block them.
+
+## What I did
+
+I read the design, the vision, the oracle ledger, and the one existing plan. The next milestone is the MVP **`convert`** — single-shot length and mass conversions (R1, R2) with errors and usage (R4, R5).
+
+I could not write slices for it, because the design leaves two things open on purpose (`docs/DESIGN.md` §11, and the owner's test note at the top of that file says to file them, not to guess).
+
+I filed them in `docs/BACKLOG.md`:
+
+- **BL-6 (HIGH)** — how you call the tool. My default: `anvil 5 km mi`, three values in that order, and `--batch` for the stdin mode. This must be answered now: it decides if a bare `anvil` is an error or a batch request.
+- **BL-7 (HIGH)** — what a good result line looks like, and which stream it goes to. My default: just the number on standard output, errors on standard error.
+- **BL-8 (LOW)** — may the plan also claim R7 and R8? My default: yes. This one does not block; I noted the default and moved on.
+
+Commit: `5be06ae`, on branch `worker/plan-20260820134009`, and it changes nothing but the backlog.
+
+## What happens now
+
+Nothing for you to do. The delivery driver pushes this as a `docs/` branch, runs the oracle, and calls me again. Then I record each `OD-<n>` ruling and write the plan.
+
+Intended path when it is written: `docs/plans/oracle/convert-mvp.md`, slug `convert-mvp` (not plain `convert`, so it cannot be confused with the later `convert-batch` plan in a branch name).
