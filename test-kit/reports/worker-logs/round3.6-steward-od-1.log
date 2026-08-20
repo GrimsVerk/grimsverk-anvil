@@ -1,0 +1,65 @@
+Preparing worktree (new branch 'worker/steward-od-1')
+HEAD is now at 1af17db Merge pull request #42 from GrimsVerk/docs/oracle-20260820130342--run-local
+=== spawn-worker[steward-od-1] engine=claude branch=worker/steward-od-1 base=run/local (1af17dbb7936dfefe6e1ad5e3db1ac954df7c77a) bypass=0 ===
+=== 2026-08-20T13:15:31Z ===
+**Stopped at the uncertainty gate. No plan written; a `BL-5` filed instead.**
+
+**Decision:** OD-1 / R1000 — printed results carry at most 12 significant digits.
+
+**Why the plan could not be written.** OD-1 does not just add a requirement; it names the measurement that comes with it, and makes it mandatory: *"the plan that implements R1000 must carry two things: the ESC-1 reproducer as a table row in `acceptance/S1.sh` (0.1 km to m prints exactly `100`) … and unit tests."* The second is writable today. The first is not:
+
+- `acceptance/S1.sh` does not exist, and `docs/DESIGN.md` §13 defines S1 as measuring **"the installed `anvil` command"**. The tree holds only the scaffold — no converter, no CLI.
+- Writing that script therefore means deciding how `anvil` is invoked, and §11 withholds exactly that: *"The exact command-line syntax (positional order, how batch mode is invoked) is not decided here."* The design's own test note goes further and reserves it: those gaps exist *"so the planning layer must file uncertainties and the oracle must rule."*
+- That is HIGH by the contract test on every count — an external format, fixing the Signatures and slice boundaries of whichever plan owns R1000, expensive to reverse once S1/S3/S5 scripts are written against it. A steward may not rule on it, so the plan stops.
+
+The alternative — a steward plan covering R1000 alone — delivers a formatting function with nothing printing, drops one of OD-1's two mandated halves, and is the horizontal slice the Planning rule forbids. The oracle's own handoff anticipated this and recommended the other shape: fold R1000 into the `convert` milestone plan, with a standalone steward plan legal only *"if the milestone plan has already been cut."* It has not been.
+
+**What I guessed at:** nothing was proceeded on. `BL-5` carries the proposed default rather than the plan — fold R1000 into the `convert` milestone plan (`covers: [R1, R2, R4, R5, R1000]`), which creates `acceptance/S1.sh` with the ESC-1 row and files the invocation syntax as its own uncertainty; failing that, rule the syntax as `anvil <value> <from-unit> <to-unit>`, converted value alone on stdout.
+
+**Existing plans made partly wrong:** none. `docs/plans/` holds only `_TEMPLATE.md`, and `docs/plans/oracle/` is empty.
+
+**What OD-1 left unsaid:** it assumes S1's fixed conversion table already exists as the mechanism carrying its reproducer. It does not, and the decision does not say whether R1000's plan builds the printing surface that would make it exist — which would require the CLI syntax the design deliberately reserves for the oracle.
+
+Verification note: the change is docs-only; the test suite was not run (the command is outside this session's tool grant), and pre-commit reported no files to check. The `plan` check's size cap is met either way — 22 added lines, all inside `docs/BACKLOG.md`, on a `docs/`-prefixed branch.
+
+Plan pending oracle ruling on BL-5.
+
+WORK_ON_BRANCH docs/steward-od-1-uncertainty
+Preparing worktree (new branch 'worker/steward-od-1')
+HEAD is now at b32736d Merge pull request #45 from GrimsVerk/docs/oracle-20260820132118--run-local
+=== spawn-worker[steward-od-1] engine=claude branch=worker/steward-od-1 base=run/local (b32736d6638185efa72a3743b7185c55f253e439) bypass=0 ===
+=== 2026-08-20T13:28:25Z ===
+I read OD-1, both handoffs, `docs/DESIGN.md`, and the check script. I am not writing a plan, and the reason is a landed decision, not a blocker.
+
+## What I found
+
+OD-1 (the 12-significant-digit rule, R1000) was already re-scoped by a later decision. **OD-4 rules directly on the question I was dispatched to answer**, in its own heading: *"R1000 is carried by the `convert` milestone plan; no steward plan is cut for OD-1."*
+
+OD-4's alternatives make the foreclosure explicit rather than incidental:
+
+- **(b)** a standalone steward plan under `docs/plans/oracle/` covering R1000 alone — **rejected**: it would deliver a formatting function with no printed output to govern, so it is not a vertical slice.
+- **(d)** leave the choice to the steward — **rejected**: BL-5 was HIGH-risk, so planning was stopped until a decision cited it; not choosing is the one option already ruled out.
+
+And its rationale resolves OD-1's own wording: *"OD-1's phrase 'the plan that implements R1000' now resolves to the milestone `convert` plan (slug `convert`, at `docs/plans/convert.md`)."* `docs/oracle/handoff-2026-08-20-2.md:11` says the same and adds "NOT `docs/plans/oracle/`".
+
+So the artifact my role produces — `docs/plans/oracle/<slug>.md` citing OD-1 — is the exact shape a landed decision rejected. Writing it would not be widening a decision; it would be reversing one, in the document where nothing checks it. That is the failure this role's narrowness exists to prevent, so I stopped.
+
+I also did not write `docs/plans/convert.md`. It is not a path I may write, and OD-4 chose it *because* it routes through the normal `/plan` path and the owner's `CODEOWNERS` review — an unattended steward writing it would strip the oversight that was the reason for the ruling.
+
+## Nothing filed, deliberately
+
+I did not open a `BL-<n>`. The uncertainty gate is for a gap the design layer left; this is the opposite — the question is answered, twice, in the ledger and the handoff. Filing it would manufacture a question into an append-only file the oracle then has to metabolize. I did not file an objection either: I have none. OD-4's reasoning is sound and the design layer is internally consistent.
+
+## Report
+
+- **Plan path and slug:** none written.
+- **Decision implemented:** none. OD-1's implementation was reassigned to the `convert` milestone plan by OD-4.
+- **What I had to guess at:** nothing.
+- **Existing plans this makes partly wrong:** none exist. `docs/plans/` holds only `_TEMPLATE.md` and `oracle/.gitkeep`. `acceptance/` holds only `README.md`; `src/grimsverk_anvil/` only `__init__.py`.
+- **What was left unsaid:** nothing by the decision. The stale part is the dispatch — OD-1 was commissioned for stewarding before OD-4 landed and moved its work elsewhere.
+
+**The work OD-1 still needs is real and unbuilt** — it is now one `/plan` round on the normal path: `docs/plans/convert.md`, slug `convert`, `covers: [R1, R2, R4, R5, R1000, R1001]`, carrying `acceptance/S1.sh` with the ESC-1 reproducer row (0.1 km to m prints exactly `100`), `acceptance/S3.sh` for the R4/R5 cases, and unit tests for the formatting rule and the stdout/stderr split. Per handoff run 2, that planner must **not** re-file the invocation syntax as an uncertainty; OD-5/R1001 fixed it.
+
+My branch is clean and carries no commits of my own — there is nothing here to open a pull request from.
+
+WORK_ON_BRANCH worker/steward-od-1

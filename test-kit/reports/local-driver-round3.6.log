@@ -1,0 +1,98 @@
+
+════════════════════════════════════════════════════════════════════
+  THIS RUN'S BASE BRANCH: run/local
+  Every pull request this run opens will merge into 'run/local',
+  and this run waits only on pull requests targeting 'run/local'.
+  Non-default base: every branch this run pushes is suffixed '--run-local'.
+  THIS RUN'S PROCESS:     pid 540424  (tag /home/loke/code/GrimsVerk/grimsverk-anvil@run/local)
+  To stop exactly this run, and nothing in any other repository:
+      kill $(cat .claude/deliver-loop--run-local/driver.pid)
+  Never 'pkill -f deliver-loop': another project's driver can carry an
+  identical command line, and killing it takes its evidence with it.
+
+════════════════════════════════════════════════════════════════════
+deliver-loop: checking whether this repository can run unattended…
+unattended-ready: GrimsVerk/grimsverk-anvil
+  ready    auto_merge: true in .copier-answers.yml
+  ready    auto-merge workflow is present
+  ready    repository allows auto-merge
+  ready    repository deletes head branches on merge
+  ready    required check 'plan' is configured
+  ready    required check 'template-sync' is configured
+  ready    required check 'secrets' is configured
+  ready    required check 'test-the-tests' is configured
+  ready    required check 'acceptance-criteria' is configured
+  ready    required check 'review' is configured
+  ready    required check 'checks' is configured
+  ready    a pull-request rule is active (merges only via PR)
+  ready    base branch 'run/local': pull-request rule binds
+  ready    base branch 'run/local': required check 'plan' binds
+  ready    base branch 'run/local': required check 'template-sync' binds
+  ready    base branch 'run/local': required check 'secrets' binds
+  ready    base branch 'run/local': required check 'test-the-tests' binds
+  ready    base branch 'run/local': required check 'acceptance-criteria' binds
+  ready    base branch 'run/local': required check 'review' binds
+  ready    base branch 'run/local': required check 'checks' binds
+  ready    CLAUDE_CODE_OAUTH_TOKEN is set (review gate can run)
+  ready    merge identity: GitHub App configured (a login that is not the owner's)
+  note     template reads are minted from this App — it must be installed on the TEMPLATE repository too, or template/ branches fail template-sync closed
+  ready    CODEOWNERS resolves cleanly (at run/local)
+  ready    docs/VISION.md is filled in
+  ready    no pull request is open against 'run/local' — the run starts on a clear base
+  ready    no leftover worktrees — no dead run's debris in the way
+
+unattended-ready: this repository can run unattended.
+deliver-loop: budget: weekly at 16% (model 13%), allowance 20 points, window resets Aug 27, 11am (Europe/Amsterdam)
+deliver-loop: budget: weekly at 16% (model 13%), spent 0 of 20 points on the per-model weekly limit
+deliver-loop: iteration 1: phase ORACLE
+deliver-loop: dispatch oracle worker (oracle-20260820130342)
+remote: 
+remote: Create a pull request for 'docs/oracle-20260820130342--run-local' on GitHub by visiting:        
+remote:      https://github.com/GrimsVerk/grimsverk-anvil/pull/new/docs/oracle-20260820130342--run-local        
+remote: 
+deliver-loop: budget: weekly at 17% (model 16%), spent 3 of 20 points on the per-model weekly limit
+deliver-loop: iteration 2: phase WAIT
+deliver-loop: waiting on PR #42 (docs/oracle-20260820130342--run-local) — mechanical watch, no model budget
+deliver-loop: PR #42 merged
+deliver-loop: budget: weekly at 18% (model 16%), spent 3 of 20 points on the per-model weekly limit
+deliver-loop: iteration 3: phase STEWARD
+deliver-loop: dispatch steward worker (steward-od-1)
+deliver-loop: the worker's work is on 'docs/steward-od-1-uncertainty', not 'worker/steward-od-1' — pushing what it reported
+remote: 
+remote: Create a pull request for 'docs/oracle-plan-od-1--run-local' on GitHub by visiting:        
+remote:      https://github.com/GrimsVerk/grimsverk-anvil/pull/new/docs/oracle-plan-od-1--run-local        
+remote: 
+deliver-loop: budget: weekly at 18% (model 17%), spent 4 of 20 points on the per-model weekly limit
+deliver-loop: iteration 4: phase WAIT
+deliver-loop: waiting on PR #44 (docs/oracle-plan-od-1--run-local) — mechanical watch, no model budget
+deliver-loop: PR #44 merged
+deliver-loop: budget: weekly at 18% (model 17%), spent 4 of 20 points on the per-model weekly limit
+deliver-loop: iteration 5: phase ORACLE
+deliver-loop: dispatch oracle worker (oracle-20260820132118)
+deliver-loop: the worker's work is on 'docs/oracle-20260820132118--run-local', not 'worker/oracle-20260820132118' — pushing what it reported
+remote: 
+remote: Create a pull request for 'docs/oracle-20260820132118--run-local' on GitHub by visiting:        
+remote:      https://github.com/GrimsVerk/grimsverk-anvil/pull/new/docs/oracle-20260820132118--run-local        
+remote: 
+deliver-loop: budget: weekly at 19% (model 18%), spent 5 of 20 points on the per-model weekly limit
+deliver-loop: iteration 6: phase WAIT
+deliver-loop: waiting on PR #45 (docs/oracle-20260820132118--run-local) — mechanical watch, no model budget
+deliver-loop: PR #45 merged
+deliver-loop: budget: weekly at 19% (model 18%), spent 5 of 20 points on the per-model weekly limit
+deliver-loop: iteration 7: phase STEWARD
+deliver-loop: dispatch steward worker (steward-od-1)
+deliver-loop: the steward worker (steward-od-1) failed with exit code 2 — its engine did not finish — see .claude/orchestration-logs/steward-od-1.log
+deliver-loop: that dispatch produced no pull request (1 in a row) — recording its scope as processed and re-detecting
+deliver-loop: budget: weekly at 19% (model 18%), spent 5 of 20 points on the per-model weekly limit
+deliver-loop: iteration 8: phase STEWARD
+deliver-loop: dispatch steward worker (steward-od-1)
+deliver-loop: the steward worker (steward-od-1) failed with exit code 3 — its engine did not finish — see .claude/orchestration-logs/steward-od-1.log
+deliver-loop: STOPPED: 2 dispatches in a row produced no pull request. The
+deliver-loop: workers ran and the lane did not move, so nothing here will change on its
+deliver-loop: own — every further iteration would spend a model worker to learn the same
+deliver-loop: thing. Evidence is being landed; read it before restarting.
+deliver-loop: landing this run's evidence in docs/runs/20260820T130332Z ...
+deliver-loop: collect-evidence: 3 worker log(s) into docs/runs/20260820T130332Z/workers.
+deliver-loop: collect-evidence: 3 review(s) into docs/runs/20260820T130332Z/reviews (24 skipped).
+deliver-loop: sweep-branches: 0 merged branch(es) deleted, 4 unmerged left alone, 0 refused.
+deliver-loop: sweep-branches: left alone (not merged into run/local): origin docs/oracle-plan-od-1--run-web docs/run-20260820T130332Z--run-local run/web

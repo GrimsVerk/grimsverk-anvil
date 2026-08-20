@@ -3119,3 +3119,122 @@ throughput limit on nested sessions rather than anything wrong with the template
 — but it is only consistent with it, not evidence for it, and I have not tried
 to reproduce it deliberately. Recorded so the owner can weigh it against what
 the other test bed saw at the same timestamps.
+| 13:29:53Z | **STOP** | `STOPPED: 2 dispatches in a row produced no pull request` — **exit code 5, the livelock guard.** |
+
+## Round 3.6 stop — step 6 answered point by point
+
+**(a) The per-iteration budget line.** Confirmed, throughout: eight readings,
+`spent 0 → 3 → 5 of 20 points`, weekly 16% → 19%, model 13% → 18%. It rises on
+model work and holds flat across mechanical WAIT iterations. **No
+`weekly window reset mid-run` line at any point** — ESC-74 held for the whole
+run on the boundary that produced the spurious one in round 3.3.
+
+**(b) The stop line versus the landed report.** They agree, and the code is
+non-zero with a reason:
+
+```
+Stopped 2026-08-20T13:29:53Z with exit code 5: 2 dispatches in a row produced no
+pull request — the livelock guard
+```
+
+The stop message in the log is the same event in fuller words, and it explains
+*why* stopping is right: "every further iteration would spend a model worker to
+learn the same thing. Evidence is being landed; read it before restarting."
+**F20's fix holds under a second, different stop class.**
+
+**(c) The sweep at the stop.** ESC-78 reported, and — the part worth recording —
+it left the other lane alone:
+
+```
+sweep-branches: 0 merged branch(es) deleted, 4 unmerged left alone, 0 refused.
+sweep-branches: left alone (not merged into run/local): origin docs/oracle-plan-od-1--run-web docs/run-20260820T130332Z--run-local run/web
+```
+
+It names what it did not touch, and `run/web` and the web lane's open pull
+request branch are both in that list. A repository-wide sweep that refuses
+anything unmerged is safe across lanes.
+
+**(d) Anything readiness did not catch that the driver then refused on.**
+Nothing that readiness *could* have caught. Readiness was green and the driver
+refused on the livelock guard, which is a runtime condition — it depends on what
+two consecutive dispatches produce, which no preflight can know. The honest
+answer to step 6(d) is: the two checks are correctly scoped, and this stop is
+evidence of that rather than a gap.
+
+---
+
+### F29 — BUG: the driver reports a worker that correctly found nothing to do as an engine failure, and the landed report asserts a specific wrong cause
+- **Where:** round 3.6, iterations 7 and 8, `steward-od-1`; `docs/runs/20260820T130332Z/run.md`.
+- **What the driver recorded:**
+
+  ```
+  the steward worker (steward-od-1) failed with exit code 3 — its engine did not finish
+  ```
+
+  and in the landed report:
+
+  > The worktree is clean, so the worker wrote nothing at all. The usual cause is
+  > silently denied writes: a headless agent cannot be prompted for permission, so
+  > every denial passes without a word and the run ends successfully having done
+  > nothing.
+
+- **What the worker actually did.** It finished, wrote a full report, and
+  explained precisely why it had nothing to commit — its assigned work had been
+  reassigned out from under it by a later oracle decision:
+
+  > - **Decision implemented:** none. OD-1's implementation was reassigned to the
+  >   `convert` milestone plan by OD-4.
+  > …
+  > **The work OD-1 still needs is real and unbuilt** — it is now one `/plan`
+  > round on the normal path: `docs/plans/convert.md`, slug `convert`,
+  > `covers: [R1, R2, R4, R5, R1000, R1001]` …
+  >
+  > My branch is clean and carries no commits of my own — there is nothing here
+  > to open a pull request from.
+  >
+  > WORK_ON_BRANCH worker/steward-od-1
+
+  That is a correct, well-reasoned refusal to invent work, ending with ESC-69's
+  contract token. The engine did finish. Nothing was denied.
+- **Why the wrong cause matters more than the wrong label.** "Silently denied
+  writes" is a specific, plausible, checkable hypothesis — and it is false here.
+  It is now in the landed evidence, which is what the owner reads in the morning.
+  It sends them to look for a permissions problem that does not exist, and it
+  buries the real signal, which is in the worker's report and says the detector
+  dispatched stale work.
+- **Expected:** `AGENTS.md`'s "Honesty about verification" — never claim
+  something in an environment where you could not observe it. The driver can see
+  that the worktree is clean; it cannot see *why*, and the worker told it why in
+  the log the driver itself names one line earlier.
+- **Severity: bug.** The stop was right; the diagnosis attached to it is wrong.
+
+### F30 — BUG: "recording its scope as processed" did not stop the same scope being re-dispatched on the very next iteration
+- **Where:** round 3.6, iterations 7 → 8.
+- **What happened:**
+
+  ```
+  13:28:21Z iteration 7: phase STEWARD
+  13:28:21Z dispatch steward worker (steward-od-1)
+  13:28:22Z the steward worker (steward-od-1) failed with exit code 2 …
+  13:28:22Z that dispatch produced no pull request (1 in a row) — recording its scope as processed and re-detecting
+  13:28:25Z iteration 8: phase STEWARD
+  13:28:25Z dispatch steward worker (steward-od-1)      <-- same scope, three seconds later
+  ```
+
+  The whole point of "recording its scope as processed" (ESC-66) is that the
+  detector stops re-summoning the same work. It re-summoned it immediately, with
+  the same worker id, and only the livelock counter stopped the run.
+- **Consequence:** the livelock guard is doing the work the scope-recording was
+  meant to do. That is fine as a backstop and expensive as a primary mechanism —
+  it costs a second model worker every time, which is exactly the spend ESC-66
+  set out to prevent.
+- **Note on the underlying cause:** the worker's own report says OD-1's
+  implementation "was reassigned to the `convert` milestone plan by OD-4", so the
+  scope was *already* stale when first dispatched. The detector is choosing work
+  from a superseded decision — the recording gap is what let it do so twice.
+- **Severity: bug.** Not blocking; the run stopped correctly and cheaply enough.
+
+Evidence pull request **#47** is open and **unread** — its readings are not
+taken, and per rule 14 and the amended drill I have left it alone. Driver
+**not restarted** (rule 7). Raw log: `test-kit/reports/local-driver-round3.6.log`;
+worker log: `test-kit/reports/worker-logs/round3.6-steward-od-1.log`.
