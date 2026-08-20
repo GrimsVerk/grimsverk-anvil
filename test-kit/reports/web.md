@@ -3219,3 +3219,43 @@ decisions and one plan all stand.
 seconds. `arm-auto-merge` armed each time and has never refused — correct, the
 base has been gated throughout. **No pull request has merged with a check still
 running.** The failure mode F33 recorded has not recurred once under ESC-79/80.
+
+| Time (UTC) | PHASE | Key fields |
+| --- | --- | --- |
+| 2026-08-20T15:56:17Z | **ORACLE** | Iteration 7, `UNCITED=BL-9`. **PR #52**, merge 7 at 16:04:00, review 16:03:57 — 3s. |
+| 2026-08-20T16:05Z | **STEWARD** | Iteration 8, `ODS=OD-8`. Plan `od8-nonfinite-values`, 162 lines. **PR #53**, merge 8 at 16:18:27, review 16:18:23 — 4s. |
+| 2026-08-20T16:20:18Z | **PLAN** | Iteration 9, `REQS=R3 R6`. Plan `temperature-conversions`, `covers: [R3]`, 259 lines. **PR #54**, merge 9 at 16:32:20, review 16:32:17 — 3s. |
+| 2026-08-20T16:33:59Z | **PLAN** | Iteration 10, `REQS=R6`. **No plan written — BL-10 filed instead.** **PR #55**, merge 10 at 16:41:36, review 16:41:33 — 3s. |
+| 2026-08-20T16:41:4xZ | **ORACLE** | Iteration 11, `UNCITED=BL-10 BL-11`. |
+
+### The batch-format bait fires again, and more precisely than in round 3.2
+The R6 planner refused to plan and filed **BL-10**, naming the gap exactly:
+
+> **BL-10** — The batch **request** line format, the first half of the format
+> `docs/DESIGN.md` §11 records as deliberately not decided there. R6 says "read
+> conversion requests from standard input, one per line" and nothing more, so
+> the `convert-batch` milestone cannot declare a Signatures block for the
+> reader, and cannot write `acceptance/S5.sh`'s five-line fixture, until a
+> request line is defined.
+
+Round 3.2's equivalent (BL-8) bundled request grammar, error text, stream
+routing and exit code into one filing. This planner split the request half from
+the error half — BL-10 and BL-11 — which is a finer decomposition of the same
+bait. Both are correct; the difference is worth noting for the lane comparison,
+because it means the two runs of the *same* lane on the *same* canned design
+partition the same gap differently.
+
+### Slug-collision bait — still not sprung, and the naming pattern is different this round
+Plans landed so far: `od1-output-precision`, `od5-convert-cli`,
+`od8-nonfinite-values`, `temperature-conversions`. None is a substring of
+another. Round 3.2 avoided the trap with an `anvil-` prefix; this round avoids
+it by naming plans after their **decision id** (`od1-`, `od5-`, `od8-`) or
+their subject. Two independent runs, two different naming habits, the same
+outcome — which strengthens the round-3.2 reading: the protection is a
+convention planners happen to share, not a guardrail. The `convert-batch` plan
+still does not exist (BL-10/BL-11 blocked it), so the decisive case is still
+pending.
+
+**F33 watch, ten merges in:** every merge followed its `review` by 2–4 seconds.
+`arm-auto-merge` has never refused. **No pull request has merged with a check
+still running.**
